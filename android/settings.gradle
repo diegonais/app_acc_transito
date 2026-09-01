@@ -1,0 +1,8 @@
+def localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    def properties = new Properties()
+    properties.load(new FileInputStream(localPropertiesFile))
+    
+    def flutterSdkPath = properties.getProperty("flutter.sdk")
+    assert flutterSdkPath != null : "The flutter.sdk path is missing from $rootProject.file('local.properties')."
+}
