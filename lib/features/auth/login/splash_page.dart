@@ -1,16 +1,55 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/routes/app_routes.dart';
+import '../application/auth_scope.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../shared/ui/app_logo.dart';
 import '../../../shared/ui/app_state_view.dart';
 
-class SplashPage extends StatelessWidget {
+class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
+
+  @override
+  State<SplashPage> createState() => _SplashPageState();
+}
+
+class _SplashPageState extends State<SplashPage> {
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _resolveInitialRoute();
+    });
+  }
+
+  Future<void> _resolveInitialRoute() async {
+    setState(() {
+      _errorMessage = null;
+    });
+    try {
+      final hasAdmin = await AuthScope.of(context).hasAdmin();
+      if (!mounted) {
+        return;
+      }
+      Navigator.of(context).pushReplacementNamed(
+        hasAdmin ? AppRoutes.login : AppRoutes.initialSetup,
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _errorMessage = 'No se pudo preparar la autenticacion local.';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final errorMessage = _errorMessage;
 
     return Scaffold(
       body: SafeArea(
@@ -39,20 +78,14 @@ class SplashPage extends StatelessWidget {
                     style: textTheme.bodyLarge,
                   ),
                   const SizedBox(height: 32),
-                  const AppLoadingState(message: 'Preparando aplicacion'),
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pushReplacementNamed(
-                          AppRoutes.login,
-                        );
-                      },
-                      icon: const Icon(Icons.arrow_forward_rounded),
-                      label: const Text('Continuar'),
+                  if (errorMessage == null)
+                    const AppLoadingState(message: 'Preparando aplicacion')
+                  else
+                    AppErrorState(
+                      title: 'Error de inicio',
+                      message: errorMessage,
+                      onRetry: _resolveInitialRoute,
                     ),
-                  ),
                 ],
               ),
             ),

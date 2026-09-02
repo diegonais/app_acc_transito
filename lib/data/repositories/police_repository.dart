@@ -33,4 +33,9 @@ class PoliceRepository {
       'fecha_modificacion': timestamp,
     });
   }
+
+  Future<Map<String, Object?>?> findActiveByUserId(int idUsuario) async {
+    final db = await _database.instance;
+    return PoliceDao(db).findActiveByUserId(idUsuario);
+  }
 }

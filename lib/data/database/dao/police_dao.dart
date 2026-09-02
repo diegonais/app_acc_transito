@@ -18,4 +18,14 @@ class PoliceDao {
     );
     return rows.isEmpty ? null : rows.first;
   }
+
+  Future<Map<String, Object?>?> findActiveByUserId(int idUsuario) async {
+    final rows = await _db.query(
+      'policias',
+      where: 'id_usuario = ? AND estado = ?',
+      whereArgs: [idUsuario, 1],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : rows.first;
+  }
 }

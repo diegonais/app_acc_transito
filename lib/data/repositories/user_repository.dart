@@ -24,8 +24,34 @@ class UserRepository {
     });
   }
 
+  Future<int> countAdmins() async {
+    final db = await _database.instance;
+    return UserDao(db).countAdmins();
+  }
+
   Future<Map<String, Object?>?> findActiveByUsername(String username) async {
     final db = await _database.instance;
     return UserDao(db).findActiveByUsername(username);
+  }
+
+  Future<Map<String, Object?>?> findByUsername(String username) async {
+    final db = await _database.instance;
+    return UserDao(db).findByUsername(username);
+  }
+
+  Future<void> updatePasswordHash({
+    required int idUsuario,
+    required String passwordHash,
+    DateTime? now,
+  }) async {
+    final db = await _database.instance;
+    final updatedRows = await UserDao(db).updatePasswordHash(
+      idUsuario,
+      passwordHash,
+      (now ?? DateTime.now()).toIso8601String(),
+    );
+    if (updatedRows != 1) {
+      throw StateError('No se pudo actualizar la contrasena del usuario.');
+    }
   }
 }

@@ -1,105 +1,83 @@
-# Estado actual - Fase 2 completada
+# Estado actual - Fase 3 completada
 
 ## Etapa
 
-**Fase 2 - SQLite y persistencia**: finalizada.
+**Fase 3 - Autenticacion local y roles**: finalizada.
 
-La aplicacion cuenta con una base SQLite local, versionada y reproducible para Android mediante `sqflite`. No se implementaron pantallas nuevas, autenticacion funcional, dashboard real, GPS, fotografias desde camara/galeria, PDF ni QR.
+La aplicacion cuenta con autenticacion completamente local sobre SQLite, configuracion inicial del primer `ADMIN`, login por usuario/contrasena, sesion en memoria, logout y autorizacion logica por roles `ADMIN` y `POLICE`.
+
+No se implementaron dashboard real, gestion completa de policias, formularios de informes, GPS, fotografias desde camara/galeria, croquis, PDF ni QR.
 
 ## Dependencias agregadas
 
-- `sqflite`: motor SQLite local requerido por la fase.
+- `cryptography`: usada para derivar contrasenas con PBKDF2-HMAC-SHA256, salt aleatorio y comparacion de hash sin almacenar texto plano.
+
+Se mantienen:
+
+- `sqflite`: motor SQLite local.
 - `path`: construccion portable de la ruta del archivo de base de datos.
-- `sqflite_common_ffi` como dependencia de desarrollo: pruebas SQLite reales en memoria.
+- `sqflite_common_ffi` como dependencia de desarrollo para pruebas SQLite reales en memoria.
+
+## Autenticacion
+
+- Gestor de sesion en memoria: `lib/features/auth/application/auth_controller.dart`.
+- Scope de acceso a sesion: `lib/features/auth/application/auth_scope.dart`.
+- Repositorio de autenticacion: `lib/features/auth/data/auth_repository.dart`.
+- Hashing de contrasena: `lib/features/auth/data/password_hasher.dart`.
+
+Flujos implementados:
+
+- Si no existe ningun `ADMIN`, el splash redirige a configuracion inicial.
+- La configuracion inicial crea el primer `ADMIN` con usuario y contrasena validados.
+- Cuando ya existe un `ADMIN`, el flujo inicial deja de mostrarse.
+- Login busca usuario localmente, valida estado activo, verifica contrasena y carga rol.
+- Usuarios inactivos no acceden.
+- Usuario inexistente y contrasena incorrecta devuelven error generico de credenciales.
+- La sesion vive solo en memoria mientras la app esta abierta.
+- No existe `Recordarme` ni sesion persistente automatica.
+- Logout limpia la sesion y vuelve a login.
+- La ruta protegida de dashboard redirige a login si no existe sesion.
+
+## Seguridad de contrasena
+
+- Nunca se guarda la contrasena en texto plano.
+- `usuarios.contrasena_hash` almacena un valor codificado con formato:
+  `pbkdf2_sha256$iteraciones$saltBase64$hashBase64`.
+- El salt se genera con `Random.secure`.
+- La verificacion deriva nuevamente la clave y compara bytes sin exponer hash ni contrasena en UI.
+- No se implementaron email, SMS, preguntas de seguridad ni recuperacion cloud.
+
+## Roles y datos del policia
+
+- Roles modelados en `lib/features/auth/domain/app_role.dart`.
+- Sesion autenticada modelada en `lib/features/auth/domain/authenticated_user.dart`.
+- La autorizacion se aplica en logica mediante `requireRole`.
+- El dashboard minimo muestra datos de sesion y restringe el restablecimiento a `ADMIN`.
+- Para usuarios `POLICE`, el login carga datos activos de `policias`:
+  - `id_policia`;
+  - grado;
+  - nombres y apellidos;
+  - unidad;
+  - sigla;
+  - numero de placa;
+  - C.I. administrativo.
+- Estos datos quedan disponibles en la sesion para asociar informes en fases posteriores.
+
+## Restablecimiento
+
+- `ADMIN` puede establecer una nueva contrasena para un usuario `POLICE`.
+- No se requiere conocer ni visualizar la contrasena anterior.
+- El restablecimiento reemplaza solamente el hash almacenado y actualiza `fecha_modificacion`.
+- Un usuario no `ADMIN` recibe error de autorizacion en la capa logica.
 
 ## Base de datos
 
-- Gestor central: `lib/data/database/app_database.dart`.
-- Nombre de BD: `app_acc_transito.db`.
-- Version de esquema: `1`.
-- Migraciones versionadas: `lib/data/database/app_database_migrations.dart`.
-- `PRAGMA foreign_keys = ON` se habilita al configurar cada conexion.
-- Todas las consultas implementadas usan parametros (`whereArgs` o `rawQuery` con argumentos).
-
-## Esquema implementado
-
-Tablas base creadas:
-
-- `usuarios`
-- `policias`
-- `informes`
-- `conductores`
-- `vehiculos`
-- `personas_involucradas`
-- `fotografias`
-
-Restricciones principales:
-
-- PK internas `INTEGER PRIMARY KEY AUTOINCREMENT`.
-- FK explicitas entre usuarios, policias, informes y tablas hijas.
-- `usuarios.nombre_usuario` unico.
-- `policias.numero_placa` unico.
-- `policias.id_usuario` unico para relacion 1 a 0..1.
-- `informes.numero_caso` unico.
-- `informes(gestion, correlativo)` unico.
-- `estado` entero con `0 = inactivo`, `1 = activo`.
-- Roles restringidos a `ADMIN` y `POLICE`.
-- Personas restringidas a `HERIDO` y `FALLECIDO`.
-- Fotografias restringidas a `PANORAMICA`, `LICENCIA`, `PLACA`, `OTRA`.
-- Fotografias, croquis y PDF se persisten solo como rutas/metadatos, sin BLOB.
-- No se agregaron campos de celular ni escalafon para policias.
-
-Indices creados:
-
-- FK y consultas reales: informes por policia, informes por estado, hijos por informe y vehiculos por conductor.
-- Unicidades mediante restricciones aprobadas.
-
-## Arquitectura de persistencia
-
-Se respeta el flujo:
-
-```text
-UI
-↓
-estado/controlador
-↓
-repositorio
-↓
-DAO
-↓
-SQLite
-```
-
-DAOs creados:
-
-- `UserDao`
-- `PoliceDao`
-- `ReportDao`
-
-Repositorios creados:
-
-- `UserRepository`
-- `PoliceRepository`
-- `ReportRepository`
-
-La UI existente no ejecuta SQL.
-
-## Finalizar informe
-
-Quedo preparado el mecanismo transaccional en `ReportRepository.finalizeReport`.
-
-La transaccion:
-
-1. calcula correlativo por gestion considerando activos e inactivos;
-2. arma `numero_caso` con formato `AAAA-NNNNNN`;
-3. inserta informe con `estado = 1`;
-4. inserta conductores;
-5. inserta vehiculos y relacion opcional con conductor;
-6. inserta personas involucradas;
-7. inserta fotografias como rutas/metadatos;
-8. confirma todo o revierte todo ante error.
-
-Los informes finalizados no tienen estado de borrador. La inactivacion usa soft delete mediante `estado = 0`; las consultas de aplicacion implementadas devuelven solo activos.
+- No se modifico el esquema ni la version de base de datos.
+- Se agregaron consultas parametrizadas en DAO para:
+  - buscar usuario por nombre;
+  - contar administradores;
+  - actualizar hash de contrasena;
+  - cargar policia activo por usuario.
 
 ## Pruebas y validacion
 
@@ -112,28 +90,36 @@ Comandos ejecutados:
 | `flutter analyze` | correcto | sin issues |
 | `flutter test` | correcto | todos los tests pasaron |
 
-Pruebas de persistencia agregadas en `test/data/database/persistence_test.dart`:
+Pruebas agregadas:
 
-- creacion de BD versionada;
-- `PRAGMA foreign_keys = ON`;
-- existencia de tablas base;
-- inserciones de usuarios, policias, informes y relaciones;
-- FK y restricciones `UNIQUE`/`CHECK`;
-- rollback completo en finalizacion fallida;
-- correlativo por gestion;
-- reinicio de correlativo por gestion;
-- no reutilizacion tras inactivar;
-- soft delete;
-- consultas que excluyen informes inactivos;
-- conservacion de metadatos asociados a informes inactivos.
+- `test/features/auth/auth_repository_test.dart`
+  - primer `ADMIN`;
+  - hash + salt y ausencia de texto plano;
+  - bloqueo de recreacion del flujo inicial;
+  - login valido `ADMIN`;
+  - login valido `POLICE` con datos de policia;
+  - contrasena incorrecta;
+  - usuario inexistente;
+  - usuario inactivo;
+  - autorizacion por rol;
+  - restablecimiento local de contrasena policial.
+- `test/features/auth/auth_controller_test.dart`
+  - sesion en memoria;
+  - logout limpia autenticacion.
+- `test/app_startup_test.dart`
+  - configuracion inicial sin `ADMIN`;
+  - login valido;
+  - logout y proteccion de ruta;
+  - error por credenciales incorrectas;
+  - ruta desconocida a login.
 
 ## Problemas conocidos
 
 - No se probo en dispositivo Android fisico en esta fase.
-- La autenticacion local aun no verifica hash/salt en UI; queda para la fase correspondiente.
-- La pantalla de informe todavia no existe; solo quedo lista la persistencia transaccional para usarla despues.
-- GPS, camara/galeria, croquis, PDF y QR siguen pendientes.
+- El dashboard sigue siendo minimo; los indicadores reales quedan para una fase posterior.
+- La gestion completa de policias y cuentas locales queda para fases posteriores.
+- Informes, GPS, camara/galeria, croquis, PDF y QR siguen pendientes.
 
 ## Siguiente fase
 
-**Fase 3.**
+**Fase 4.**

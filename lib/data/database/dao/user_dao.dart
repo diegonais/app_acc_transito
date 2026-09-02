@@ -28,4 +28,38 @@ class UserDao {
     );
     return rows.isEmpty ? null : rows.first;
   }
+
+  Future<Map<String, Object?>?> findByUsername(String username) async {
+    final rows = await _db.query(
+      'usuarios',
+      where: 'nombre_usuario = ?',
+      whereArgs: [username],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : rows.first;
+  }
+
+  Future<int> countAdmins() async {
+    final rows = await _db.rawQuery(
+      'SELECT COUNT(*) AS total FROM usuarios WHERE rol = ?',
+      ['ADMIN'],
+    );
+    return rows.single['total'] as int;
+  }
+
+  Future<int> updatePasswordHash(
+    int idUsuario,
+    String passwordHash,
+    String modifiedAt,
+  ) {
+    return _db.update(
+      'usuarios',
+      {
+        'contrasena_hash': passwordHash,
+        'fecha_modificacion': modifiedAt,
+      },
+      where: 'id_usuario = ?',
+      whereArgs: [idUsuario],
+    );
+  }
 }
