@@ -29,6 +29,9 @@ class AppDatabaseMigrations {
       case 2:
         await _createVersion2(db);
         return;
+      case 3:
+        await _createVersion3(db);
+        return;
       default:
         throw StateError('No existe migracion para version $targetVersion.');
     }
@@ -224,5 +227,16 @@ BEGIN
   SELECT RAISE(ABORT, 'El conductor relacionado no pertenece al informe.');
 END
 ''');
+  }
+
+  static Future<void> _createVersion3(DatabaseExecutor db) async {
+    await db.execute(
+      'CREATE INDEX idx_informes_estado_fecha_hecho '
+      'ON informes (estado, fecha_hora_hecho)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_informes_estado_policia_fecha_hecho '
+      'ON informes (estado, id_policia, fecha_hora_hecho)',
+    );
   }
 }

@@ -6,6 +6,8 @@ import 'package:app_acc_transito/services/media/evidence_photo.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+var _policeSequence = 0;
+
 void main() {
   late AppDatabase appDatabase;
   late UserRepository userRepository;
@@ -280,6 +282,87 @@ void main() {
     expect(activeReports.single['id_informe'], active.idInforme);
     expect(inactivePhotos.single['ruta'], '/evidencias/inactiva.jpg');
   });
+
+  test('dashboard calcula totales dia mes fecha policia y omite inactivos',
+      () async {
+    final firstPolice = await _createPolice(userRepository, policeRepository);
+    final secondPolice = await _createPolice(userRepository, policeRepository);
+    final first = await reportRepository.finalizeReport(
+      _validReportInput(
+        idPolicia: firstPolice,
+        epi: 'EPI Dia',
+        fechaHoraHecho: DateTime.utc(2026, 5, 12, 7),
+      ),
+      now: DateTime.utc(2026, 5, 12),
+    );
+    await reportRepository.finalizeReport(
+      _validReportInput(
+        idPolicia: firstPolice,
+        epi: 'EPI Mes',
+        fechaHoraHecho: DateTime.utc(2026, 5, 20, 7),
+      ),
+      now: DateTime.utc(2026, 5, 20),
+    );
+    final inactive = await reportRepository.finalizeReport(
+      _validReportInput(
+        idPolicia: secondPolice,
+        epi: 'EPI Inactivo',
+        fechaHoraHecho: DateTime.utc(2026, 5, 12, 8),
+      ),
+      now: DateTime.utc(2026, 5, 12),
+    );
+    await reportRepository.inactivateReport(
+      idInforme: inactive.idInforme,
+      now: DateTime.utc(2026, 6),
+    );
+
+    final adminStats = await reportRepository.loadAdminDashboard(
+      referenceDate: DateTime(2026, 5, 12, 9),
+      selectedDate: DateTime(2026, 5, 12),
+    );
+    final policeStats = await reportRepository.loadPoliceDashboard(
+      idPolicia: firstPolice,
+      referenceDate: DateTime(2026, 5, 12, 9),
+      selectedDate: DateTime(2026, 6, 1),
+    );
+    final emptyResults = await reportRepository.queryActiveReportsForAdmin(
+      filter: ReportQueryFilter(
+        from: DateTime.utc(2025, 1, 1),
+        to: DateTime.utc(2025, 1, 2),
+      ),
+    );
+
+    expect(adminStats.totalActiveReports, 2);
+    expect(adminStats.activePoliceCount, 2);
+    expect(adminStats.reportsToday, 1);
+    expect(adminStats.reportsThisMonth, 2);
+    expect(adminStats.reportsBySelectedDate, 1);
+    expect(adminStats.reportsByPolice, hasLength(2));
+    expect(
+      adminStats.reportsByPolice
+          .singleWhere((entry) => entry.idPolicia == firstPolice)
+          .total,
+      2,
+    );
+    expect(
+      adminStats.reportsByPolice
+          .singleWhere((entry) => entry.idPolicia == secondPolice)
+          .total,
+      0,
+    );
+    expect(adminStats.reportsByMonth.single.total, 2);
+    expect(policeStats.totalActiveReports, 2);
+    expect(policeStats.reportsToday, 1);
+    expect(policeStats.reportsThisMonth, 2);
+    expect(policeStats.reportsBySelectedDate, 0);
+    expect(emptyResults, isEmpty);
+
+    final detail = await reportRepository.findActiveReportDetailForPolice(
+      idInforme: first.idInforme,
+      idPolicia: secondPolice,
+    );
+    expect(detail, isNull);
+  });
 }
 
 const _validDriver = DriverInput(
@@ -296,16 +379,17 @@ Future<int> _createPolice(
   UserRepository userRepository,
   PoliceRepository policeRepository,
 ) async {
+  final sequence = ++_policeSequence;
   final now = DateTime.utc(2026);
   final idUsuario = await userRepository.createUser(
-    username: 'policia-${DateTime.now().microsecondsSinceEpoch}',
+    username: 'policia-$sequence',
     passwordHash: 'hash:salt',
     role: 'POLICE',
     now: now,
   );
   return policeRepository.createPolice(
     idUsuario: idUsuario,
-    numeroPlaca: 'PL-${DateTime.now().microsecondsSinceEpoch}',
+    numeroPlaca: 'PL-$sequence',
     grado: 'Sgto.',
     nombres: 'Ana',
     apellidos: 'Quispe',
@@ -320,6 +404,7 @@ FinalizeReportInput _validReportInput({
   required int idPolicia,
   int gestion = 2026,
   String epi = 'EPI Central',
+  DateTime? fechaHoraHecho,
   List<DriverInput> conductores = const [],
   List<VehicleInput> vehiculos = const [],
   List<PersonInput> personas = const [],
@@ -330,7 +415,7 @@ FinalizeReportInput _validReportInput({
     gestion: gestion,
     epi: epi,
     fechaHoraLlegada: DateTime.utc(gestion, 1, 1, 8),
-    fechaHoraHecho: DateTime.utc(gestion, 1, 1, 7),
+    fechaHoraHecho: fechaHoraHecho ?? DateTime.utc(gestion, 1, 1, 7),
     naturaleza: 'Colision',
     lugar: 'Av. Principal',
     denuncianteNombre: 'No existe',

@@ -8,6 +8,7 @@ import '../features/auth/application/auth_controller.dart';
 import '../features/auth/application/auth_scope.dart';
 import '../features/auth/data/auth_repository.dart';
 import '../features/auth/data/password_hasher.dart';
+import '../features/dashboard/application/dashboard_controller.dart';
 import '../features/officers/application/officer_management_controller.dart';
 import '../features/officers/data/officer_management_repository.dart';
 import '../features/reports/application/report_controller.dart';
@@ -32,6 +33,7 @@ class AccTransitoApp extends StatefulWidget {
 class _AccTransitoAppState extends State<AccTransitoApp> {
   late final AuthController _authController;
   late final OfficerManagementController _officerManagementController;
+  late final DashboardController _dashboardController;
   late final ReportController _reportController;
 
   @override
@@ -51,8 +53,10 @@ class _AccTransitoAppState extends State<AccTransitoApp> {
       repository: OfficerManagementRepository(database),
       passwordHasher: passwordHasher,
     );
+    final reportRepository = ReportRepository(database);
+    _dashboardController = DashboardController(repository: reportRepository);
     _reportController = ReportController(
-      repository: ReportRepository(database),
+      repository: reportRepository,
     );
   }
 
@@ -70,6 +74,7 @@ class _AccTransitoAppState extends State<AccTransitoApp> {
             settings,
             _authController,
             _officerManagementController,
+            _dashboardController,
             _reportController,
           );
         },

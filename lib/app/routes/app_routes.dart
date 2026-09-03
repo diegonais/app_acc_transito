@@ -5,6 +5,7 @@ import '../../features/auth/login/initial_admin_setup_page.dart';
 import '../../features/auth/login/splash_page.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/domain/app_role.dart';
+import '../../features/dashboard/application/dashboard_controller.dart';
 import '../../features/dashboard/dashboard_placeholder_page.dart';
 import '../../features/officers/application/officer_management_controller.dart';
 import '../../features/officers/officer_management_page.dart';
@@ -25,6 +26,7 @@ class AppRoutes {
     RouteSettings settings,
     AuthController authController,
     OfficerManagementController officerManagementController,
+    DashboardController dashboardController,
     ReportController reportController,
   ) {
     return switch (settings.name) {
@@ -32,7 +34,7 @@ class AppRoutes {
       initialSetup => _buildRoute(settings, const InitialAdminSetupPage()),
       login => _buildRoute(settings, const LoginPage()),
       dashboard when authController.isAuthenticated =>
-        _buildRoute(settings, const DashboardPage()),
+        _buildRoute(settings, DashboardPage(controller: dashboardController)),
       dashboard => _buildRoute(settings, const LoginPage()),
       officers when authController.currentUser?.role == AppRole.admin =>
         _buildRoute(
@@ -40,7 +42,7 @@ class AppRoutes {
           OfficerManagementPage(controller: officerManagementController),
         ),
       officers when authController.isAuthenticated =>
-        _buildRoute(settings, const DashboardPage()),
+        _buildRoute(settings, DashboardPage(controller: dashboardController)),
       officers => _buildRoute(settings, const LoginPage()),
       reports when authController.isAuthenticated => _buildRoute(
           settings,

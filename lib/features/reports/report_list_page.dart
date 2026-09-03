@@ -44,13 +44,17 @@ class ReportListPage extends StatefulWidget {
 }
 
 class _ReportListPageState extends State<ReportListPage> {
+  int? _selectedPoliceId;
+  DateTime? _from;
+  DateTime? _to;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = AuthScope.of(context).currentUser;
       if (user != null) {
-        widget.controller.load(user);
+        widget.controller.load(user, filter: _currentFilter);
       }
     });
   }
@@ -70,7 +74,7 @@ class _ReportListPageState extends State<ReportListPage> {
       actions: [
         IconButton(
           tooltip: 'Actualizar',
-          onPressed: () => widget.controller.load(user),
+          onPressed: () => widget.controller.load(user, filter: _currentFilter),
           icon: const Icon(Icons.refresh_rounded),
         ),
       ],
@@ -88,19 +92,45 @@ class _ReportListPageState extends State<ReportListPage> {
             return AppErrorState(
               title: 'No se pudo cargar',
               message: error,
-              onRetry: () => controller.load(user),
+              onRetry: () => controller.load(user, filter: _currentFilter),
             );
           }
           if (controller.reports.isEmpty) {
-            return _EmptyReports(
-              isPolice: user.isPolice,
-              onCreate: () => _openForm(user),
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _ReportHeader(
+                  user: user,
+                  onCreate: () => _openForm(user),
+                ),
+                const SizedBox(height: 12),
+                _ReportFilters(
+                  isAdmin: user.isAdmin,
+                  policeOptions: controller.policeOptions,
+                  selectedPoliceId: _selectedPoliceId,
+                  from: _from,
+                  to: _to,
+                  onPoliceChanged: (value) async {
+                    setState(() => _selectedPoliceId = value);
+                    await widget.controller.load(user, filter: _currentFilter);
+                  },
+                  onPickFrom: () => _pickFilterDate(user, isFrom: true),
+                  onPickTo: () => _pickFilterDate(user, isFrom: false),
+                  onClear: () => _clearFilters(user),
+                ),
+                const SizedBox(height: 32),
+                _EmptyReports(
+                  hasFilters: !_currentFilter.isEmpty,
+                  isPolice: user.isPolice,
+                  onCreate: () => _openForm(user),
+                ),
+              ],
             );
           }
 
           return ListView.separated(
             padding: const EdgeInsets.all(16),
-            itemCount: controller.reports.length + 1,
+            itemCount: controller.reports.length + 2,
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               if (index == 0) {
@@ -109,7 +139,23 @@ class _ReportListPageState extends State<ReportListPage> {
                   onCreate: () => _openForm(user),
                 );
               }
-              final report = controller.reports[index - 1];
+              if (index == 1) {
+                return _ReportFilters(
+                  isAdmin: user.isAdmin,
+                  policeOptions: controller.policeOptions,
+                  selectedPoliceId: _selectedPoliceId,
+                  from: _from,
+                  to: _to,
+                  onPoliceChanged: (value) async {
+                    setState(() => _selectedPoliceId = value);
+                    await widget.controller.load(user, filter: _currentFilter);
+                  },
+                  onPickFrom: () => _pickFilterDate(user, isFrom: true),
+                  onPickTo: () => _pickFilterDate(user, isFrom: false),
+                  onClear: () => _clearFilters(user),
+                );
+              }
+              final report = controller.reports[index - 2];
               return _ReportTile(
                 report: report,
                 canInactivate: user.role == AppRole.admin,
@@ -160,7 +206,7 @@ class _ReportListPageState extends State<ReportListPage> {
       ),
     );
     if (mounted) {
-      await widget.controller.load(user);
+      await widget.controller.load(user, filter: _currentFilter);
     }
   }
 
@@ -211,6 +257,54 @@ class _ReportListPageState extends State<ReportListPage> {
       );
     }
   }
+
+  ReportQueryFilter get _currentFilter {
+    return ReportQueryFilter(
+      idPolicia: _selectedPoliceId,
+      from: _from == null
+          ? null
+          : DateTime(_from!.year, _from!.month, _from!.day),
+      to: _to == null
+          ? null
+          : DateTime(_to!.year, _to!.month, _to!.day).add(
+              const Duration(days: 1),
+            ),
+    );
+  }
+
+  Future<void> _pickFilterDate(
+    AuthenticatedUser user, {
+    required bool isFrom,
+  }) async {
+    final current = isFrom ? _from : _to;
+    final now = DateTime.now();
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: current ?? now,
+      firstDate: DateTime(now.year - 10),
+      lastDate: DateTime(now.year + 1),
+    );
+    if (selected == null || !mounted) {
+      return;
+    }
+    setState(() {
+      if (isFrom) {
+        _from = selected;
+      } else {
+        _to = selected;
+      }
+    });
+    await widget.controller.load(user, filter: _currentFilter);
+  }
+
+  Future<void> _clearFilters(AuthenticatedUser user) async {
+    setState(() {
+      _selectedPoliceId = null;
+      _from = null;
+      _to = null;
+    });
+    await widget.controller.load(user, filter: _currentFilter);
+  }
 }
 
 class _ReportHeader extends StatelessWidget {
@@ -243,8 +337,13 @@ class _ReportHeader extends StatelessWidget {
 }
 
 class _EmptyReports extends StatelessWidget {
-  const _EmptyReports({required this.isPolice, required this.onCreate});
+  const _EmptyReports({
+    required this.hasFilters,
+    required this.isPolice,
+    required this.onCreate,
+  });
 
+  final bool hasFilters;
   final bool isPolice;
   final VoidCallback onCreate;
 
@@ -257,11 +356,11 @@ class _EmptyReports extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const AppEmptyState(
-              title: 'Sin informes activos',
-              message: 'No existen informes visibles para esta sesion.',
+              title: 'Sin resultados',
+              message: 'No existen informes activos con estos criterios.',
               icon: Icons.assignment_outlined,
             ),
-            if (isPolice) ...[
+            if (isPolice && !hasFilters) ...[
               const SizedBox(height: 20),
               AppButton(
                 label: 'Registrar informe',
@@ -269,6 +368,98 @@ class _EmptyReports extends StatelessWidget {
                 onPressed: onCreate,
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReportFilters extends StatelessWidget {
+  const _ReportFilters({
+    required this.isAdmin,
+    required this.policeOptions,
+    required this.selectedPoliceId,
+    required this.from,
+    required this.to,
+    required this.onPoliceChanged,
+    required this.onPickFrom,
+    required this.onPickTo,
+    required this.onClear,
+  });
+
+  final bool isAdmin;
+  final List<PoliceReportCount> policeOptions;
+  final int? selectedPoliceId;
+  final DateTime? from;
+  final DateTime? to;
+  final ValueChanged<int?> onPoliceChanged;
+  final VoidCallback onPickFrom;
+  final VoidCallback onPickTo;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Filtros de consulta',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            if (isAdmin) ...[
+              DropdownButtonFormField<int?>(
+                initialValue: selectedPoliceId,
+                decoration: const InputDecoration(
+                  labelText: 'Policia',
+                  prefixIcon: Icon(Icons.local_police_outlined),
+                ),
+                items: [
+                  const DropdownMenuItem<int?>(
+                    value: null,
+                    child: Text('Todos'),
+                  ),
+                  ...policeOptions.map(
+                    (police) => DropdownMenuItem<int?>(
+                      value: police.idPolicia,
+                      child: Text(
+                        police.displayName,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ],
+                onChanged: onPoliceChanged,
+              ),
+              const SizedBox(height: 12),
+            ],
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: onPickFrom,
+                  icon: const Icon(Icons.event_outlined),
+                  label: Text('Desde ${_formatOptionalDate(from)}'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: onPickTo,
+                  icon: const Icon(Icons.event_available_outlined),
+                  label: Text('Hasta ${_formatOptionalDate(to)}'),
+                ),
+                TextButton.icon(
+                  onPressed: onClear,
+                  icon: const Icon(Icons.filter_alt_off_outlined),
+                  label: const Text('Limpiar'),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -2135,6 +2326,14 @@ String _formatDateTime(DateTime value) {
 
 String _formatOptionalDateTime(DateTime? value) {
   return value == null ? 'No aplica' : _formatDateTime(value);
+}
+
+String _formatOptionalDate(DateTime? value) {
+  if (value == null) {
+    return 'sin definir';
+  }
+  String two(int part) => part.toString().padLeft(2, '0');
+  return '${two(value.day)}/${two(value.month)}/${value.year}';
 }
 
 String _boolText(bool? value) {

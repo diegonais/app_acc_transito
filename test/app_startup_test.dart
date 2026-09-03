@@ -10,6 +10,7 @@ import 'package:app_acc_transito/features/auth/data/password_hasher.dart';
 import 'package:app_acc_transito/features/auth/domain/app_role.dart';
 import 'package:app_acc_transito/features/auth/domain/auth_exceptions.dart';
 import 'package:app_acc_transito/features/auth/domain/authenticated_user.dart';
+import 'package:app_acc_transito/features/dashboard/application/dashboard_controller.dart';
 import 'package:app_acc_transito/features/officers/application/officer_management_controller.dart';
 import 'package:app_acc_transito/features/officers/data/officer_management_repository.dart';
 import 'package:app_acc_transito/features/reports/application/report_controller.dart';
@@ -99,6 +100,7 @@ void main() {
             settings,
             controller,
             _unusedOfficerController(),
+            _unusedDashboardController(),
             _unusedReportController(),
           );
         },
@@ -197,6 +199,11 @@ OfficerManagementController _unusedOfficerController() {
       ),
     ),
   );
+}
+
+DashboardController _unusedDashboardController() {
+  final database = AppDatabase(databasePath: ':memory:');
+  return DashboardController(repository: ReportRepository(database));
 }
 
 ReportController _unusedReportController() {

@@ -87,21 +87,39 @@ class ReportController extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   List<ReportRecord> _reports = const [];
+  List<PoliceReportCount> _policeOptions = const [];
+  ReportQueryFilter _filter = const ReportQueryFilter();
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   List<ReportRecord> get reports => _reports;
+  List<PoliceReportCount> get policeOptions => _policeOptions;
+  ReportQueryFilter get filter => _filter;
 
-  Future<void> load(AuthenticatedUser actor) async {
+  Future<void> load(
+    AuthenticatedUser actor, {
+    ReportQueryFilter? filter,
+  }) async {
     _isLoading = true;
     _errorMessage = null;
+    if (filter != null) {
+      _filter = filter;
+    }
     notifyListeners();
 
     try {
-      _reports = actor.role == AppRole.admin
-          ? await _repository.listActiveReportsForAdmin()
-          : await _repository
-              .listActiveReportsForPolice(actor.requiredPoliceId);
+      if (actor.role == AppRole.admin) {
+        _policeOptions = await _repository.listPoliceReportCounts();
+        _reports = await _repository.queryActiveReportsForAdmin(
+          filter: _filter,
+        );
+      } else {
+        _policeOptions = const [];
+        _reports = await _repository.queryActiveReportsForPolice(
+          idPolicia: actor.requiredPoliceId,
+          filter: _filter,
+        );
+      }
     } catch (error) {
       _errorMessage = error.toString();
     } finally {
@@ -159,13 +177,14 @@ class ReportController extends ChangeNotifier {
     required AuthenticatedUser actor,
     required int idInforme,
   }) async {
-    final report = await _repository.findActiveReportDetail(idInforme);
+    final report = actor.role == AppRole.admin
+        ? await _repository.findActiveReportDetail(idInforme)
+        : await _repository.findActiveReportDetailForPolice(
+            idInforme: idInforme,
+            idPolicia: actor.requiredPoliceId,
+          );
     if (report == null) {
       throw StateError('El informe no existe o esta inactivo.');
-    }
-    if (actor.role == AppRole.police &&
-        report.idPolicia != actor.requiredPoliceId) {
-      throw StateError('El informe no pertenece al policia autenticado.');
     }
     return report;
   }

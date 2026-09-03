@@ -398,6 +398,83 @@ void main() {
     expect(controller.reports.single.idInforme, first.idInforme);
   });
 
+  test('consultas filtran por fecha policia y excluyen inactivos', () async {
+    final admin = _adminSession();
+    final firstPolice = await _createPoliceSession(
+      userRepository,
+      policeRepository,
+      username: 'policia.filtro.uno',
+      plate: 'PL-014',
+    );
+    final secondPolice = await _createPoliceSession(
+      userRepository,
+      policeRepository,
+      username: 'policia.filtro.dos',
+      plate: 'PL-015',
+    );
+    final january = await controller.finalize(
+      actor: firstPolice,
+      draft: _validDraft(fechaHoraHecho: DateTime.utc(2026, 1, 10, 7)),
+      now: DateTime.utc(2026, 1, 10),
+    );
+    final february = await controller.finalize(
+      actor: firstPolice,
+      draft: _validDraft(fechaHoraHecho: DateTime.utc(2026, 2, 5, 7)),
+      now: DateTime.utc(2026, 2, 5),
+    );
+    await controller.finalize(
+      actor: secondPolice,
+      draft: _validDraft(fechaHoraHecho: DateTime.utc(2026, 1, 10, 8)),
+      now: DateTime.utc(2026, 1, 10),
+    );
+    await controller.inactivate(actor: admin, idInforme: february.idInforme);
+
+    await controller.load(
+      admin,
+      filter: ReportQueryFilter(
+        idPolicia: firstPolice.requiredPoliceId,
+        from: DateTime.utc(2026, 1, 10),
+        to: DateTime.utc(2026, 1, 11),
+      ),
+    );
+
+    expect(controller.reports, hasLength(1));
+    expect(controller.reports.single.idInforme, january.idInforme);
+  });
+
+  test('POLICE no puede ampliar consultas con id_policia ajeno', () async {
+    final firstPolice = await _createPoliceSession(
+      userRepository,
+      policeRepository,
+      username: 'policia.scope.uno',
+      plate: 'PL-016',
+    );
+    final secondPolice = await _createPoliceSession(
+      userRepository,
+      policeRepository,
+      username: 'policia.scope.dos',
+      plate: 'PL-017',
+    );
+    await controller.finalize(
+      actor: firstPolice,
+      draft: _validDraft(epi: 'Propio'),
+      now: DateTime.utc(2026),
+    );
+    await controller.finalize(
+      actor: secondPolice,
+      draft: _validDraft(epi: 'Ajeno'),
+      now: DateTime.utc(2026),
+    );
+
+    await controller.load(
+      firstPolice,
+      filter: ReportQueryFilter(idPolicia: secondPolice.requiredPoliceId),
+    );
+
+    expect(controller.reports, hasLength(1));
+    expect(controller.reports.single.idPolicia, firstPolice.requiredPoliceId);
+  });
+
   test('ADMIN consulta todos los activos e inactiva con soft delete', () async {
     final admin = _adminSession();
     final police = await _createPoliceSession(
@@ -485,6 +562,7 @@ void main() {
 DirectActionReportDraft _validDraft({
   String epi = 'EPI Central',
   String lugar = 'Av. Principal',
+  DateTime? fechaHoraHecho,
   double? latitud,
   double? longitud,
   String? rutaCroquis,
@@ -496,7 +574,7 @@ DirectActionReportDraft _validDraft({
   return DirectActionReportDraft(
     epi: epi,
     fechaHoraLlegada: DateTime.utc(2026, 1, 1, 8),
-    fechaHoraHecho: DateTime.utc(2026, 1, 1, 7),
+    fechaHoraHecho: fechaHoraHecho ?? DateTime.utc(2026, 1, 1, 7),
     naturaleza: 'Colision',
     lugar: lugar,
     denuncianteNombre: 'No existe',

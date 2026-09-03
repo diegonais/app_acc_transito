@@ -394,6 +394,88 @@ class PhotoRecord {
   final String? descripcion;
 }
 
+class ReportQueryFilter {
+  const ReportQueryFilter({
+    this.idPolicia,
+    this.from,
+    this.to,
+  });
+
+  final int? idPolicia;
+  final DateTime? from;
+  final DateTime? to;
+
+  ReportQueryFilter copyWith({
+    int? idPolicia,
+    bool clearPolice = false,
+    DateTime? from,
+    bool clearFrom = false,
+    DateTime? to,
+    bool clearTo = false,
+  }) {
+    return ReportQueryFilter(
+      idPolicia: clearPolice ? null : idPolicia ?? this.idPolicia,
+      from: clearFrom ? null : from ?? this.from,
+      to: clearTo ? null : to ?? this.to,
+    );
+  }
+
+  bool get isEmpty => idPolicia == null && from == null && to == null;
+}
+
+class PoliceReportCount {
+  const PoliceReportCount({
+    required this.idPolicia,
+    required this.grado,
+    required this.nombres,
+    required this.apellidos,
+    required this.numeroPlaca,
+    required this.total,
+  });
+
+  final int idPolicia;
+  final String grado;
+  final String nombres;
+  final String apellidos;
+  final String numeroPlaca;
+  final int total;
+
+  String get nombreCompleto => '$nombres $apellidos'.trim();
+  String get displayName => '$grado $nombreCompleto - $numeroPlaca';
+}
+
+class MonthlyReportCount {
+  const MonthlyReportCount({
+    required this.gestion,
+    required this.mes,
+    required this.total,
+  });
+
+  final int gestion;
+  final int mes;
+  final int total;
+}
+
+class DashboardStats {
+  const DashboardStats({
+    required this.totalActiveReports,
+    required this.activePoliceCount,
+    required this.reportsToday,
+    required this.reportsThisMonth,
+    required this.reportsBySelectedDate,
+    required this.reportsByPolice,
+    required this.reportsByMonth,
+  });
+
+  final int totalActiveReports;
+  final int activePoliceCount;
+  final int reportsToday;
+  final int reportsThisMonth;
+  final int reportsBySelectedDate;
+  final List<PoliceReportCount> reportsByPolice;
+  final List<MonthlyReportCount> reportsByMonth;
+}
+
 typedef PersistPhotosForCase = Future<List<PhotoInput>> Function({
   required String numeroCaso,
   required List<PhotoInput> photos,
@@ -534,14 +616,35 @@ class ReportRepository {
   }
 
   Future<List<ReportRecord>> listActiveReportsForAdmin() async {
+    return queryActiveReportsForAdmin();
+  }
+
+  Future<List<ReportRecord>> queryActiveReportsForAdmin({
+    ReportQueryFilter filter = const ReportQueryFilter(),
+  }) async {
     final db = await _database.instance;
-    final rows = await ReportDao(db).findActiveReports();
+    final rows = await ReportDao(db).findActiveReportsFiltered(
+      idPolicia: filter.idPolicia,
+      from: filter.from,
+      to: filter.to,
+    );
     return rows.map(_mapReport).toList(growable: false);
   }
 
   Future<List<ReportRecord>> listActiveReportsForPolice(int idPolicia) async {
+    return queryActiveReportsForPolice(idPolicia: idPolicia);
+  }
+
+  Future<List<ReportRecord>> queryActiveReportsForPolice({
+    required int idPolicia,
+    ReportQueryFilter filter = const ReportQueryFilter(),
+  }) async {
     final db = await _database.instance;
-    final rows = await ReportDao(db).findActiveReportsByPolice(idPolicia);
+    final rows = await ReportDao(db).findActiveReportsFiltered(
+      idPolicia: idPolicia,
+      from: filter.from,
+      to: filter.to,
+    );
     return rows.map(_mapReport).toList(growable: false);
   }
 
@@ -558,6 +661,103 @@ class ReportRepository {
       personas: (await dao.findPeople(idInforme)).map(_mapPerson).toList(),
       fotografias: (await dao.findPhotos(idInforme)).map(_mapPhoto).toList(),
     );
+  }
+
+  Future<ReportRecord?> findActiveReportDetailForPolice({
+    required int idInforme,
+    required int idPolicia,
+  }) async {
+    final db = await _database.instance;
+    final dao = ReportDao(db);
+    final report = await dao.findActiveByIdForPolice(idInforme, idPolicia);
+    if (report == null) {
+      return null;
+    }
+    return _mapReport(report).copyWith(
+      conductores: (await dao.findDrivers(idInforme)).map(_mapDriver).toList(),
+      vehiculos: (await dao.findVehicles(idInforme)).map(_mapVehicle).toList(),
+      personas: (await dao.findPeople(idInforme)).map(_mapPerson).toList(),
+      fotografias: (await dao.findPhotos(idInforme)).map(_mapPhoto).toList(),
+    );
+  }
+
+  Future<DashboardStats> loadAdminDashboard({
+    required DateTime referenceDate,
+    DateTime? selectedDate,
+  }) async {
+    final db = await _database.instance;
+    final dao = ReportDao(db);
+    final todayRange = _dayRange(referenceDate);
+    final monthRange = _monthRange(referenceDate);
+    final selectedRange = _dayRange(selectedDate ?? referenceDate);
+
+    return DashboardStats(
+      totalActiveReports: await dao.countActiveReports(),
+      activePoliceCount: await dao.countActivePolice(),
+      reportsToday: await dao.countActiveReportsFromTo(
+        from: todayRange.$1,
+        to: todayRange.$2,
+      ),
+      reportsThisMonth: await dao.countActiveReportsFromTo(
+        from: monthRange.$1,
+        to: monthRange.$2,
+      ),
+      reportsBySelectedDate: await dao.countActiveReportsFromTo(
+        from: selectedRange.$1,
+        to: selectedRange.$2,
+      ),
+      reportsByPolice: (await dao.countActiveReportsByPolice())
+          .map(_mapPoliceReportCount)
+          .toList(growable: false),
+      reportsByMonth: (await dao.countActiveReportsByMonth())
+          .map(_mapMonthlyReportCount)
+          .toList(growable: false),
+    );
+  }
+
+  Future<DashboardStats> loadPoliceDashboard({
+    required int idPolicia,
+    required DateTime referenceDate,
+    DateTime? selectedDate,
+  }) async {
+    final db = await _database.instance;
+    final dao = ReportDao(db);
+    final todayRange = _dayRange(referenceDate);
+    final monthRange = _monthRange(referenceDate);
+    final selectedRange = _dayRange(selectedDate ?? referenceDate);
+
+    return DashboardStats(
+      totalActiveReports: await dao.countActiveReports(idPolicia: idPolicia),
+      activePoliceCount: 0,
+      reportsToday: await dao.countActiveReportsFromTo(
+        from: todayRange.$1,
+        to: todayRange.$2,
+        idPolicia: idPolicia,
+      ),
+      reportsThisMonth: await dao.countActiveReportsFromTo(
+        from: monthRange.$1,
+        to: monthRange.$2,
+        idPolicia: idPolicia,
+      ),
+      reportsBySelectedDate: await dao.countActiveReportsFromTo(
+        from: selectedRange.$1,
+        to: selectedRange.$2,
+        idPolicia: idPolicia,
+      ),
+      reportsByPolice: const [],
+      reportsByMonth: (await dao.countActiveReportsByMonth(
+        idPolicia: idPolicia,
+      ))
+          .map(_mapMonthlyReportCount)
+          .toList(growable: false),
+    );
+  }
+
+  Future<List<PoliceReportCount>> listPoliceReportCounts() async {
+    final db = await _database.instance;
+    return (await ReportDao(db).countActiveReportsByPolice())
+        .map(_mapPoliceReportCount)
+        .toList(growable: false);
   }
 
   Future<void> inactivateReport({
@@ -736,6 +936,35 @@ class ReportRepository {
       tipo: EvidencePhotoCategory.fromDatabase(row['tipo']! as String),
       descripcion: row['descripcion'] as String?,
     );
+  }
+
+  static PoliceReportCount _mapPoliceReportCount(Map<String, Object?> row) {
+    return PoliceReportCount(
+      idPolicia: row['id_policia']! as int,
+      grado: row['grado']! as String,
+      nombres: row['nombres']! as String,
+      apellidos: row['apellidos']! as String,
+      numeroPlaca: row['numero_placa']! as String,
+      total: row['total']! as int,
+    );
+  }
+
+  static MonthlyReportCount _mapMonthlyReportCount(Map<String, Object?> row) {
+    return MonthlyReportCount(
+      gestion: row['gestion']! as int,
+      mes: row['mes']! as int,
+      total: row['total']! as int,
+    );
+  }
+
+  static (DateTime, DateTime) _dayRange(DateTime date) {
+    final start = DateTime(date.year, date.month, date.day);
+    return (start, start.add(const Duration(days: 1)));
+  }
+
+  static (DateTime, DateTime) _monthRange(DateTime date) {
+    final start = DateTime(date.year, date.month);
+    return (start, DateTime(date.year, date.month + 1));
   }
 
   static int? _boolToInt(bool? value) {

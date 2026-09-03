@@ -1,26 +1,24 @@
-# Estado actual - Fase 8 completada
+# Estado actual - Fase 9 completada
 
 ## Etapa
 
-**Fase 8 - Fotografias y archivos**: finalizada.
+**Fase 9 - Consultas, filtros y dashboard**: finalizada.
 
-La aplicacion mantiene autenticacion local sobre SQLite, gestion de policias
-para `ADMIN` y el flujo de Informes de Accion Directa. La fase actual agrego
-evidencias fotograficas desde camara y galeria, manejo temporal durante el
-formulario, previsualizacion, categorias normalizadas y persistencia definitiva
-por numero de caso.
+La aplicacion mantiene autenticacion local sobre SQLite, gestion de policias,
+registro de Informes de Accion Directa, evidencias fotograficas y soft delete
+de informes. Esta fase agrego dashboard operativo real, consultas filtradas y
+estadisticas locales diferenciadas por rol.
 
-No se implementaron todavia dashboard real, PDF ni QR.
+No se implementaron PDF, QR ni PDF estadistico del dashboard.
 
 ## Dependencias
 
-Dependencias agregadas en esta fase:
-
-- `image_picker`: captura desde camara y seleccion multiple desde galeria.
-- `mime`: identificacion basica del tipo de archivo seleccionado para metadato.
+No se agregaron dependencias en esta fase.
 
 Se mantienen:
 
+- `image_picker`: captura desde camara y seleccion multiple desde galeria.
+- `mime`: identificacion basica del tipo de archivo seleccionado para metadato.
 - `geolocator`: permisos, estado del servicio de ubicacion y latitud/longitud.
 - `flutter_map`: croquis cartografico sencillo con OpenStreetMap.
 - `latlong2`: modelo de coordenadas usado por `flutter_map`.
@@ -31,59 +29,88 @@ Se mantienen:
 - `path`: construccion portable de rutas.
 - `sqflite_common_ffi`: SQLite real en memoria para pruebas.
 
-## Informe de Accion Directa
+## Dashboard y consultas
 
 Implementado:
+
+- Dashboard `ADMIN` con:
+  - total de informes activos;
+  - cantidad de policias activos;
+  - informes por policia;
+  - informes del dia;
+  - informes del mes;
+  - informes por fecha seleccionada;
+  - resumen de informes por mes.
+- Dashboard `POLICE` con:
+  - total propio de informes activos;
+  - indicadores propios del dia;
+  - indicadores propios del mes;
+  - indicador propio por fecha seleccionada;
+  - resumen mensual propio.
+- Las estadisticas se calculan siempre desde SQLite.
+- No existen tablas de contadores ni totales duplicados persistidos.
+- EPI se conserva como dato del informe, pero no se agrego como filtro del
+  dashboard.
+- La pantalla de informes permite consultar activos:
+  - todos para `ADMIN`;
+  - por policia para `ADMIN`;
+  - por rango de fechas;
+  - solo propios para `POLICE`.
+- El detalle de informe permanece en modo lectura.
+- La UI incluye cards, loading, error, empty y estado sin coincidencias.
+
+## Seguridad por rol
+
+- `ADMIN` puede consultar todos los informes activos e inactivar informes.
+- `POLICE` puede registrar informes y consultar solamente sus informes activos.
+- La restriccion por rol existe en controlador y repositorio:
+  - las consultas `POLICE` fuerzan `id_policia` desde la sesion autenticada;
+  - el filtro recibido no puede ampliar el alcance a informes ajenos;
+  - el detalle `POLICE` se resuelve con `id_informe`, `id_policia` y
+    `estado = 1` en la consulta.
+- Un informe inactivo no se muestra, no se cuenta y no puede abrirse desde la
+  consulta normal.
+
+## Informe de Accion Directa
+
+Se mantiene:
 
 - Ruta `/reports` accesible desde el dashboard.
 - `POLICE` puede registrar informes nuevos.
 - `ADMIN` consulta informes activos del dispositivo.
 - `POLICE` consulta solamente sus informes activos.
-- Formulario por secciones con estado en memoria, incluyendo evidencias
-  fotograficas temporales.
-- La seccion de coordenadas conserva GPS, croquis OSM, captura PNG opcional y
-  apertura externa de mapas.
-- La seccion de fotografias permite agregar evidencias desde camara y galeria.
-- Cada fotografia se previsualiza como miniatura y permite cambiar categoria.
-- Categorias centralizadas: `PANORAMICA`, `LICENCIA`, `PLACA`, `OTRA`.
-- Las fotografias pueden quitarse antes de finalizar; al quitarlas se limpian
-  temporales propios de la app cuando corresponde.
-- Si el usuario cancela el informe, se descarta el estado en memoria y se
-  eliminan las evidencias temporales creadas por la app.
-- Si un archivo temporal falta, la UI muestra archivo inexistente y la
-  finalizacion falla sin crear informe ni metadatos huerfanos.
+- Formulario por secciones con estado en memoria y evidencias fotograficas
+  temporales.
+- Coordenadas, croquis OSM, captura PNG opcional y apertura externa de mapas.
+- Fotografias desde camara y galeria, con categorias `PANORAMICA`,
+  `LICENCIA`, `PLACA`, `OTRA`.
 - No existen borradores persistidos.
 - `Finalizar informe` valida obligatorios y persiste definitivamente.
-- Despues de finalizar, el detalle se abre en modo lectura y muestra las
-  fotografias persistidas o estado de archivo inexistente.
+- El informe finalizado es inmutable y se abre en modo lectura.
 - No existe edicion posterior del informe finalizado.
 
 ## Persistencia
 
-- Version de esquema SQLite actual: `2`.
-- No se requirio migracion nueva: la tabla `fotografias` ya existia con
-  `id_informe`, `ruta`, `tipo`, `descripcion` y `fecha_creacion`.
+- Version de esquema SQLite actual: `3`.
+- Se agrego migracion versionada para indices de consultas por fecha:
+  `idx_informes_estado_fecha_hecho` e
+  `idx_informes_estado_policia_fecha_hecho`.
 - `PRAGMA foreign_keys = ON` se mantiene habilitado.
 - `Finalizar informe` usa transaccion SQLite.
 - Informe, conductores, vehiculos, relaciones, personas y fotografias se
   persisten como una sola unidad.
-- Antes de insertar metadatos de fotografias, el correlativo se calcula dentro
-  de la transaccion y se obtiene `numero_caso`.
-- Las fotografias se copian desde el area temporal propia de la app a
-  almacenamiento persistente bajo `reports/NUMERO_CASO/images/`.
-- Los nombres persistentes son seguros y se basan en numero de caso, orden y
-  categoria.
-- SQLite guarda rutas/metadatos; nunca bytes ni BLOB.
-- Si falla una operacion persistente, SQLite revierte la transaccion completa y
-  se intenta limpiar cualquier fotografia persistente creada en ese intento.
-- El informe se guarda asociado automaticamente al `id_policia` autenticado.
+- El correlativo se calcula dentro de la transaccion considerando activos e
+  inactivos.
+- SQLite guarda rutas/metadatos de archivos; nunca bytes ni BLOB.
 - Todo informe nuevo queda con `estado = 1`.
 - Correlativo por gestion con formato `AAAA-NNNNNN`.
-- Consultas de aplicacion filtran `estado = 1`.
+- Consultas, filtros y estadisticas de aplicacion filtran `estado = 1`.
 - `ADMIN` puede inactivar informes con confirmacion.
 - Inactivar solo cambia `estado` y conserva contenido, relaciones y archivos.
 - No existe vista de inactivos ni reactivacion en UI.
-- No se crean registros huerfanos durante el llenado del formulario.
+- Se usan consultas parametrizadas.
+- Se mantienen indices previos sobre `informes(id_policia)` e
+  `informes(estado)`.
 
 ## Servicios
 
@@ -108,8 +135,7 @@ Implementado:
 
 - `CAMERA` permanece declarado para captura desde camara.
 - No se agregaron permisos amplios de almacenamiento.
-- Para galeria se usa `image_picker`/selector del sistema, solicitando solo lo
-  necesario segun la version Android objetivo.
+- Para galeria se usa `image_picker`/selector del sistema.
 - `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION` e `INTERNET` se conservan por
   GPS y cartografia.
 
@@ -126,19 +152,18 @@ Comandos ejecutados:
 Pruebas agregadas o actualizadas:
 
 - `test/features/reports/report_controller_test.dart`
-  - finaliza varias fotografias persistidas con categorias;
-  - valida relacion correcta de fotografias con `id_informe`;
-  - archivo fotografico inexistente evita crear informe y metadatos.
-- `test/services/evidence_media_service_test.dart`
-  - copia imagen seleccionada al area temporal propia;
-  - persiste evidencias bajo `reports/NUMERO_CASO/images/`;
-  - genera nombres seguros por caso, orden y categoria;
-  - limpia temporales al persistir y al cancelar;
-  - falla claramente cuando el archivo fuente no existe.
+  - consulta por fecha y policia;
+  - exclusion de informes inactivos;
+  - aislamiento de rol cuando `POLICE` intenta usar un `id_policia` ajeno.
 - `test/data/database/persistence_test.dart`
-  - mantiene creacion de BD versionada con `fotografias`;
-  - inserta metadatos fotograficos como rutas;
-  - conserva fotografias tras inactivar informe.
+  - totales de dashboard;
+  - informes por dia, mes y fecha seleccionada;
+  - informes por policia, incluyendo policia activo sin informes activos;
+  - indicadores propios de `POLICE`;
+  - resultados vacios;
+  - detalle restringido por `id_policia`.
+- `test/app_startup_test.dart`
+  - rutas actualizadas con el controlador real de dashboard.
 
 ## Pruebas fisicas pendientes
 
@@ -155,19 +180,15 @@ Requieren dispositivo Android real:
   almacenamiento interno de la app.
 - Confirmar que las rutas persistidas no apuntan a cache/temporales.
 - Inactivar informe y confirmar que fotografias/metadatos se conservan.
+- Probar dashboard y filtros en dispositivo con datos reales.
 - Repetir validaciones fisicas pendientes de GPS, mapa, croquis PNG y apertura
   externa de coordenadas.
 
 ## Problemas conocidos
 
 - No se probo en dispositivo Android fisico en esta fase.
-- `flutter pub add image_picker` resolvio dependencias pero Windows mostro el
-  aviso de Developer Mode/symlinks para plugins; `flutter analyze` y
-  `flutter test` se ejecutaron correctamente.
-- El dashboard sigue siendo minimo; los indicadores reales quedan para fase
-  posterior.
 - PDF y QR siguen pendientes para fases posteriores.
 
 ## Siguiente fase
 
-**Fase 9.**
+**Fase 10.**
