@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import '../../app/routes/app_routes.dart';
 import '../../data/repositories/report_repository.dart';
+import '../../services/external_apps/external_maps_service.dart';
+import '../../services/geolocation/geolocation_service.dart';
+import '../../services/maps/map_snapshot_service.dart';
+import '../../services/maps/simple_sketch_map.dart';
 import '../../shared/scaffold_shell.dart';
 import '../../shared/ui/app_button.dart';
 import '../../shared/ui/app_state_view.dart';
@@ -11,9 +16,21 @@ import '../auth/domain/authenticated_user.dart';
 import 'application/report_controller.dart';
 
 class ReportListPage extends StatefulWidget {
-  const ReportListPage({super.key, required this.controller});
+  const ReportListPage({
+    super.key,
+    required this.controller,
+    GeolocationService? geolocationService,
+    MapSnapshotService? mapSnapshotService,
+    ExternalMapsService? externalMapsService,
+  })  : geolocationService = geolocationService ?? const GeolocationService(),
+        mapSnapshotService = mapSnapshotService ?? const MapSnapshotService(),
+        externalMapsService =
+            externalMapsService ?? const ExternalMapsService();
 
   final ReportController controller;
+  final GeolocationService geolocationService;
+  final MapSnapshotService mapSnapshotService;
+  final ExternalMapsService externalMapsService;
 
   @override
   State<ReportListPage> createState() => _ReportListPageState();
@@ -108,6 +125,9 @@ class _ReportListPageState extends State<ReportListPage> {
         builder: (_) => DirectActionReportFormPage(
           controller: widget.controller,
           actor: user,
+          geolocationService: widget.geolocationService,
+          mapSnapshotService: widget.mapSnapshotService,
+          externalMapsService: widget.externalMapsService,
         ),
       ),
     );
@@ -127,6 +147,7 @@ class _ReportListPageState extends State<ReportListPage> {
           controller: widget.controller,
           actor: user,
           idInforme: idInforme,
+          externalMapsService: widget.externalMapsService,
         ),
       ),
     );
@@ -315,10 +336,16 @@ class DirectActionReportFormPage extends StatefulWidget {
     super.key,
     required this.controller,
     required this.actor,
+    required this.geolocationService,
+    required this.mapSnapshotService,
+    required this.externalMapsService,
   });
 
   final ReportController controller;
   final AuthenticatedUser actor;
+  final GeolocationService geolocationService;
+  final MapSnapshotService mapSnapshotService;
+  final ExternalMapsService externalMapsService;
 
   @override
   State<DirectActionReportFormPage> createState() =>
@@ -328,6 +355,7 @@ class DirectActionReportFormPage extends StatefulWidget {
 class _DirectActionReportFormPageState
     extends State<DirectActionReportFormPage> {
   final _formKey = GlobalKey<FormState>();
+  final _mapBoundaryKey = GlobalKey();
   final _epi = TextEditingController();
   final _llegada = TextEditingController();
   final _hecho = TextEditingController();
@@ -351,7 +379,11 @@ class _DirectActionReportFormPageState
   bool? _vehiculosMovidos;
   bool? _protagonistasPresentes;
   bool _isSubmitting = false;
+  bool _isLocating = false;
+  bool _isCapturingSketch = false;
   String? _errorMessage;
+  String? _geoMessage;
+  String? _mapMessage;
 
   @override
   void dispose() {
@@ -462,6 +494,43 @@ class _DirectActionReportFormPageState
               _Section(
                 title: 'Coordenadas y croquis',
                 children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _isLocating ? null : _locateIncident,
+                        icon: _isLocating
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.my_location_outlined),
+                        label: Text(
+                          _isLocating
+                              ? 'Obteniendo ubicacion'
+                              : 'Obtener ubicacion',
+                        ),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _hasCoordinates
+                            ? () => _openCoordinatesExternally(
+                                  _currentLatitude!,
+                                  _currentLongitude!,
+                                )
+                            : null,
+                        icon: const Icon(Icons.map_outlined),
+                        label: const Text('Abrir en mapas'),
+                      ),
+                    ],
+                  ),
+                  if (_geoMessage != null) ...[
+                    const SizedBox(height: 8),
+                    _InlineNotice(message: _geoMessage!),
+                  ],
+                  const SizedBox(height: 12),
                   _field(
                     _latitud,
                     'Latitud',
@@ -482,7 +551,54 @@ class _DirectActionReportFormPageState
                     _rutaCroquis,
                     'Ruta de croquis',
                     required: false,
+                    readOnly: true,
                   ),
+                  if (_hasCoordinates) ...[
+                    RepaintBoundary(
+                      key: _mapBoundaryKey,
+                      child: SimpleSketchMap(
+                        latitude: _currentLatitude!,
+                        longitude: _currentLongitude!,
+                        onTileErrorChanged: (hasError) {
+                          if (mounted) {
+                            setState(() {
+                              _mapMessage = hasError
+                                  ? 'La cartografia no cargo correctamente. Las coordenadas se conservan y el informe puede finalizarse.'
+                                  : null;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Mover el mapa solo cambia el encuadre; las coordenadas registradas no se modifican.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    if (_mapMessage != null) ...[
+                      const SizedBox(height: 8),
+                      _InlineNotice(message: _mapMessage!),
+                    ],
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: _isCapturingSketch ? null : _captureSketchMap,
+                      icon: _isCapturingSketch
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.image_outlined),
+                      label: Text(
+                        _isCapturingSketch
+                            ? 'Preparando croquis'
+                            : 'Preparar PNG para PDF',
+                      ),
+                    ),
+                  ] else
+                    const _InlineNotice(
+                      message:
+                          'Sin coordenadas registradas. Puede finalizar el informe conservando el lugar textual.',
+                    ),
                 ],
               ),
               _RelationSection(
@@ -598,6 +714,13 @@ class _DirectActionReportFormPageState
     );
   }
 
+  bool get _hasCoordinates =>
+      _currentLatitude != null && _currentLongitude != null;
+
+  double? get _currentLatitude => _tryParseOptionalDouble(_latitud.text);
+
+  double? get _currentLongitude => _tryParseOptionalDouble(_longitud.text);
+
   Future<void> _finalize() async {
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
@@ -607,6 +730,9 @@ class _DirectActionReportFormPageState
       _errorMessage = null;
     });
     try {
+      if (_hasCoordinates && _rutaCroquis.text.trim().isEmpty) {
+        await _captureSketchMap(showSuccessMessage: false);
+      }
       final finalized = await widget.controller.finalize(
         actor: widget.actor,
         draft: _draft,
@@ -627,6 +753,97 @@ class _DirectActionReportFormPageState
         });
       }
     }
+  }
+
+  Future<void> _locateIncident() async {
+    setState(() {
+      _isLocating = true;
+      _geoMessage = null;
+      _errorMessage = null;
+    });
+    final result = await widget.geolocationService.currentCoordinates();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _isLocating = false;
+      _geoMessage = result.message;
+      if (result.hasCoordinates) {
+        _latitud.text = result.latitude!.toStringAsFixed(7);
+        _longitud.text = result.longitude!.toStringAsFixed(7);
+        _rutaCroquis.clear();
+        _mapMessage = null;
+      }
+    });
+  }
+
+  Future<void> _captureSketchMap({bool showSuccessMessage = true}) async {
+    if (!_hasCoordinates) {
+      setState(() {
+        _mapMessage =
+            'No hay coordenadas para preparar el croquis. El informe puede finalizarse sin PNG.';
+      });
+      return;
+    }
+    setState(() {
+      _isCapturingSketch = true;
+      _mapMessage = null;
+    });
+    try {
+      await WidgetsBinding.instance.endOfFrame;
+      final context = _mapBoundaryKey.currentContext;
+      final boundary = context?.findRenderObject() as RenderRepaintBoundary?;
+      final path = await widget.mapSnapshotService.saveBoundaryAsPng(
+        boundary,
+        fileNamePrefix: 'croquis_${widget.actor.requiredPoliceId}',
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        if (path == null) {
+          _mapMessage =
+              'No se pudo preparar el PNG del croquis. El informe puede finalizarse conservando las coordenadas.';
+        } else {
+          _rutaCroquis.text = path;
+          _mapMessage = showSuccessMessage
+              ? 'Croquis PNG preparado para PDF.'
+              : _mapMessage;
+        }
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _mapMessage =
+            'No se pudo preparar el PNG del croquis: $error. El informe puede finalizarse conservando las coordenadas.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCapturingSketch = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _openCoordinatesExternally(
+    double latitude,
+    double longitude,
+  ) async {
+    final opened = await widget.externalMapsService.openCoordinates(
+      latitude: latitude,
+      longitude: longitude,
+    );
+    if (!mounted || opened) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('No se encontro una aplicacion compatible de mapas.'),
+      ),
+    );
   }
 
   Future<void> _cancel() async {
@@ -787,11 +1004,13 @@ class ReportDetailPage extends StatefulWidget {
     required this.controller,
     required this.actor,
     required this.idInforme,
+    required this.externalMapsService,
   });
 
   final ReportController controller;
   final AuthenticatedUser actor;
   final int idInforme;
+  final ExternalMapsService externalMapsService;
 
   @override
   State<ReportDetailPage> createState() => _ReportDetailPageState();
@@ -877,6 +1096,22 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                   'Ruta de croquis': report.rutaCroquis,
                 },
               ),
+              if (report.latitud != null && report.longitud != null) ...[
+                SimpleSketchMap(
+                  latitude: report.latitud!,
+                  longitude: report.longitud!,
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () => _openCoordinatesExternally(report),
+                  icon: const Icon(Icons.map_outlined),
+                  label: const Text('Abrir coordenadas en mapas'),
+                ),
+              ] else
+                const _InlineNotice(
+                  message:
+                      'Este informe no tiene coordenadas registradas; se conserva el lugar textual.',
+                ),
               _ReadOnlyList(
                 title: 'Conductores',
                 values: report.conductores
@@ -908,6 +1143,21 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
       ),
     );
   }
+
+  Future<void> _openCoordinatesExternally(ReportRecord report) async {
+    final opened = await widget.externalMapsService.openCoordinates(
+      latitude: report.latitud!,
+      longitude: report.longitud!,
+    );
+    if (!mounted || opened) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('No se encontro una aplicacion compatible de mapas.'),
+      ),
+    );
+  }
 }
 
 class _Section extends StatelessWidget {
@@ -932,6 +1182,40 @@ class _Section extends StatelessWidget {
           const SizedBox(height: 12),
           ...children,
         ],
+      ),
+    );
+  }
+}
+
+class _InlineNotice extends StatelessWidget {
+  const _InlineNotice({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border.all(color: colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.info_outline_rounded,
+              color: colorScheme.primary,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
       ),
     );
   }
@@ -1371,6 +1655,7 @@ Widget _field(
   TextEditingController controller,
   String label, {
   bool required = true,
+  bool readOnly = false,
   int maxLines = 1,
   String? helperText,
   TextInputType? keyboardType,
@@ -1380,6 +1665,7 @@ Widget _field(
     padding: const EdgeInsets.only(bottom: 12),
     child: TextFormField(
       controller: controller,
+      readOnly: readOnly,
       maxLines: maxLines,
       keyboardType: keyboardType,
       decoration: InputDecoration(
@@ -1523,6 +1809,11 @@ String? _validateRequiredInt(String? value) {
 double? _parseOptionalDouble(String value) {
   final text = value.trim();
   return text.isEmpty ? null : double.parse(text);
+}
+
+double? _tryParseOptionalDouble(String value) {
+  final text = value.trim();
+  return text.isEmpty ? null : double.tryParse(text);
 }
 
 int? _parseOptionalInt(String value) {

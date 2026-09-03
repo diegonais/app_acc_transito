@@ -94,6 +94,58 @@ void main() {
     expect(detail.descripcion, 'Descripcion del hecho');
   });
 
+  test('GPS fallido no bloquea finalizacion y conserva lugar textual',
+      () async {
+    final police = await _createPoliceSession(
+      userRepository,
+      policeRepository,
+      username: 'policia.sin.gps',
+      plate: 'PL-010',
+    );
+
+    final finalized = await controller.finalize(
+      actor: police,
+      draft: _validDraft(lugar: 'Interseccion textual confirmada'),
+      now: DateTime.utc(2026, 5, 4),
+    );
+
+    final detail = await controller.findReadableDetail(
+      actor: police,
+      idInforme: finalized.idInforme,
+    );
+    expect(detail.lugar, 'Interseccion textual confirmada');
+    expect(detail.latitud, isNull);
+    expect(detail.longitud, isNull);
+    expect(detail.rutaCroquis, isNull);
+  });
+
+  test('persiste coordenadas y ruta PNG del croquis', () async {
+    final police = await _createPoliceSession(
+      userRepository,
+      policeRepository,
+      username: 'policia.mapa',
+      plate: 'PL-011',
+    );
+
+    final finalized = await controller.finalize(
+      actor: police,
+      draft: _validDraft(
+        latitud: -17.783327,
+        longitud: -63.182140,
+        rutaCroquis: '/documentos/croquis/croquis_2026_000001.png',
+      ),
+      now: DateTime.utc(2026, 5, 5),
+    );
+
+    final detail = await controller.findReadableDetail(
+      actor: police,
+      idInforme: finalized.idInforme,
+    );
+    expect(detail.latitud, -17.783327);
+    expect(detail.longitud, -63.182140);
+    expect(detail.rutaCroquis, '/documentos/croquis/croquis_2026_000001.png');
+  });
+
   test('finaliza varios conductores, vehiculos relacionados y personas',
       () async {
     final police = await _createPoliceSession(
@@ -337,6 +389,10 @@ void main() {
 
 DirectActionReportDraft _validDraft({
   String epi = 'EPI Central',
+  String lugar = 'Av. Principal',
+  double? latitud,
+  double? longitud,
+  String? rutaCroquis,
   List<DriverInput>? conductores,
   List<VehicleInput>? vehiculos,
   List<PersonInput>? personas,
@@ -346,7 +402,7 @@ DirectActionReportDraft _validDraft({
     fechaHoraLlegada: DateTime.utc(2026, 1, 1, 8),
     fechaHoraHecho: DateTime.utc(2026, 1, 1, 7),
     naturaleza: 'Colision',
-    lugar: 'Av. Principal',
+    lugar: lugar,
     denuncianteNombre: 'No existe',
     denuncianteDocumento: '',
     denuncianteContacto: 'No existe',
@@ -356,6 +412,9 @@ DirectActionReportDraft _validDraft({
     protagonistasPresentes: true,
     testigos: 'No existe',
     efectosPersonales: 'No aplica',
+    latitud: latitud,
+    longitud: longitud,
+    rutaCroquis: rutaCroquis,
     conductores: conductores ??
         const [
           DriverInput(
