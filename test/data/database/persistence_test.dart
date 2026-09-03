@@ -2,6 +2,7 @@ import 'package:app_acc_transito/data/database/app_database.dart';
 import 'package:app_acc_transito/data/repositories/police_repository.dart';
 import 'package:app_acc_transito/data/repositories/report_repository.dart';
 import 'package:app_acc_transito/data/repositories/user_repository.dart';
+import 'package:app_acc_transito/services/media/evidence_photo.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -76,7 +77,10 @@ void main() {
           PersonInput(nombre: 'Maria Rojas', edad: 30, tipo: 'HERIDO'),
         ],
         fotografias: const [
-          PhotoInput(ruta: '/evidencias/foto-1.jpg', tipo: 'PANORAMICA'),
+          PhotoInput(
+            ruta: '/evidencias/foto-1.jpg',
+            tipo: EvidencePhotoCategory.panoramica,
+          ),
         ],
       ),
       now: DateTime.utc(2026),
@@ -237,7 +241,10 @@ void main() {
         idPolicia: idPolicia,
         epi: 'EPI Activo',
         fotografias: const [
-          PhotoInput(ruta: '/evidencias/activa.jpg', tipo: 'OTRA'),
+          PhotoInput(
+            ruta: '/evidencias/activa.jpg',
+            tipo: EvidencePhotoCategory.otra,
+          ),
         ],
       ),
       now: DateTime.utc(2026),
@@ -247,7 +254,10 @@ void main() {
         idPolicia: idPolicia,
         epi: 'EPI Inactivo',
         fotografias: const [
-          PhotoInput(ruta: '/evidencias/inactiva.jpg', tipo: 'PLACA'),
+          PhotoInput(
+            ruta: '/evidencias/inactiva.jpg',
+            tipo: EvidencePhotoCategory.placa,
+          ),
         ],
       ),
       now: DateTime.utc(2026),

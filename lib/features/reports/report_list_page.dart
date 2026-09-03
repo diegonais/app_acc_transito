@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
@@ -7,6 +9,8 @@ import '../../services/external_apps/external_maps_service.dart';
 import '../../services/geolocation/geolocation_service.dart';
 import '../../services/maps/map_snapshot_service.dart';
 import '../../services/maps/simple_sketch_map.dart';
+import '../../services/media/evidence_media_service.dart';
+import '../../services/media/evidence_photo.dart';
 import '../../shared/scaffold_shell.dart';
 import '../../shared/ui/app_button.dart';
 import '../../shared/ui/app_state_view.dart';
@@ -16,21 +20,24 @@ import '../auth/domain/authenticated_user.dart';
 import 'application/report_controller.dart';
 
 class ReportListPage extends StatefulWidget {
-  const ReportListPage({
+  ReportListPage({
     super.key,
     required this.controller,
     GeolocationService? geolocationService,
     MapSnapshotService? mapSnapshotService,
     ExternalMapsService? externalMapsService,
+    EvidenceMediaService? evidenceMediaService,
   })  : geolocationService = geolocationService ?? const GeolocationService(),
         mapSnapshotService = mapSnapshotService ?? const MapSnapshotService(),
         externalMapsService =
-            externalMapsService ?? const ExternalMapsService();
+            externalMapsService ?? const ExternalMapsService(),
+        evidenceMediaService = evidenceMediaService ?? EvidenceMediaService();
 
   final ReportController controller;
   final GeolocationService geolocationService;
   final MapSnapshotService mapSnapshotService;
   final ExternalMapsService externalMapsService;
+  final EvidenceMediaService evidenceMediaService;
 
   @override
   State<ReportListPage> createState() => _ReportListPageState();
@@ -128,6 +135,7 @@ class _ReportListPageState extends State<ReportListPage> {
           geolocationService: widget.geolocationService,
           mapSnapshotService: widget.mapSnapshotService,
           externalMapsService: widget.externalMapsService,
+          evidenceMediaService: widget.evidenceMediaService,
         ),
       ),
     );
@@ -339,6 +347,7 @@ class DirectActionReportFormPage extends StatefulWidget {
     required this.geolocationService,
     required this.mapSnapshotService,
     required this.externalMapsService,
+    required this.evidenceMediaService,
   });
 
   final ReportController controller;
@@ -346,6 +355,7 @@ class DirectActionReportFormPage extends StatefulWidget {
   final GeolocationService geolocationService;
   final MapSnapshotService mapSnapshotService;
   final ExternalMapsService externalMapsService;
+  final EvidenceMediaService evidenceMediaService;
 
   @override
   State<DirectActionReportFormPage> createState() =>
@@ -374,6 +384,7 @@ class _DirectActionReportFormPageState
   final _conductores = <DriverInput>[];
   final _vehiculos = <VehicleInput>[];
   final _personas = <PersonInput>[];
+  final _fotografias = <PhotoInput>[];
   DateTime? _fechaHoraLlegada;
   DateTime? _fechaHoraHecho;
   bool? _vehiculosMovidos;
@@ -381,9 +392,11 @@ class _DirectActionReportFormPageState
   bool _isSubmitting = false;
   bool _isLocating = false;
   bool _isCapturingSketch = false;
+  bool _isPickingPhoto = false;
   String? _errorMessage;
   String? _geoMessage;
   String? _mapMessage;
+  String? _photoMessage;
 
   @override
   void dispose() {
@@ -601,6 +614,55 @@ class _DirectActionReportFormPageState
                     ),
                 ],
               ),
+              _Section(
+                title: 'Fotografias y archivos',
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _isPickingPhoto
+                            ? null
+                            : () => _addPhotoFromCamera(),
+                        icon: _isPickingPhoto
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.photo_camera_outlined),
+                        label: const Text('Camara'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _isPickingPhoto
+                            ? null
+                            : () => _addPhotosFromGallery(),
+                        icon: const Icon(Icons.photo_library_outlined),
+                        label: const Text('Galeria'),
+                      ),
+                    ],
+                  ),
+                  if (_photoMessage != null) ...[
+                    const SizedBox(height: 8),
+                    _InlineNotice(message: _photoMessage!),
+                  ],
+                  const SizedBox(height: 12),
+                  if (_fotografias.isEmpty)
+                    const Text('No existen fotografias agregadas.')
+                  else
+                    _PhotoGrid(
+                      photos: _fotografias,
+                      onCategoryChanged: (index, category) => setState(() {
+                        _fotografias[index] = _fotografias[index].copyWith(
+                          tipo: category,
+                        );
+                      }),
+                      onRemove: _removePhoto,
+                    ),
+                ],
+              ),
               _RelationSection(
                 title: 'Conductores',
                 emptyText: 'No existen conductores registrados.',
@@ -711,6 +773,7 @@ class _DirectActionReportFormPageState
       conductores: List.unmodifiable(_conductores),
       vehiculos: List.unmodifiable(_vehiculos),
       personas: List.unmodifiable(_personas),
+      fotografias: List.unmodifiable(_fotografias),
     );
   }
 
@@ -736,6 +799,10 @@ class _DirectActionReportFormPageState
       final finalized = await widget.controller.finalize(
         actor: widget.actor,
         draft: _draft,
+        persistPhotosForCase:
+            widget.evidenceMediaService.persistPhotosForReport,
+        cleanupPersistedPhotos:
+            widget.evidenceMediaService.cleanupPersistentPhotos,
       );
       if (mounted) {
         Navigator.of(context).pop(finalized);
@@ -871,6 +938,7 @@ class _DirectActionReportFormPageState
       ),
     );
     if (confirmed == true && mounted) {
+      await widget.evidenceMediaService.cleanupTemporaryPhotos(_fotografias);
       _clearDraft();
       Navigator.of(context).pop();
     }
@@ -895,10 +963,65 @@ class _DirectActionReportFormPageState
     _conductores.clear();
     _vehiculos.clear();
     _personas.clear();
+    _fotografias.clear();
     _fechaHoraLlegada = null;
     _fechaHoraHecho = null;
     _vehiculosMovidos = null;
     _protagonistasPresentes = null;
+    _photoMessage = null;
+  }
+
+  Future<void> _addPhotoFromCamera() async {
+    await _pickPhotos(() async {
+      final photo = await widget.evidenceMediaService.takePhoto();
+      return photo == null ? const <PhotoInput>[] : [photo];
+    });
+  }
+
+  Future<void> _addPhotosFromGallery() async {
+    await _pickPhotos(widget.evidenceMediaService.pickFromGallery);
+  }
+
+  Future<void> _pickPhotos(Future<List<PhotoInput>> Function() picker) async {
+    setState(() {
+      _isPickingPhoto = true;
+      _photoMessage = null;
+      _errorMessage = null;
+    });
+    try {
+      final photos = await picker();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _fotografias.addAll(photos);
+        _photoMessage = photos.isEmpty
+            ? 'No se seleccionaron fotografias.'
+            : 'Fotografias agregadas al formulario. Se guardaran definitivamente al finalizar.';
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _photoMessage =
+            'No se pudo acceder a la camara o galeria: $error. Revise permisos del dispositivo.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPickingPhoto = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _removePhoto(int index) async {
+    final removed = _fotografias.removeAt(index);
+    setState(() {
+      _photoMessage = 'Fotografia quitada del formulario.';
+    });
+    await widget.evidenceMediaService.cleanupTemporaryPhotos([removed]);
   }
 
   Future<void> _addDriver() async {
@@ -1137,6 +1260,12 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                     .map((person) => '${person.tipo}: ${person.nombre}')
                     .toList(),
               ),
+              _Section(
+                title: 'Fotografias',
+                children: [
+                  _ReadOnlyPhotoGrid(photos: report.fotografias),
+                ],
+              ),
             ],
           );
         },
@@ -1254,6 +1383,178 @@ class _RelationSection extends StatelessWidget {
           label: const Text('Agregar'),
         ),
       ],
+    );
+  }
+}
+
+class _PhotoGrid extends StatelessWidget {
+  const _PhotoGrid({
+    required this.photos,
+    required this.onCategoryChanged,
+    required this.onRemove,
+  });
+
+  final List<PhotoInput> photos;
+  final void Function(int index, EvidencePhotoCategory category)
+      onCategoryChanged;
+  final Future<void> Function(int index) onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: photos.length,
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 260,
+        mainAxisExtent: 260,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemBuilder: (context, index) {
+        final photo = photos[index];
+        final file = File(photo.ruta);
+        final exists = file.existsSync();
+        return Card(
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: exists
+                    ? Image.file(
+                        file,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const _PhotoProblem(
+                          message: 'No se pudo mostrar la imagen.',
+                        ),
+                      )
+                    : const _PhotoProblem(
+                        message: 'Archivo inexistente.',
+                      ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                child: DropdownButtonFormField<EvidencePhotoCategory>(
+                  initialValue: photo.tipo,
+                  decoration: const InputDecoration(
+                    labelText: 'Categoria',
+                    isDense: true,
+                  ),
+                  items: EvidencePhotoCategory.values
+                      .map(
+                        (category) => DropdownMenuItem(
+                          value: category,
+                          child: Text(category.label),
+                        ),
+                      )
+                      .toList(growable: false),
+                  onChanged: (category) {
+                    if (category != null) {
+                      onCategoryChanged(index, category);
+                    }
+                  },
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: IconButton(
+                  tooltip: 'Quitar fotografia',
+                  onPressed: () => onRemove(index),
+                  icon: const Icon(Icons.delete_outline_rounded),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ReadOnlyPhotoGrid extends StatelessWidget {
+  const _ReadOnlyPhotoGrid({required this.photos});
+
+  final List<PhotoRecord> photos;
+
+  @override
+  Widget build(BuildContext context) {
+    if (photos.isEmpty) {
+      return const Text('No existe.');
+    }
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: photos.length,
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 260,
+        mainAxisExtent: 228,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemBuilder: (context, index) {
+        final photo = photos[index];
+        final file = File(photo.ruta);
+        final exists = file.existsSync();
+        return Card(
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: exists
+                    ? Image.file(
+                        file,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const _PhotoProblem(
+                          message: 'No se pudo mostrar la imagen.',
+                        ),
+                      )
+                    : const _PhotoProblem(
+                        message: 'Archivo inexistente.',
+                      ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: Text(
+                  '${photo.tipo.label}\n${photo.ruta}',
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PhotoProblem extends StatelessWidget {
+  const _PhotoProblem({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.broken_image_outlined),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

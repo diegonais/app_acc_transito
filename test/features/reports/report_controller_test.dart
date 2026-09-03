@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:app_acc_transito/data/database/app_database.dart';
 import 'package:app_acc_transito/data/repositories/police_repository.dart';
 import 'package:app_acc_transito/data/repositories/report_repository.dart';
@@ -5,6 +7,7 @@ import 'package:app_acc_transito/data/repositories/user_repository.dart';
 import 'package:app_acc_transito/features/auth/domain/app_role.dart';
 import 'package:app_acc_transito/features/auth/domain/authenticated_user.dart';
 import 'package:app_acc_transito/features/reports/application/report_controller.dart';
+import 'package:app_acc_transito/services/media/evidence_photo.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -144,6 +147,98 @@ void main() {
     expect(detail.latitud, -17.783327);
     expect(detail.longitud, -63.182140);
     expect(detail.rutaCroquis, '/documentos/croquis/croquis_2026_000001.png');
+  });
+
+  test('finaliza fotografias persistidas con categorias y relacion al informe',
+      () async {
+    final police = await _createPoliceSession(
+      userRepository,
+      policeRepository,
+      username: 'policia.fotos',
+      plate: 'PL-012',
+    );
+
+    final finalized = await controller.finalize(
+      actor: police,
+      draft: _validDraft(
+        fotografias: const [
+          PhotoInput(
+            ruta: '/tmp/foto-a.jpg',
+            tipo: EvidencePhotoCategory.panoramica,
+          ),
+          PhotoInput(
+            ruta: '/tmp/foto-b.jpg',
+            tipo: EvidencePhotoCategory.licencia,
+          ),
+        ],
+      ),
+      persistPhotosForCase: ({required numeroCaso, required photos}) async {
+        expect(numeroCaso, '2026-000001');
+        return [
+          photos[0].copyWith(
+            ruta: '/documentos/reports/$numeroCaso/images/01_panoramica.jpg',
+          ),
+          photos[1].copyWith(
+            ruta: '/documentos/reports/$numeroCaso/images/02_licencia.jpg',
+          ),
+        ];
+      },
+      now: DateTime.utc(2026, 5, 6),
+    );
+
+    final detail = await controller.findReadableDetail(
+      actor: police,
+      idInforme: finalized.idInforme,
+    );
+    final db = await appDatabase.instance;
+    final rows = await db.query('fotografias');
+
+    expect(detail.fotografias, hasLength(2));
+    expect(detail.fotografias.first.idFotografia, rows.first['id_fotografia']);
+    expect(detail.fotografias.first.tipo, EvidencePhotoCategory.panoramica);
+    expect(detail.fotografias.last.tipo, EvidencePhotoCategory.licencia);
+    expect(rows.map((row) => row['id_informe']),
+        everyElement(finalized.idInforme));
+    expect(
+      detail.fotografias.first.ruta,
+      '/documentos/reports/2026-000001/images/01_panoramica.jpg',
+    );
+  });
+
+  test('archivo inexistente de fotografia evita finalizar y no crea informe',
+      () async {
+    final police = await _createPoliceSession(
+      userRepository,
+      policeRepository,
+      username: 'policia.foto.faltante',
+      plate: 'PL-013',
+    );
+
+    await expectLater(
+      controller.finalize(
+        actor: police,
+        draft: _validDraft(
+          fotografias: const [
+            PhotoInput(
+              ruta: '/tmp/faltante.jpg',
+              tipo: EvidencePhotoCategory.otra,
+            ),
+          ],
+        ),
+        persistPhotosForCase: ({required numeroCaso, required photos}) async {
+          throw const FileSystemException(
+            'La fotografia temporal no existe.',
+            '/tmp/faltante.jpg',
+          );
+        },
+        now: DateTime.utc(2026, 5, 7),
+      ),
+      throwsA(isA<FileSystemException>()),
+    );
+
+    final db = await appDatabase.instance;
+    expect(await db.query('informes'), isEmpty);
+    expect(await db.query('fotografias'), isEmpty);
   });
 
   test('finaliza varios conductores, vehiculos relacionados y personas',
@@ -396,6 +491,7 @@ DirectActionReportDraft _validDraft({
   List<DriverInput>? conductores,
   List<VehicleInput>? vehiculos,
   List<PersonInput>? personas,
+  List<PhotoInput>? fotografias,
 }) {
   return DirectActionReportDraft(
     epi: epi,
@@ -447,6 +543,7 @@ DirectActionReportDraft _validDraft({
             lugarEvacuacion: 'Hospital',
           ),
         ],
+    fotografias: fotografias ?? const [],
   );
 }
 

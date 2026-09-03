@@ -26,6 +26,7 @@ class DirectActionReportDraft {
     this.conductores = const [],
     this.vehiculos = const [],
     this.personas = const [],
+    this.fotografias = const [],
   });
 
   final String epi;
@@ -48,6 +49,7 @@ class DirectActionReportDraft {
   final List<DriverInput> conductores;
   final List<VehicleInput> vehiculos;
   final List<PersonInput> personas;
+  final List<PhotoInput> fotografias;
 
   bool get hasData {
     return [
@@ -71,7 +73,8 @@ class DirectActionReportDraft {
         longitud != null ||
         conductores.isNotEmpty ||
         vehiculos.isNotEmpty ||
-        personas.isNotEmpty;
+        personas.isNotEmpty ||
+        fotografias.isNotEmpty;
   }
 }
 
@@ -111,6 +114,8 @@ class ReportController extends ChangeNotifier {
     required AuthenticatedUser actor,
     required DirectActionReportDraft draft,
     DateTime? now,
+    PersistPhotosForCase? persistPhotosForCase,
+    CleanupPhotos? cleanupPersistedPhotos,
   }) async {
     if (actor.role != AppRole.police) {
       throw StateError('Solo un usuario POLICE puede crear informes.');
@@ -140,8 +145,11 @@ class ReportController extends ChangeNotifier {
         conductores: draft.conductores,
         vehiculos: draft.vehiculos,
         personas: draft.personas,
+        fotografias: draft.fotografias,
       ),
       now: reference,
+      persistPhotosForCase: persistPhotosForCase,
+      cleanupPersistedPhotos: cleanupPersistedPhotos,
     );
     await load(actor);
     return finalized;

@@ -1,5 +1,6 @@
 import '../database/app_database.dart';
 import '../database/dao/report_dao.dart';
+import '../../services/media/evidence_photo.dart';
 
 class ReportValidationException implements Exception {
   const ReportValidationException(this.messages);
@@ -181,8 +182,20 @@ class PhotoInput {
   });
 
   final String ruta;
-  final String tipo;
+  final EvidencePhotoCategory tipo;
   final String? descripcion;
+
+  PhotoInput copyWith({
+    String? ruta,
+    EvidencePhotoCategory? tipo,
+    String? descripcion,
+  }) {
+    return PhotoInput(
+      ruta: ruta ?? this.ruta,
+      tipo: tipo ?? this.tipo,
+      descripcion: descripcion ?? this.descripcion,
+    );
+  }
 }
 
 class FinalizedReport {
@@ -377,9 +390,16 @@ class PhotoRecord {
 
   final int idFotografia;
   final String ruta;
-  final String tipo;
+  final EvidencePhotoCategory tipo;
   final String? descripcion;
 }
+
+typedef PersistPhotosForCase = Future<List<PhotoInput>> Function({
+  required String numeroCaso,
+  required List<PhotoInput> photos,
+});
+
+typedef CleanupPhotos = Future<void> Function(List<PhotoInput> photos);
 
 class ReportRepository {
   const ReportRepository(this._database);
@@ -389,103 +409,123 @@ class ReportRepository {
   Future<FinalizedReport> finalizeReport(
     FinalizeReportInput input, {
     DateTime? now,
-  }) {
+    PersistPhotosForCase? persistPhotosForCase,
+    CleanupPhotos? cleanupPersistedPhotos,
+  }) async {
     _validateInput(input);
-    return _database.transaction((transaction) async {
-      final dao = ReportDao(transaction);
-      final timestamp = (now ?? DateTime.now()).toIso8601String();
-      final correlativo = await dao.nextCorrelativo(input.gestion);
-      final numeroCaso = formatCaseNumber(input.gestion, correlativo);
+    var persistedPhotos = <PhotoInput>[];
+    try {
+      return await _database.transaction((transaction) async {
+        final dao = ReportDao(transaction);
+        final timestamp = (now ?? DateTime.now()).toIso8601String();
+        final correlativo = await dao.nextCorrelativo(input.gestion);
+        final numeroCaso = formatCaseNumber(input.gestion, correlativo);
 
-      final idInforme = await dao.insertReport({
-        'id_policia': input.idPolicia,
-        'gestion': input.gestion,
-        'correlativo': correlativo,
-        'numero_caso': numeroCaso,
-        'epi': input.epi,
-        'fecha_hora_llegada': input.fechaHoraLlegada?.toIso8601String(),
-        'fecha_hora_hecho': input.fechaHoraHecho?.toIso8601String(),
-        'naturaleza': input.naturaleza,
-        'lugar': input.lugar,
-        'latitud': input.latitud,
-        'longitud': input.longitud,
-        'denunciante_nombre': input.denuncianteNombre,
-        'denunciante_documento': input.denuncianteDocumento,
-        'denunciante_contacto': input.denuncianteContacto,
-        'descripcion': input.descripcion,
-        'condiciones_climaticas': input.condicionesClimaticas,
-        'vehiculos_movidos': _boolToInt(input.vehiculosMovidos),
-        'protagonistas_presentes': _boolToInt(input.protagonistasPresentes),
-        'testigos': input.testigos,
-        'efectos_personales': input.efectosPersonales,
-        'ruta_croquis': input.rutaCroquis,
-        'ruta_pdf': input.rutaPdf,
-        'estado': 1,
-        'fecha_creacion': timestamp,
-        'fecha_modificacion': timestamp,
-      });
+        final idInforme = await dao.insertReport({
+          'id_policia': input.idPolicia,
+          'gestion': input.gestion,
+          'correlativo': correlativo,
+          'numero_caso': numeroCaso,
+          'epi': input.epi,
+          'fecha_hora_llegada': input.fechaHoraLlegada?.toIso8601String(),
+          'fecha_hora_hecho': input.fechaHoraHecho?.toIso8601String(),
+          'naturaleza': input.naturaleza,
+          'lugar': input.lugar,
+          'latitud': input.latitud,
+          'longitud': input.longitud,
+          'denunciante_nombre': input.denuncianteNombre,
+          'denunciante_documento': input.denuncianteDocumento,
+          'denunciante_contacto': input.denuncianteContacto,
+          'descripcion': input.descripcion,
+          'condiciones_climaticas': input.condicionesClimaticas,
+          'vehiculos_movidos': _boolToInt(input.vehiculosMovidos),
+          'protagonistas_presentes': _boolToInt(input.protagonistasPresentes),
+          'testigos': input.testigos,
+          'efectos_personales': input.efectosPersonales,
+          'ruta_croquis': input.rutaCroquis,
+          'ruta_pdf': input.rutaPdf,
+          'estado': 1,
+          'fecha_creacion': timestamp,
+          'fecha_modificacion': timestamp,
+        });
 
-      final driverIds = <int>[];
-      for (final conductor in input.conductores) {
-        driverIds.add(
-          await dao.insertDriver({
+        final driverIds = <int>[];
+        for (final conductor in input.conductores) {
+          driverIds.add(
+            await dao.insertDriver({
+              'id_informe': idInforme,
+              'nombre_completo': conductor.nombreCompleto,
+              'edad': conductor.edad,
+              'licencia': conductor.licencia,
+              'categoria': conductor.categoria,
+              'domicilio': conductor.domicilio,
+              'zona': conductor.zona,
+              'contactos': conductor.contactos,
+              'condicion_entrega': conductor.condicionEntrega,
+              'fecha_creacion': timestamp,
+            }),
+          );
+        }
+
+        for (final vehiculo in input.vehiculos) {
+          final driverIndex = vehiculo.driverIndex;
+          final idConductor =
+              driverIndex == null ? null : driverIds[driverIndex];
+          await dao.insertVehicle({
             'id_informe': idInforme,
-            'nombre_completo': conductor.nombreCompleto,
-            'edad': conductor.edad,
-            'licencia': conductor.licencia,
-            'categoria': conductor.categoria,
-            'domicilio': conductor.domicilio,
-            'zona': conductor.zona,
-            'contactos': conductor.contactos,
-            'condicion_entrega': conductor.condicionEntrega,
+            'id_conductor': idConductor,
+            'placa': vehiculo.placa,
+            'marca': vehiculo.marca,
+            'color': vehiculo.color,
+            'tipo': vehiculo.tipo,
+            'servicio': vehiculo.servicio,
             'fecha_creacion': timestamp,
-          }),
+          });
+        }
+
+        for (final persona in input.personas) {
+          await dao.insertPerson({
+            'id_informe': idInforme,
+            'nombre': persona.nombre,
+            'edad': persona.edad,
+            'tipo': persona.tipo,
+            'lugar_evacuacion': persona.lugarEvacuacion,
+            'fecha_creacion': timestamp,
+          });
+        }
+
+        persistedPhotos = input.fotografias.isEmpty
+            ? const []
+            : persistPhotosForCase == null
+                ? input.fotografias
+                : await persistPhotosForCase(
+                    numeroCaso: numeroCaso,
+                    photos: input.fotografias,
+                  );
+
+        for (final fotografia in persistedPhotos) {
+          await dao.insertPhoto({
+            'id_informe': idInforme,
+            'ruta': fotografia.ruta,
+            'tipo': fotografia.tipo.databaseValue,
+            'descripcion': fotografia.descripcion,
+            'fecha_creacion': timestamp,
+          });
+        }
+
+        return FinalizedReport(
+          idInforme: idInforme,
+          gestion: input.gestion,
+          correlativo: correlativo,
+          numeroCaso: numeroCaso,
         );
+      });
+    } catch (_) {
+      if (persistedPhotos.isNotEmpty && cleanupPersistedPhotos != null) {
+        await cleanupPersistedPhotos(persistedPhotos);
       }
-
-      for (final vehiculo in input.vehiculos) {
-        final driverIndex = vehiculo.driverIndex;
-        final idConductor = driverIndex == null ? null : driverIds[driverIndex];
-        await dao.insertVehicle({
-          'id_informe': idInforme,
-          'id_conductor': idConductor,
-          'placa': vehiculo.placa,
-          'marca': vehiculo.marca,
-          'color': vehiculo.color,
-          'tipo': vehiculo.tipo,
-          'servicio': vehiculo.servicio,
-          'fecha_creacion': timestamp,
-        });
-      }
-
-      for (final persona in input.personas) {
-        await dao.insertPerson({
-          'id_informe': idInforme,
-          'nombre': persona.nombre,
-          'edad': persona.edad,
-          'tipo': persona.tipo,
-          'lugar_evacuacion': persona.lugarEvacuacion,
-          'fecha_creacion': timestamp,
-        });
-      }
-
-      for (final fotografia in input.fotografias) {
-        await dao.insertPhoto({
-          'id_informe': idInforme,
-          'ruta': fotografia.ruta,
-          'tipo': fotografia.tipo,
-          'descripcion': fotografia.descripcion,
-          'fecha_creacion': timestamp,
-        });
-      }
-
-      return FinalizedReport(
-        idInforme: idInforme,
-        gestion: input.gestion,
-        correlativo: correlativo,
-        numeroCaso: numeroCaso,
-      );
-    });
+      rethrow;
+    }
   }
 
   Future<List<Map<String, Object?>>> findActiveReports() async {
@@ -615,10 +655,6 @@ class ReportRepository {
     }
     for (final (index, fotografia) in input.fotografias.indexed) {
       requiredText('ruta de fotografia ${index + 1}', fotografia.ruta);
-      if (!{'PANORAMICA', 'LICENCIA', 'PLACA', 'OTRA'}
-          .contains(fotografia.tipo)) {
-        messages.add('El tipo de fotografia ${index + 1} no es valido.');
-      }
     }
 
     if (messages.isNotEmpty) {
@@ -697,7 +733,7 @@ class ReportRepository {
     return PhotoRecord(
       idFotografia: row['id_fotografia']! as int,
       ruta: row['ruta']! as String,
-      tipo: row['tipo']! as String,
+      tipo: EvidencePhotoCategory.fromDatabase(row['tipo']! as String),
       descripcion: row['descripcion'] as String?,
     );
   }
