@@ -60,6 +60,16 @@ class _DashboardPageState extends State<DashboardPage> {
             Text('ID policia: ${profile.idPolicia}'),
           ],
           const SizedBox(height: 24),
+          AppButton(
+            label: user.isAdmin ? 'Consultar informes' : 'Registrar informe',
+            icon: user.isAdmin
+                ? Icons.assignment_outlined
+                : Icons.note_add_outlined,
+            onPressed: () {
+              Navigator.of(context).pushNamed(AppRoutes.reports);
+            },
+          ),
+          const SizedBox(height: 12),
           if (user.role == AppRole.admin)
             AppButton(
               label: 'Gestionar policias',

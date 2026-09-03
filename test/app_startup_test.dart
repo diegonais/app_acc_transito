@@ -2,6 +2,7 @@ import 'package:app_acc_transito/app/app.dart';
 import 'package:app_acc_transito/app/routes/app_routes.dart';
 import 'package:app_acc_transito/data/database/app_database.dart';
 import 'package:app_acc_transito/data/repositories/police_repository.dart';
+import 'package:app_acc_transito/data/repositories/report_repository.dart';
 import 'package:app_acc_transito/data/repositories/user_repository.dart';
 import 'package:app_acc_transito/features/auth/application/auth_controller.dart';
 import 'package:app_acc_transito/features/auth/data/auth_repository.dart';
@@ -11,6 +12,7 @@ import 'package:app_acc_transito/features/auth/domain/auth_exceptions.dart';
 import 'package:app_acc_transito/features/auth/domain/authenticated_user.dart';
 import 'package:app_acc_transito/features/officers/application/officer_management_controller.dart';
 import 'package:app_acc_transito/features/officers/data/officer_management_repository.dart';
+import 'package:app_acc_transito/features/reports/application/report_controller.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -97,6 +99,7 @@ void main() {
             settings,
             controller,
             _unusedOfficerController(),
+            _unusedReportController(),
           );
         },
         initialRoute: '/ruta-no-registrada',
@@ -194,6 +197,11 @@ OfficerManagementController _unusedOfficerController() {
       ),
     ),
   );
+}
+
+ReportController _unusedReportController() {
+  final database = AppDatabase(databasePath: ':memory:');
+  return ReportController(repository: ReportRepository(database));
 }
 
 Future<void> _pumpUntilVisible(

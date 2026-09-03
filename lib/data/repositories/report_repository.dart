@@ -1,6 +1,15 @@
 import '../database/app_database.dart';
 import '../database/dao/report_dao.dart';
 
+class ReportValidationException implements Exception {
+  const ReportValidationException(this.messages);
+
+  final List<String> messages;
+
+  @override
+  String toString() => messages.join('\n');
+}
+
 class FinalizeReportInput {
   const FinalizeReportInput({
     required this.idPolicia,
@@ -135,6 +144,188 @@ class FinalizedReport {
   final String numeroCaso;
 }
 
+class ReportRecord {
+  const ReportRecord({
+    required this.idInforme,
+    required this.idPolicia,
+    required this.gestion,
+    required this.correlativo,
+    required this.numeroCaso,
+    required this.epi,
+    required this.estado,
+    required this.fechaCreacion,
+    required this.fechaModificacion,
+    this.fechaHoraLlegada,
+    this.fechaHoraHecho,
+    this.naturaleza,
+    this.lugar,
+    this.latitud,
+    this.longitud,
+    this.denuncianteNombre,
+    this.denuncianteDocumento,
+    this.denuncianteContacto,
+    this.descripcion,
+    this.condicionesClimaticas,
+    this.vehiculosMovidos,
+    this.protagonistasPresentes,
+    this.testigos,
+    this.efectosPersonales,
+    this.rutaCroquis,
+    this.rutaPdf,
+    this.conductores = const [],
+    this.vehiculos = const [],
+    this.personas = const [],
+    this.fotografias = const [],
+  });
+
+  final int idInforme;
+  final int idPolicia;
+  final int gestion;
+  final int correlativo;
+  final String numeroCaso;
+  final String epi;
+  final DateTime? fechaHoraLlegada;
+  final DateTime? fechaHoraHecho;
+  final String? naturaleza;
+  final String? lugar;
+  final double? latitud;
+  final double? longitud;
+  final String? denuncianteNombre;
+  final String? denuncianteDocumento;
+  final String? denuncianteContacto;
+  final String? descripcion;
+  final String? condicionesClimaticas;
+  final bool? vehiculosMovidos;
+  final bool? protagonistasPresentes;
+  final String? testigos;
+  final String? efectosPersonales;
+  final String? rutaCroquis;
+  final String? rutaPdf;
+  final int estado;
+  final DateTime fechaCreacion;
+  final DateTime fechaModificacion;
+  final List<DriverRecord> conductores;
+  final List<VehicleRecord> vehiculos;
+  final List<PersonRecord> personas;
+  final List<PhotoRecord> fotografias;
+
+  bool get isActive => estado == 1;
+
+  ReportRecord copyWith({
+    List<DriverRecord>? conductores,
+    List<VehicleRecord>? vehiculos,
+    List<PersonRecord>? personas,
+    List<PhotoRecord>? fotografias,
+  }) {
+    return ReportRecord(
+      idInforme: idInforme,
+      idPolicia: idPolicia,
+      gestion: gestion,
+      correlativo: correlativo,
+      numeroCaso: numeroCaso,
+      epi: epi,
+      fechaHoraLlegada: fechaHoraLlegada,
+      fechaHoraHecho: fechaHoraHecho,
+      naturaleza: naturaleza,
+      lugar: lugar,
+      latitud: latitud,
+      longitud: longitud,
+      denuncianteNombre: denuncianteNombre,
+      denuncianteDocumento: denuncianteDocumento,
+      denuncianteContacto: denuncianteContacto,
+      descripcion: descripcion,
+      condicionesClimaticas: condicionesClimaticas,
+      vehiculosMovidos: vehiculosMovidos,
+      protagonistasPresentes: protagonistasPresentes,
+      testigos: testigos,
+      efectosPersonales: efectosPersonales,
+      rutaCroquis: rutaCroquis,
+      rutaPdf: rutaPdf,
+      estado: estado,
+      fechaCreacion: fechaCreacion,
+      fechaModificacion: fechaModificacion,
+      conductores: conductores ?? this.conductores,
+      vehiculos: vehiculos ?? this.vehiculos,
+      personas: personas ?? this.personas,
+      fotografias: fotografias ?? this.fotografias,
+    );
+  }
+}
+
+class DriverRecord {
+  const DriverRecord({
+    required this.idConductor,
+    required this.nombreCompleto,
+    this.edad,
+    this.licencia,
+    this.categoria,
+    this.domicilio,
+    this.zona,
+    this.contactos,
+    this.condicionEntrega,
+  });
+
+  final int idConductor;
+  final String nombreCompleto;
+  final int? edad;
+  final String? licencia;
+  final String? categoria;
+  final String? domicilio;
+  final String? zona;
+  final String? contactos;
+  final String? condicionEntrega;
+}
+
+class VehicleRecord {
+  const VehicleRecord({
+    required this.idVehiculo,
+    this.idConductor,
+    this.placa,
+    this.marca,
+    this.color,
+    this.tipo,
+    this.servicio,
+  });
+
+  final int idVehiculo;
+  final int? idConductor;
+  final String? placa;
+  final String? marca;
+  final String? color;
+  final String? tipo;
+  final String? servicio;
+}
+
+class PersonRecord {
+  const PersonRecord({
+    required this.idPersona,
+    required this.nombre,
+    required this.tipo,
+    this.edad,
+    this.lugarEvacuacion,
+  });
+
+  final int idPersona;
+  final String nombre;
+  final String tipo;
+  final int? edad;
+  final String? lugarEvacuacion;
+}
+
+class PhotoRecord {
+  const PhotoRecord({
+    required this.idFotografia,
+    required this.ruta,
+    required this.tipo,
+    this.descripcion,
+  });
+
+  final int idFotografia;
+  final String ruta;
+  final String tipo;
+  final String? descripcion;
+}
+
 class ReportRepository {
   const ReportRepository(this._database);
 
@@ -144,6 +335,7 @@ class ReportRepository {
     FinalizeReportInput input, {
     DateTime? now,
   }) {
+    _validateInput(input);
     return _database.transaction((transaction) async {
       final dao = ReportDao(transaction);
       final timestamp = (now ?? DateTime.now()).toIso8601String();
@@ -246,6 +438,33 @@ class ReportRepository {
     return ReportDao(db).findActiveReports();
   }
 
+  Future<List<ReportRecord>> listActiveReportsForAdmin() async {
+    final db = await _database.instance;
+    final rows = await ReportDao(db).findActiveReports();
+    return rows.map(_mapReport).toList(growable: false);
+  }
+
+  Future<List<ReportRecord>> listActiveReportsForPolice(int idPolicia) async {
+    final db = await _database.instance;
+    final rows = await ReportDao(db).findActiveReportsByPolice(idPolicia);
+    return rows.map(_mapReport).toList(growable: false);
+  }
+
+  Future<ReportRecord?> findActiveReportDetail(int idInforme) async {
+    final db = await _database.instance;
+    final dao = ReportDao(db);
+    final report = await dao.findActiveById(idInforme);
+    if (report == null) {
+      return null;
+    }
+    return _mapReport(report).copyWith(
+      conductores: (await dao.findDrivers(idInforme)).map(_mapDriver).toList(),
+      vehiculos: (await dao.findVehicles(idInforme)).map(_mapVehicle).toList(),
+      personas: (await dao.findPeople(idInforme)).map(_mapPerson).toList(),
+      fotografias: (await dao.findPhotos(idInforme)).map(_mapPhoto).toList(),
+    );
+  }
+
   Future<void> inactivateReport({
     required int idInforme,
     DateTime? now,
@@ -264,10 +483,174 @@ class ReportRepository {
     return '$gestion-${correlativo.toString().padLeft(6, '0')}';
   }
 
+  static void _validateInput(FinalizeReportInput input) {
+    final messages = <String>[];
+    void requiredText(String label, String? value) {
+      if ((value ?? '').trim().isEmpty) {
+        messages.add('Debe ingresar $label.');
+      }
+    }
+
+    if (input.idPolicia <= 0) {
+      messages.add('El informe debe asociarse a un policia valido.');
+    }
+    if (input.gestion < 2000) {
+      messages.add('La gestion del informe no es valida.');
+    }
+    requiredText('EPI / Estacion Policial Integral', input.epi);
+    if (input.fechaHoraLlegada == null) {
+      messages.add('Debe ingresar fecha y hora de llegada.');
+    }
+    if (input.fechaHoraHecho == null) {
+      messages.add('Debe ingresar fecha y hora del hecho.');
+    }
+    requiredText('naturaleza', input.naturaleza);
+    requiredText('lugar', input.lugar);
+    requiredText('denunciante', input.denuncianteNombre);
+    requiredText('contacto del denunciante', input.denuncianteContacto);
+    requiredText('descripcion', input.descripcion);
+    requiredText('condiciones climaticas', input.condicionesClimaticas);
+    if (input.vehiculosMovidos == null) {
+      messages.add('Debe indicar si los vehiculos fueron movidos.');
+    }
+    if (input.protagonistasPresentes == null) {
+      messages.add('Debe indicar si los protagonistas estan presentes.');
+    }
+    requiredText('testigos', input.testigos);
+    requiredText('efectos personales', input.efectosPersonales);
+
+    for (final (index, conductor) in input.conductores.indexed) {
+      requiredText(
+          'nombre del conductor ${index + 1}', conductor.nombreCompleto);
+      if (conductor.edad != null && conductor.edad! < 0) {
+        messages.add('La edad del conductor ${index + 1} no es valida.');
+      }
+    }
+    for (final (index, vehiculo) in input.vehiculos.indexed) {
+      final driverIndex = vehiculo.driverIndex;
+      if (driverIndex != null &&
+          (driverIndex < 0 || driverIndex >= input.conductores.length)) {
+        messages
+            .add('El vehiculo ${index + 1} referencia un conductor invalido.');
+      }
+    }
+    for (final (index, persona) in input.personas.indexed) {
+      requiredText(
+          'nombre de la persona involucrada ${index + 1}', persona.nombre);
+      if (persona.tipo != 'HERIDO' && persona.tipo != 'FALLECIDO') {
+        messages.add('El tipo de persona ${index + 1} no es valido.');
+      }
+      if (persona.edad != null && persona.edad! < 0) {
+        messages.add('La edad de la persona ${index + 1} no es valida.');
+      }
+    }
+    for (final (index, fotografia) in input.fotografias.indexed) {
+      requiredText('ruta de fotografia ${index + 1}', fotografia.ruta);
+      if (!{'PANORAMICA', 'LICENCIA', 'PLACA', 'OTRA'}
+          .contains(fotografia.tipo)) {
+        messages.add('El tipo de fotografia ${index + 1} no es valido.');
+      }
+    }
+
+    if (messages.isNotEmpty) {
+      throw ReportValidationException(messages);
+    }
+  }
+
+  static ReportRecord _mapReport(Map<String, Object?> row) {
+    return ReportRecord(
+      idInforme: row['id_informe']! as int,
+      idPolicia: row['id_policia']! as int,
+      gestion: row['gestion']! as int,
+      correlativo: row['correlativo']! as int,
+      numeroCaso: row['numero_caso']! as String,
+      epi: row['epi']! as String,
+      fechaHoraLlegada: _parseOptionalDate(row['fecha_hora_llegada']),
+      fechaHoraHecho: _parseOptionalDate(row['fecha_hora_hecho']),
+      naturaleza: row['naturaleza'] as String?,
+      lugar: row['lugar'] as String?,
+      latitud: (row['latitud'] as num?)?.toDouble(),
+      longitud: (row['longitud'] as num?)?.toDouble(),
+      denuncianteNombre: row['denunciante_nombre'] as String?,
+      denuncianteDocumento: row['denunciante_documento'] as String?,
+      denuncianteContacto: row['denunciante_contacto'] as String?,
+      descripcion: row['descripcion'] as String?,
+      condicionesClimaticas: row['condiciones_climaticas'] as String?,
+      vehiculosMovidos: _intToBool(row['vehiculos_movidos']),
+      protagonistasPresentes: _intToBool(row['protagonistas_presentes']),
+      testigos: row['testigos'] as String?,
+      efectosPersonales: row['efectos_personales'] as String?,
+      rutaCroquis: row['ruta_croquis'] as String?,
+      rutaPdf: row['ruta_pdf'] as String?,
+      estado: row['estado']! as int,
+      fechaCreacion: DateTime.parse(row['fecha_creacion']! as String),
+      fechaModificacion: DateTime.parse(row['fecha_modificacion']! as String),
+    );
+  }
+
+  static DriverRecord _mapDriver(Map<String, Object?> row) {
+    return DriverRecord(
+      idConductor: row['id_conductor']! as int,
+      nombreCompleto: row['nombre_completo']! as String,
+      edad: row['edad'] as int?,
+      licencia: row['licencia'] as String?,
+      categoria: row['categoria'] as String?,
+      domicilio: row['domicilio'] as String?,
+      zona: row['zona'] as String?,
+      contactos: row['contactos'] as String?,
+      condicionEntrega: row['condicion_entrega'] as String?,
+    );
+  }
+
+  static VehicleRecord _mapVehicle(Map<String, Object?> row) {
+    return VehicleRecord(
+      idVehiculo: row['id_vehiculo']! as int,
+      idConductor: row['id_conductor'] as int?,
+      placa: row['placa'] as String?,
+      marca: row['marca'] as String?,
+      color: row['color'] as String?,
+      tipo: row['tipo'] as String?,
+      servicio: row['servicio'] as String?,
+    );
+  }
+
+  static PersonRecord _mapPerson(Map<String, Object?> row) {
+    return PersonRecord(
+      idPersona: row['id_persona']! as int,
+      nombre: row['nombre']! as String,
+      edad: row['edad'] as int?,
+      tipo: row['tipo']! as String,
+      lugarEvacuacion: row['lugar_evacuacion'] as String?,
+    );
+  }
+
+  static PhotoRecord _mapPhoto(Map<String, Object?> row) {
+    return PhotoRecord(
+      idFotografia: row['id_fotografia']! as int,
+      ruta: row['ruta']! as String,
+      tipo: row['tipo']! as String,
+      descripcion: row['descripcion'] as String?,
+    );
+  }
+
   static int? _boolToInt(bool? value) {
     if (value == null) {
       return null;
     }
     return value ? 1 : 0;
+  }
+
+  static bool? _intToBool(Object? value) {
+    if (value == null) {
+      return null;
+    }
+    return value == 1;
+  }
+
+  static DateTime? _parseOptionalDate(Object? value) {
+    if (value == null) {
+      return null;
+    }
+    return DateTime.parse(value as String);
   }
 }

@@ -43,6 +43,63 @@ class ReportDao {
     );
   }
 
+  Future<List<Map<String, Object?>>> findActiveReportsByPolice(
+    int idPolicia,
+  ) {
+    return _db.query(
+      'informes',
+      where: 'estado = ? AND id_policia = ?',
+      whereArgs: [1, idPolicia],
+      orderBy: 'gestion DESC, correlativo DESC',
+    );
+  }
+
+  Future<Map<String, Object?>?> findActiveById(int idInforme) async {
+    final rows = await _db.query(
+      'informes',
+      where: 'id_informe = ? AND estado = ?',
+      whereArgs: [idInforme, 1],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : rows.first;
+  }
+
+  Future<List<Map<String, Object?>>> findDrivers(int idInforme) {
+    return _db.query(
+      'conductores',
+      where: 'id_informe = ?',
+      whereArgs: [idInforme],
+      orderBy: 'id_conductor ASC',
+    );
+  }
+
+  Future<List<Map<String, Object?>>> findVehicles(int idInforme) {
+    return _db.query(
+      'vehiculos',
+      where: 'id_informe = ?',
+      whereArgs: [idInforme],
+      orderBy: 'id_vehiculo ASC',
+    );
+  }
+
+  Future<List<Map<String, Object?>>> findPeople(int idInforme) {
+    return _db.query(
+      'personas_involucradas',
+      where: 'id_informe = ?',
+      whereArgs: [idInforme],
+      orderBy: 'id_persona ASC',
+    );
+  }
+
+  Future<List<Map<String, Object?>>> findPhotos(int idInforme) {
+    return _db.query(
+      'fotografias',
+      where: 'id_informe = ?',
+      whereArgs: [idInforme],
+      orderBy: 'id_fotografia ASC',
+    );
+  }
+
   Future<Map<String, Object?>?> findByCaseNumber(String numeroCaso) async {
     final rows = await _db.query(
       'informes',

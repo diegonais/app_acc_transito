@@ -8,6 +8,8 @@ import '../../features/auth/domain/app_role.dart';
 import '../../features/dashboard/dashboard_placeholder_page.dart';
 import '../../features/officers/application/officer_management_controller.dart';
 import '../../features/officers/officer_management_page.dart';
+import '../../features/reports/application/report_controller.dart';
+import '../../features/reports/report_list_page.dart';
 
 class AppRoutes {
   const AppRoutes._();
@@ -17,11 +19,13 @@ class AppRoutes {
   static const String login = '/login';
   static const String dashboard = '/dashboard';
   static const String officers = '/officers';
+  static const String reports = '/reports';
 
   static Route<void> onGenerateRoute(
     RouteSettings settings,
     AuthController authController,
     OfficerManagementController officerManagementController,
+    ReportController reportController,
   ) {
     return switch (settings.name) {
       splash => _buildRoute(settings, const SplashPage()),
@@ -38,6 +42,11 @@ class AppRoutes {
       officers when authController.isAuthenticated =>
         _buildRoute(settings, const DashboardPage()),
       officers => _buildRoute(settings, const LoginPage()),
+      reports when authController.isAuthenticated => _buildRoute(
+          settings,
+          ReportListPage(controller: reportController),
+        ),
+      reports => _buildRoute(settings, const LoginPage()),
       _ => _buildRoute(settings, const LoginPage()),
     };
   }

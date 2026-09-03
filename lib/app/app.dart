@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/database/app_database.dart';
 import '../data/repositories/police_repository.dart';
+import '../data/repositories/report_repository.dart';
 import '../data/repositories/user_repository.dart';
 import '../features/auth/application/auth_controller.dart';
 import '../features/auth/application/auth_scope.dart';
@@ -9,6 +10,7 @@ import '../features/auth/data/auth_repository.dart';
 import '../features/auth/data/password_hasher.dart';
 import '../features/officers/application/officer_management_controller.dart';
 import '../features/officers/data/officer_management_repository.dart';
+import '../features/reports/application/report_controller.dart';
 import 'routes/app_routes.dart';
 import 'theme/app_theme.dart';
 
@@ -30,6 +32,7 @@ class AccTransitoApp extends StatefulWidget {
 class _AccTransitoAppState extends State<AccTransitoApp> {
   late final AuthController _authController;
   late final OfficerManagementController _officerManagementController;
+  late final ReportController _reportController;
 
   @override
   void initState() {
@@ -48,6 +51,9 @@ class _AccTransitoAppState extends State<AccTransitoApp> {
       repository: OfficerManagementRepository(database),
       passwordHasher: passwordHasher,
     );
+    _reportController = ReportController(
+      repository: ReportRepository(database),
+    );
   }
 
   @override
@@ -64,6 +70,7 @@ class _AccTransitoAppState extends State<AccTransitoApp> {
             settings,
             _authController,
             _officerManagementController,
+            _reportController,
           );
         },
       ),

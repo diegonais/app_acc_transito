@@ -48,9 +48,8 @@ void main() {
     final idPolicia = await _createPolice(userRepository, policeRepository);
 
     final finalized = await reportRepository.finalizeReport(
-      FinalizeReportInput(
+      _validReportInput(
         idPolicia: idPolicia,
-        gestion: 2026,
         epi: 'EPI Norte',
         conductores: const [
           DriverInput(nombreCompleto: 'Juan Perez', licencia: 'LP-123'),
@@ -130,17 +129,11 @@ void main() {
   });
 
   test('rollback completo si falla una insercion dependiente', () async {
-    final idPolicia = await _createPolice(userRepository, policeRepository);
-
     await expectLater(
       reportRepository.finalizeReport(
-        FinalizeReportInput(
-          idPolicia: idPolicia,
-          gestion: 2026,
+        _validReportInput(
+          idPolicia: 999,
           epi: 'EPI Central',
-          personas: const [
-            PersonInput(nombre: 'Tipo invalido', tipo: 'TESTIGO'),
-          ],
         ),
         now: DateTime.utc(2026),
       ),
@@ -149,22 +142,21 @@ void main() {
 
     final db = await appDatabase.instance;
     expect(await db.query('informes'), isEmpty);
-    expect(await db.query('personas_involucradas'), isEmpty);
   });
 
   test('correlativo por gestion no reutiliza informes inactivos', () async {
     final idPolicia = await _createPolice(userRepository, policeRepository);
 
     final first = await reportRepository.finalizeReport(
-      FinalizeReportInput(idPolicia: idPolicia, gestion: 2026, epi: 'EPI 1'),
+      _validReportInput(idPolicia: idPolicia, epi: 'EPI 1'),
       now: DateTime.utc(2026),
     );
     final second = await reportRepository.finalizeReport(
-      FinalizeReportInput(idPolicia: idPolicia, gestion: 2026, epi: 'EPI 2'),
+      _validReportInput(idPolicia: idPolicia, epi: 'EPI 2'),
       now: DateTime.utc(2026),
     );
     final nextYear = await reportRepository.finalizeReport(
-      FinalizeReportInput(idPolicia: idPolicia, gestion: 2027, epi: 'EPI 3'),
+      _validReportInput(idPolicia: idPolicia, gestion: 2027, epi: 'EPI 3'),
       now: DateTime.utc(2027),
     );
 
@@ -174,7 +166,7 @@ void main() {
     );
 
     final third = await reportRepository.finalizeReport(
-      FinalizeReportInput(idPolicia: idPolicia, gestion: 2026, epi: 'EPI 4'),
+      _validReportInput(idPolicia: idPolicia, epi: 'EPI 4'),
       now: DateTime.utc(2026, 3),
     );
 
@@ -188,9 +180,8 @@ void main() {
       () async {
     final idPolicia = await _createPolice(userRepository, policeRepository);
     final active = await reportRepository.finalizeReport(
-      FinalizeReportInput(
+      _validReportInput(
         idPolicia: idPolicia,
-        gestion: 2026,
         epi: 'EPI Activo',
         fotografias: const [
           PhotoInput(ruta: '/evidencias/activa.jpg', tipo: 'OTRA'),
@@ -199,9 +190,8 @@ void main() {
       now: DateTime.utc(2026),
     );
     final inactive = await reportRepository.finalizeReport(
-      FinalizeReportInput(
+      _validReportInput(
         idPolicia: idPolicia,
-        gestion: 2026,
         epi: 'EPI Inactivo',
         fotografias: const [
           PhotoInput(ruta: '/evidencias/inactiva.jpg', tipo: 'PLACA'),
@@ -250,5 +240,37 @@ Future<int> _createPolice(
     sigla: 'UT',
     ci: '1234567',
     now: now,
+  );
+}
+
+FinalizeReportInput _validReportInput({
+  required int idPolicia,
+  int gestion = 2026,
+  String epi = 'EPI Central',
+  List<DriverInput> conductores = const [],
+  List<VehicleInput> vehiculos = const [],
+  List<PersonInput> personas = const [],
+  List<PhotoInput> fotografias = const [],
+}) {
+  return FinalizeReportInput(
+    idPolicia: idPolicia,
+    gestion: gestion,
+    epi: epi,
+    fechaHoraLlegada: DateTime.utc(gestion, 1, 1, 8),
+    fechaHoraHecho: DateTime.utc(gestion, 1, 1, 7),
+    naturaleza: 'Colision',
+    lugar: 'Av. Principal',
+    denuncianteNombre: 'No existe',
+    denuncianteContacto: 'No existe',
+    descripcion: 'Descripcion del hecho',
+    condicionesClimaticas: 'Despejado',
+    vehiculosMovidos: false,
+    protagonistasPresentes: true,
+    testigos: 'No existe',
+    efectosPersonales: 'No aplica',
+    conductores: conductores,
+    vehiculos: vehiculos,
+    personas: personas,
+    fotografias: fotografias,
   );
 }

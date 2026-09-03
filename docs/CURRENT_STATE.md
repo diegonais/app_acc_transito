@@ -1,14 +1,15 @@
-# Estado actual - Fase 4 completada
+# Estado actual - Fase 5 completada
 
 ## Etapa
 
-**Fase 4 - Gestion de policias**: finalizada.
+**Fase 5 - Informe de Accion Directa**: finalizada.
 
-La aplicacion mantiene autenticacion local sobre SQLite y ahora permite al
-`ADMIN` gestionar funcionarios policiales y sus cuentas locales asociadas.
+La aplicacion mantiene autenticacion local sobre SQLite, gestion de policias
+para `ADMIN` y ahora cuenta con el flujo principal para registrar, consultar e
+inactivar logicamente Informes de Accion Directa.
 
-No se implementaron todavia el Informe de Accion Directa, dashboard real, GPS,
-fotografias desde camara/galeria, croquis, PDF ni QR.
+No se implementaron todavia dashboard real, captura GPS automatica,
+fotografias desde camara/galeria, croquis cartografico operativo, PDF ni QR.
 
 ## Dependencias
 
@@ -45,48 +46,60 @@ Implementado solo para `ADMIN`:
 
 - Ruta protegida `/officers` accesible desde el dashboard del Administrador.
 - Listado de policias registrados con estados loading/error/empty.
-- Visualizacion de estado activo/inactivo.
-- Alta de funcionario policial con:
-  - numero de placa;
-  - grado;
-  - nombres;
-  - apellidos;
-  - unidad;
-  - sigla;
-  - C.I.;
-  - nombre de usuario;
-  - contrasena inicial;
-  - estado.
-- Modificacion de datos administrativos permitidos:
-  - numero de placa;
-  - grado;
-  - nombres;
-  - apellidos;
-  - unidad;
-  - sigla;
-  - C.I.;
-  - nombre de usuario.
+- Alta de funcionario policial con datos administrativos confirmados.
+- Modificacion de datos administrativos permitidos.
 - Activacion/desactivacion sincronizada de policia y usuario asociado.
 - Restablecimiento de contrasena por Admin sin mostrar la anterior.
 
 No se agregaron celular del policia ni numero de escalafon.
 
+## Informe de Accion Directa
+
+Implementado:
+
+- Ruta `/reports` accesible desde el dashboard.
+- `POLICE` puede registrar informes nuevos.
+- `ADMIN` consulta informes activos del dispositivo.
+- `POLICE` consulta solamente sus informes activos.
+- Formulario por secciones con estado en memoria:
+  - EPI / Estacion Policial Integral;
+  - fecha/hora de llegada;
+  - fecha/hora del hecho;
+  - naturaleza;
+  - lugar;
+  - denunciante, documento y contacto;
+  - descripcion;
+  - condiciones climaticas;
+  - vehiculos movidos;
+  - protagonistas presentes;
+  - testigos;
+  - efectos personales;
+  - latitud/longitud opcionales;
+  - ruta de croquis opcional;
+  - conductores;
+  - vehiculos;
+  - personas involucradas.
+- No existen borradores persistidos.
+- Cancelar con datos ingresados solicita confirmacion y advierte perdida de la
+  informacion no guardada.
+- `Finalizar informe` valida obligatorios y persiste definitivamente.
+- Despues de finalizar, el detalle se abre en modo lectura.
+- No existe edicion posterior del informe finalizado.
+
 ## Persistencia
 
 - No se modifico el esquema ni la version de base de datos.
-- Se reutilizan las tablas existentes `usuarios` y `policias`.
-- Alta de usuario `POLICE` + registro `policias` se realiza dentro de una transaccion.
-- Activacion/desactivacion actualiza ambas tablas dentro de una transaccion.
-- Actualizacion administrativa mantiene la identidad interna `id_usuario` /
-  `id_policia` y no toca tablas de informes.
-- No hay borrado fisico destructivo.
-- Se agregaron consultas parametrizadas para:
-  - listar policias con su usuario;
-  - buscar duplicados de usuario;
-  - buscar duplicados de placa;
-  - actualizar datos administrativos;
-  - actualizar estado de usuario/policia;
-  - restablecer hash de contrasena.
+- Se reutilizan las tablas existentes de informes y relaciones.
+- `Finalizar informe` usa transaccion SQLite.
+- El informe se guarda asociado automaticamente al `id_policia` autenticado.
+- Todo informe nuevo queda con `estado = 1`.
+- Correlativo por gestion con formato `AAAA-NNNNNN`.
+- El correlativo se calcula al finalizar y considera activos e inactivos.
+- Los correlativos no se reutilizan tras inactivar.
+- Consultas de aplicacion filtran `estado = 1`.
+- `ADMIN` puede inactivar informes con confirmacion.
+- Inactivar solo cambia `estado` y conserva contenido/relaciones.
+- No existe vista de inactivos ni reactivacion en UI.
 
 ## Pruebas y validacion
 
@@ -98,32 +111,38 @@ Comandos ejecutados:
 | `flutter analyze` | correcto | sin issues |
 | `flutter test` | correcto | todos los tests pasaron |
 
-Pruebas agregadas:
+Pruebas agregadas o actualizadas:
 
-- `test/features/officers/officer_management_repository_test.dart`
-  - alta valida;
-  - usuario duplicado;
-  - placa duplicada;
-  - ausencia de registros parciales;
-  - actualizacion administrativa;
-  - activacion/desactivacion sincronizada;
-  - login bloqueado para inactivo;
-  - relacion usuario-policia;
-  - restablecimiento de contrasena.
+- `test/features/reports/report_controller_test.dart`
+  - validaciones antes de finalizar;
+  - finalizacion asociada al policia autenticado;
+  - detalle en modo lectura;
+  - consulta `POLICE` limitada a informes propios activos;
+  - consulta `ADMIN` de todos los activos;
+  - permiso de inactivacion solo para `ADMIN`;
+  - bloqueo de lectura de informes ajenos para `POLICE`;
+  - cancelacion como descarte de estado en memoria sin persistencia.
+- `test/data/database/persistence_test.dart`
+  - finalizacion completa con relaciones;
+  - rollback ante falla SQLite;
+  - correlativo por gestion;
+  - no reutilizacion de correlativo con informes inactivos;
+  - soft delete conserva datos y excluye inactivos.
 
 Pruebas existentes conservadas:
 
+- `test/features/officers/officer_management_repository_test.dart`
 - `test/features/auth/auth_repository_test.dart`
 - `test/features/auth/auth_controller_test.dart`
-- `test/data/database/persistence_test.dart`
 - `test/app_startup_test.dart`
 
 ## Problemas conocidos
 
 - No se probo en dispositivo Android fisico en esta fase.
 - El dashboard sigue siendo minimo; los indicadores reales quedan para fase posterior.
-- Informes, GPS, camara/galeria, croquis, PDF y QR siguen pendientes.
+- GPS automatico, camara/galeria, croquis cartografico real, PDF y QR siguen
+  pendientes para fases posteriores.
 
 ## Siguiente fase
 
-**Fase 5.**
+**Fase 6.**
