@@ -26,6 +26,9 @@ class AppDatabaseMigrations {
       case 1:
         await _createVersion1(db);
         return;
+      case 2:
+        await _createVersion2(db);
+        return;
       default:
         throw StateError('No existe migracion para version $targetVersion.');
     }
@@ -191,5 +194,35 @@ CREATE TABLE fotografias (
     await db.execute(
       'CREATE INDEX idx_fotografias_id_informe ON fotografias (id_informe)',
     );
+  }
+
+  static Future<void> _createVersion2(DatabaseExecutor db) async {
+    await db.execute('''
+CREATE TRIGGER trg_vehiculos_conductor_mismo_informe_insert
+BEFORE INSERT ON vehiculos
+WHEN NEW.id_conductor IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM conductores
+    WHERE id_conductor = NEW.id_conductor
+      AND id_informe = NEW.id_informe
+  )
+BEGIN
+  SELECT RAISE(ABORT, 'El conductor relacionado no pertenece al informe.');
+END
+''');
+
+    await db.execute('''
+CREATE TRIGGER trg_vehiculos_conductor_mismo_informe_update
+BEFORE UPDATE OF id_informe, id_conductor ON vehiculos
+WHEN NEW.id_conductor IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM conductores
+    WHERE id_conductor = NEW.id_conductor
+      AND id_informe = NEW.id_informe
+  )
+BEGIN
+  SELECT RAISE(ABORT, 'El conductor relacionado no pertenece al informe.');
+END
+''');
   }
 }

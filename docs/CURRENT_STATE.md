@@ -1,12 +1,14 @@
-# Estado actual - Fase 5 completada
+# Estado actual - Fase 6 completada
 
 ## Etapa
 
-**Fase 5 - Informe de Accion Directa**: finalizada.
+**Fase 6 - Conductores, vehiculos y personas involucradas**: finalizada.
 
 La aplicacion mantiene autenticacion local sobre SQLite, gestion de policias
-para `ADMIN` y ahora cuenta con el flujo principal para registrar, consultar e
-inactivar logicamente Informes de Accion Directa.
+para `ADMIN` y el flujo de Informes de Accion Directa. La fase actual completo
+las secciones dinamicas de conductores, vehiculos y personas involucradas,
+manteniendo estado temporal durante el llenado y persistencia definitiva solo
+al finalizar.
 
 No se implementaron todavia dashboard real, captura GPS automatica,
 fotografias desde camara/galeria, croquis cartografico operativo, PDF ni QR.
@@ -76,21 +78,44 @@ Implementado:
   - efectos personales;
   - latitud/longitud opcionales;
   - ruta de croquis opcional;
-  - conductores;
-  - vehiculos;
-  - personas involucradas.
+  - conductores dinamicos;
+  - vehiculos dinamicos;
+  - personas involucradas dinamicas.
+- Conductores pueden agregarse, revisarse, editarse y quitarse antes de
+  finalizar.
+- Campos validados por conductor: nombre, edad, licencia, categoria,
+  domicilio, zona y contactos. Condicion de entrega queda opcional para cuando
+  corresponda.
+- Vehiculos pueden agregarse, revisarse, editarse y quitarse antes de
+  finalizar.
+- Campos validados por vehiculo: placa, marca, color, tipo y servicio.
+- La relacion conductor-vehiculo se selecciona contra conductores del mismo
+  formulario temporal.
+- Al quitar un conductor antes de finalizar, los vehiculos relacionados se
+  limpian o reindexan en memoria para evitar referencias invalidas.
+- Personas involucradas pueden agregarse, revisarse, editarse y quitarse antes
+  de finalizar.
+- Campos validados por persona: tipo `HERIDO`/`FALLECIDO`, nombre y edad.
+  Lugar de evacuacion queda opcional para cuando corresponda.
 - No existen borradores persistidos.
 - Cancelar con datos ingresados solicita confirmacion y advierte perdida de la
   informacion no guardada.
 - `Finalizar informe` valida obligatorios y persiste definitivamente.
 - Despues de finalizar, el detalle se abre en modo lectura.
 - No existe edicion posterior del informe finalizado.
+- No existen controles UI para editar o eliminar hijos individualmente en modo
+  lectura final.
 
 ## Persistencia
 
-- No se modifico el esquema ni la version de base de datos.
-- Se reutilizan las tablas existentes de informes y relaciones.
+- Version de esquema SQLite actual: `2`.
+- La version 2 agrega triggers para impedir que un vehiculo relacione un
+  conductor perteneciente a otro informe.
+- `PRAGMA foreign_keys = ON` se mantiene habilitado.
 - `Finalizar informe` usa transaccion SQLite.
+- Informe, conductores, vehiculos, relaciones, personas y fotografias se
+  persisten como una sola unidad.
+- Si falla una operacion persistente, SQLite revierte la transaccion completa.
 - El informe se guarda asociado automaticamente al `id_policia` autenticado.
 - Todo informe nuevo queda con `estado = 1`.
 - Correlativo por gestion con formato `AAAA-NNNNNN`.
@@ -100,6 +125,7 @@ Implementado:
 - `ADMIN` puede inactivar informes con confirmacion.
 - Inactivar solo cambia `estado` y conserva contenido/relaciones.
 - No existe vista de inactivos ni reactivacion en UI.
+- No se crean registros huerfanos durante el llenado del formulario.
 
 ## Pruebas y validacion
 
@@ -115,6 +141,11 @@ Pruebas agregadas o actualizadas:
 
 - `test/features/reports/report_controller_test.dart`
   - validaciones antes de finalizar;
+  - varios conductores;
+  - varios vehiculos;
+  - relacion conductor-vehiculo;
+  - personas involucradas;
+  - validacion de campos confirmados de conductores, vehiculos y personas;
   - finalizacion asociada al policia autenticado;
   - detalle en modo lectura;
   - consulta `POLICE` limitada a informes propios activos;
@@ -123,7 +154,9 @@ Pruebas agregadas o actualizadas:
   - bloqueo de lectura de informes ajenos para `POLICE`;
   - cancelacion como descarte de estado en memoria sin persistencia.
 - `test/data/database/persistence_test.dart`
+  - creacion de BD versionada con foreign keys habilitadas;
   - finalizacion completa con relaciones;
+  - impedimento de relacionar vehiculo con conductor de otro informe;
   - rollback ante falla SQLite;
   - correlativo por gestion;
   - no reutilizacion de correlativo con informes inactivos;
@@ -145,4 +178,4 @@ Pruebas existentes conservadas:
 
 ## Siguiente fase
 
-**Fase 6.**
+**Fase 7.**

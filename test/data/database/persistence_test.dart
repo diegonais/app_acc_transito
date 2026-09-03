@@ -52,13 +52,28 @@ void main() {
         idPolicia: idPolicia,
         epi: 'EPI Norte',
         conductores: const [
-          DriverInput(nombreCompleto: 'Juan Perez', licencia: 'LP-123'),
+          DriverInput(
+            nombreCompleto: 'Juan Perez',
+            edad: 34,
+            licencia: 'LP-123',
+            categoria: 'A',
+            domicilio: 'Barrio Norte',
+            zona: 'Norte',
+            contactos: '70000001',
+          ),
         ],
         vehiculos: const [
-          VehicleInput(driverIndex: 0, placa: '123ABC', marca: 'Toyota'),
+          VehicleInput(
+            driverIndex: 0,
+            placa: '123ABC',
+            marca: 'Toyota',
+            color: 'Blanco',
+            tipo: 'Vagoneta',
+            servicio: 'Particular',
+          ),
         ],
         personas: const [
-          PersonInput(nombre: 'Maria Rojas', tipo: 'HERIDO'),
+          PersonInput(nombre: 'Maria Rojas', edad: 30, tipo: 'HERIDO'),
         ],
         fotografias: const [
           PhotoInput(ruta: '/evidencias/foto-1.jpg', tipo: 'PANORAMICA'),
@@ -124,6 +139,44 @@ void main() {
         ci: '123',
         now: DateTime.utc(2026),
       ),
+      throwsA(isA<DatabaseException>()),
+    );
+  });
+
+  test('impide relacionar un vehiculo con conductor de otro informe', () async {
+    final idPolicia = await _createPolice(userRepository, policeRepository);
+    final first = await reportRepository.finalizeReport(
+      _validReportInput(
+        idPolicia: idPolicia,
+        epi: 'EPI Conductor',
+        conductores: const [_validDriver],
+      ),
+      now: DateTime.utc(2026),
+    );
+    final second = await reportRepository.finalizeReport(
+      _validReportInput(idPolicia: idPolicia, epi: 'EPI Vehiculo'),
+      now: DateTime.utc(2026),
+    );
+
+    final db = await appDatabase.instance;
+    final conductor = await db.query(
+      'conductores',
+      where: 'id_informe = ?',
+      whereArgs: [first.idInforme],
+      limit: 1,
+    );
+
+    await expectLater(
+      db.insert('vehiculos', {
+        'id_informe': second.idInforme,
+        'id_conductor': conductor.single['id_conductor'],
+        'placa': '999XYZ',
+        'marca': 'Toyota',
+        'color': 'Blanco',
+        'tipo': 'Vagoneta',
+        'servicio': 'Particular',
+        'fecha_creacion': DateTime.utc(2026).toIso8601String(),
+      }),
       throwsA(isA<DatabaseException>()),
     );
   });
@@ -218,6 +271,16 @@ void main() {
     expect(inactivePhotos.single['ruta'], '/evidencias/inactiva.jpg');
   });
 }
+
+const _validDriver = DriverInput(
+  nombreCompleto: 'Juan Perez',
+  edad: 34,
+  licencia: 'LP-123',
+  categoria: 'A',
+  domicilio: 'Barrio Norte',
+  zona: 'Norte',
+  contactos: '70000001',
+);
 
 Future<int> _createPolice(
   UserRepository userRepository,

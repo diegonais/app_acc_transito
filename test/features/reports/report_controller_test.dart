@@ -94,6 +94,133 @@ void main() {
     expect(detail.descripcion, 'Descripcion del hecho');
   });
 
+  test('finaliza varios conductores, vehiculos relacionados y personas',
+      () async {
+    final police = await _createPoliceSession(
+      userRepository,
+      policeRepository,
+      username: 'policia.relaciones',
+      plate: 'PL-008',
+    );
+
+    final finalized = await controller.finalize(
+      actor: police,
+      draft: _validDraft(
+        conductores: const [
+          DriverInput(
+            nombreCompleto: 'Juan Perez',
+            edad: 34,
+            licencia: 'LP-123',
+            categoria: 'A',
+            domicilio: 'Barrio Norte',
+            zona: 'Norte',
+            contactos: '70000001',
+          ),
+          DriverInput(
+            nombreCompleto: 'Luis Roca',
+            edad: 41,
+            licencia: 'SC-456',
+            categoria: 'B',
+            domicilio: 'Av. Sur',
+            zona: 'Sur',
+            contactos: '70000002',
+            condicionEntrega: 'Entregado a Transito',
+          ),
+        ],
+        vehiculos: const [
+          VehicleInput(
+            driverIndex: 0,
+            placa: '123ABC',
+            marca: 'Toyota',
+            color: 'Blanco',
+            tipo: 'Vagoneta',
+            servicio: 'Particular',
+          ),
+          VehicleInput(
+            driverIndex: 1,
+            placa: '456DEF',
+            marca: 'Nissan',
+            color: 'Rojo',
+            tipo: 'Automovil',
+            servicio: 'Publico',
+          ),
+        ],
+        personas: const [
+          PersonInput(
+            nombre: 'Maria Rojas',
+            edad: 30,
+            tipo: 'HERIDO',
+            lugarEvacuacion: 'Hospital',
+          ),
+          PersonInput(
+            nombre: 'Carlos Rojas',
+            edad: 52,
+            tipo: 'FALLECIDO',
+          ),
+        ],
+      ),
+      now: DateTime.utc(2026, 5, 2),
+    );
+
+    final detail = await controller.findReadableDetail(
+      actor: police,
+      idInforme: finalized.idInforme,
+    );
+
+    expect(detail.conductores, hasLength(2));
+    expect(detail.vehiculos, hasLength(2));
+    expect(detail.personas, hasLength(2));
+    expect(detail.vehiculos.first.idConductor,
+        detail.conductores.first.idConductor);
+    expect(
+        detail.vehiculos.last.idConductor, detail.conductores.last.idConductor);
+  });
+
+  test('valida campos confirmados de conductores vehiculos y personas',
+      () async {
+    final police = await _createPoliceSession(
+      userRepository,
+      policeRepository,
+      username: 'policia.validacion.relaciones',
+      plate: 'PL-009',
+    );
+
+    await expectLater(
+      controller.finalize(
+        actor: police,
+        draft: _validDraft(
+          conductores: const [
+            DriverInput(nombreCompleto: 'Sin datos'),
+          ],
+          vehiculos: const [
+            VehicleInput(driverIndex: 1),
+          ],
+          personas: const [
+            PersonInput(nombre: 'Persona sin edad', tipo: 'OBSERVADO'),
+          ],
+        ),
+        now: DateTime.utc(2026, 5, 3),
+      ),
+      throwsA(
+        isA<ReportValidationException>().having(
+          (error) => error.messages,
+          'messages',
+          containsAll([
+            'Debe ingresar edad del conductor 1.',
+            'Debe ingresar contactos del conductor 1.',
+            'Debe ingresar placa del vehiculo 1.',
+            'El vehiculo 1 referencia un conductor invalido.',
+            'El tipo de persona 1 no es valido.',
+            'Debe ingresar edad de la persona 1.',
+          ]),
+        ),
+      ),
+    );
+
+    final db = await appDatabase.instance;
+    expect(await db.query('informes'), isEmpty);
+  });
+
   test('POLICE consulta solo sus informes activos', () async {
     final firstPolice = await _createPoliceSession(
       userRepository,
@@ -208,7 +335,12 @@ void main() {
   });
 }
 
-DirectActionReportDraft _validDraft({String epi = 'EPI Central'}) {
+DirectActionReportDraft _validDraft({
+  String epi = 'EPI Central',
+  List<DriverInput>? conductores,
+  List<VehicleInput>? vehiculos,
+  List<PersonInput>? personas,
+}) {
   return DirectActionReportDraft(
     epi: epi,
     fechaHoraLlegada: DateTime.utc(2026, 1, 1, 8),
@@ -224,32 +356,38 @@ DirectActionReportDraft _validDraft({String epi = 'EPI Central'}) {
     protagonistasPresentes: true,
     testigos: 'No existe',
     efectosPersonales: 'No aplica',
-    conductores: const [
-      DriverInput(
-        nombreCompleto: 'Juan Perez',
-        licencia: 'LP-123',
-        categoria: 'A',
-        contactos: 'No aplica',
-      ),
-    ],
-    vehiculos: const [
-      VehicleInput(
-        driverIndex: 0,
-        placa: '123ABC',
-        marca: 'Toyota',
-        color: 'Blanco',
-        tipo: 'Vagoneta',
-        servicio: 'Particular',
-      ),
-    ],
-    personas: const [
-      PersonInput(
-        nombre: 'Maria Rojas',
-        edad: 30,
-        tipo: 'HERIDO',
-        lugarEvacuacion: 'Hospital',
-      ),
-    ],
+    conductores: conductores ??
+        const [
+          DriverInput(
+            nombreCompleto: 'Juan Perez',
+            edad: 34,
+            licencia: 'LP-123',
+            categoria: 'A',
+            domicilio: 'Barrio Norte',
+            zona: 'Norte',
+            contactos: 'No aplica',
+          ),
+        ],
+    vehiculos: vehiculos ??
+        const [
+          VehicleInput(
+            driverIndex: 0,
+            placa: '123ABC',
+            marca: 'Toyota',
+            color: 'Blanco',
+            tipo: 'Vagoneta',
+            servicio: 'Particular',
+          ),
+        ],
+    personas: personas ??
+        const [
+          PersonInput(
+            nombre: 'Maria Rojas',
+            edad: 30,
+            tipo: 'HERIDO',
+            lugarEvacuacion: 'Hospital',
+          ),
+        ],
   );
 }
 

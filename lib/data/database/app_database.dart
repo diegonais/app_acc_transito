@@ -6,7 +6,7 @@ import 'app_database_migrations.dart';
 class AppDatabase {
   AppDatabase({String? databasePath}) : _databasePath = databasePath;
 
-  static const int schemaVersion = 1;
+  static const int schemaVersion = 2;
   static const String databaseName = 'app_acc_transito.db';
 
   final String? _databasePath;

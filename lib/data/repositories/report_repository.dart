@@ -84,6 +84,28 @@ class DriverInput {
   final String? zona;
   final String? contactos;
   final String? condicionEntrega;
+
+  DriverInput copyWith({
+    String? nombreCompleto,
+    int? edad,
+    String? licencia,
+    String? categoria,
+    String? domicilio,
+    String? zona,
+    String? contactos,
+    String? condicionEntrega,
+  }) {
+    return DriverInput(
+      nombreCompleto: nombreCompleto ?? this.nombreCompleto,
+      edad: edad ?? this.edad,
+      licencia: licencia ?? this.licencia,
+      categoria: categoria ?? this.categoria,
+      domicilio: domicilio ?? this.domicilio,
+      zona: zona ?? this.zona,
+      contactos: contactos ?? this.contactos,
+      condicionEntrega: condicionEntrega ?? this.condicionEntrega,
+    );
+  }
 }
 
 class VehicleInput {
@@ -102,6 +124,25 @@ class VehicleInput {
   final String? color;
   final String? tipo;
   final String? servicio;
+
+  VehicleInput copyWith({
+    int? driverIndex,
+    bool clearDriverIndex = false,
+    String? placa,
+    String? marca,
+    String? color,
+    String? tipo,
+    String? servicio,
+  }) {
+    return VehicleInput(
+      driverIndex: clearDriverIndex ? null : driverIndex ?? this.driverIndex,
+      placa: placa ?? this.placa,
+      marca: marca ?? this.marca,
+      color: color ?? this.color,
+      tipo: tipo ?? this.tipo,
+      servicio: servicio ?? this.servicio,
+    );
+  }
 }
 
 class PersonInput {
@@ -116,6 +157,20 @@ class PersonInput {
   final String tipo;
   final int? edad;
   final String? lugarEvacuacion;
+
+  PersonInput copyWith({
+    String? nombre,
+    String? tipo,
+    int? edad,
+    String? lugarEvacuacion,
+  }) {
+    return PersonInput(
+      nombre: nombre ?? this.nombre,
+      tipo: tipo ?? this.tipo,
+      edad: edad ?? this.edad,
+      lugarEvacuacion: lugarEvacuacion ?? this.lugarEvacuacion,
+    );
+  }
 }
 
 class PhotoInput {
@@ -522,11 +577,23 @@ class ReportRepository {
     for (final (index, conductor) in input.conductores.indexed) {
       requiredText(
           'nombre del conductor ${index + 1}', conductor.nombreCompleto);
-      if (conductor.edad != null && conductor.edad! < 0) {
+      if (conductor.edad == null) {
+        messages.add('Debe ingresar edad del conductor ${index + 1}.');
+      } else if (conductor.edad! < 0) {
         messages.add('La edad del conductor ${index + 1} no es valida.');
       }
+      requiredText('licencia del conductor ${index + 1}', conductor.licencia);
+      requiredText('categoria del conductor ${index + 1}', conductor.categoria);
+      requiredText('domicilio del conductor ${index + 1}', conductor.domicilio);
+      requiredText('zona del conductor ${index + 1}', conductor.zona);
+      requiredText('contactos del conductor ${index + 1}', conductor.contactos);
     }
     for (final (index, vehiculo) in input.vehiculos.indexed) {
+      requiredText('placa del vehiculo ${index + 1}', vehiculo.placa);
+      requiredText('marca del vehiculo ${index + 1}', vehiculo.marca);
+      requiredText('color del vehiculo ${index + 1}', vehiculo.color);
+      requiredText('tipo del vehiculo ${index + 1}', vehiculo.tipo);
+      requiredText('servicio del vehiculo ${index + 1}', vehiculo.servicio);
       final driverIndex = vehiculo.driverIndex;
       if (driverIndex != null &&
           (driverIndex < 0 || driverIndex >= input.conductores.length)) {
@@ -540,7 +607,9 @@ class ReportRepository {
       if (persona.tipo != 'HERIDO' && persona.tipo != 'FALLECIDO') {
         messages.add('El tipo de persona ${index + 1} no es valido.');
       }
-      if (persona.edad != null && persona.edad! < 0) {
+      if (persona.edad == null) {
+        messages.add('Debe ingresar edad de la persona ${index + 1}.');
+      } else if (persona.edad! < 0) {
         messages.add('La edad de la persona ${index + 1} no es valida.');
       }
     }

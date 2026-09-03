@@ -494,10 +494,13 @@ class _DirectActionReportFormPageState
                   final driver = _conductores[index];
                   return _EditableSummary(
                     title: driver.nombreCompleto,
-                    subtitle: driver.licencia ?? 'Sin licencia',
-                    onDelete: () => setState(() {
-                      _conductores.removeAt(index);
-                    }),
+                    subtitle: [
+                      'Licencia: ${driver.licencia}',
+                      'Categoria: ${driver.categoria}',
+                      'Contactos: ${driver.contactos}',
+                    ].join(' / '),
+                    onTap: () => _editDriver(index),
+                    onDelete: () => _removeDriver(index),
                   );
                 },
               ),
@@ -516,6 +519,7 @@ class _DirectActionReportFormPageState
                       vehicle.tipo,
                       vehicle.servicio,
                     ].whereType<String>().join(' / '),
+                    onTap: () => _editVehicle(index),
                     onDelete: () => setState(() {
                       _vehiculos.removeAt(index);
                     }),
@@ -531,7 +535,8 @@ class _DirectActionReportFormPageState
                   final person = _personas[index];
                   return _EditableSummary(
                     title: person.nombre,
-                    subtitle: person.tipo,
+                    subtitle: '${person.tipo} / Edad: ${person.edad}',
+                    onTap: () => _editPerson(index),
                     onDelete: () => setState(() {
                       _personas.removeAt(index);
                     }),
@@ -691,14 +696,62 @@ class _DirectActionReportFormPageState
     }
   }
 
+  Future<void> _editDriver(int index) async {
+    final input = await showDialog<DriverInput>(
+      context: context,
+      builder: (_) => _DriverDialog(initialValue: _conductores[index]),
+    );
+    if (input != null) {
+      setState(() {
+        _conductores[index] = input;
+      });
+    }
+  }
+
+  void _removeDriver(int index) {
+    setState(() {
+      _conductores.removeAt(index);
+      for (var vehicleIndex = 0;
+          vehicleIndex < _vehiculos.length;
+          vehicleIndex++) {
+        final driverIndex = _vehiculos[vehicleIndex].driverIndex;
+        if (driverIndex == null) {
+          continue;
+        }
+        if (driverIndex == index) {
+          _vehiculos[vehicleIndex] =
+              _vehiculos[vehicleIndex].copyWith(clearDriverIndex: true);
+        } else if (driverIndex > index) {
+          _vehiculos[vehicleIndex] =
+              _vehiculos[vehicleIndex].copyWith(driverIndex: driverIndex - 1);
+        }
+      }
+    });
+  }
+
   Future<void> _addVehicle() async {
     final input = await showDialog<VehicleInput>(
       context: context,
-      builder: (_) => _VehicleDialog(driverCount: _conductores.length),
+      builder: (_) => _VehicleDialog(conductores: _conductores),
     );
     if (input != null) {
       setState(() {
         _vehiculos.add(input);
+      });
+    }
+  }
+
+  Future<void> _editVehicle(int index) async {
+    final input = await showDialog<VehicleInput>(
+      context: context,
+      builder: (_) => _VehicleDialog(
+        conductores: _conductores,
+        initialValue: _vehiculos[index],
+      ),
+    );
+    if (input != null) {
+      setState(() {
+        _vehiculos[index] = input;
       });
     }
   }
@@ -711,6 +764,18 @@ class _DirectActionReportFormPageState
     if (input != null) {
       setState(() {
         _personas.add(input);
+      });
+    }
+  }
+
+  Future<void> _editPerson(int index) async {
+    final input = await showDialog<PersonInput>(
+      context: context,
+      builder: (_) => _PersonDialog(initialValue: _personas[index]),
+    );
+    if (input != null) {
+      setState(() {
+        _personas[index] = input;
       });
     }
   }
@@ -913,17 +978,20 @@ class _EditableSummary extends StatelessWidget {
   const _EditableSummary({
     required this.title,
     required this.subtitle,
+    required this.onTap,
     required this.onDelete,
   });
 
   final String title;
   final String subtitle;
+  final VoidCallback onTap;
   final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: ListTile(
+        onTap: onTap,
         title: Text(title),
         subtitle: subtitle.isEmpty ? null : Text(subtitle),
         trailing: IconButton(
@@ -976,7 +1044,9 @@ class _ReadOnlyList extends StatelessWidget {
 }
 
 class _DriverDialog extends StatefulWidget {
-  const _DriverDialog();
+  const _DriverDialog({this.initialValue});
+
+  final DriverInput? initialValue;
 
   @override
   State<_DriverDialog> createState() => _DriverDialogState();
@@ -994,6 +1064,23 @@ class _DriverDialogState extends State<_DriverDialog> {
   final _condicionEntrega = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    final value = widget.initialValue;
+    if (value == null) {
+      return;
+    }
+    _nombre.text = value.nombreCompleto;
+    _edad.text = value.edad?.toString() ?? '';
+    _licencia.text = value.licencia ?? '';
+    _categoria.text = value.categoria ?? '';
+    _domicilio.text = value.domicilio ?? '';
+    _zona.text = value.zona ?? '';
+    _contactos.text = value.contactos ?? '';
+    _condicionEntrega.text = value.condicionEntrega ?? '';
+  }
+
+  @override
   void dispose() {
     _nombre.dispose();
     _edad.dispose();
@@ -1009,22 +1096,24 @@ class _DriverDialogState extends State<_DriverDialog> {
   @override
   Widget build(BuildContext context) {
     return _InputDialog(
-      title: 'Agregar conductor',
+      title: widget.initialValue == null
+          ? 'Agregar conductor'
+          : 'Revisar conductor',
+      submitLabel: widget.initialValue == null ? 'Agregar' : 'Guardar',
       formKey: _formKey,
       children: [
         _field(_nombre, 'Nombre completo'),
         _field(
           _edad,
           'Edad',
-          required: false,
           keyboardType: TextInputType.number,
-          validator: _validateOptionalInt,
+          validator: _validateRequiredInt,
         ),
-        _field(_licencia, 'Licencia', required: false),
-        _field(_categoria, 'Categoria', required: false),
-        _field(_domicilio, 'Domicilio', required: false),
-        _field(_zona, 'Zona', required: false),
-        _field(_contactos, 'Contactos', required: false),
+        _field(_licencia, 'Licencia'),
+        _field(_categoria, 'Categoria'),
+        _field(_domicilio, 'Domicilio'),
+        _field(_zona, 'Zona'),
+        _field(_contactos, 'Contactos'),
         _field(_condicionEntrega, 'Condicion de entrega', required: false),
       ],
       onSubmit: () {
@@ -1049,9 +1138,10 @@ class _DriverDialogState extends State<_DriverDialog> {
 }
 
 class _VehicleDialog extends StatefulWidget {
-  const _VehicleDialog({required this.driverCount});
+  const _VehicleDialog({required this.conductores, this.initialValue});
 
-  final int driverCount;
+  final List<DriverInput> conductores;
+  final VehicleInput? initialValue;
 
   @override
   State<_VehicleDialog> createState() => _VehicleDialogState();
@@ -1067,6 +1157,21 @@ class _VehicleDialogState extends State<_VehicleDialog> {
   int? _driverIndex;
 
   @override
+  void initState() {
+    super.initState();
+    final value = widget.initialValue;
+    if (value == null) {
+      return;
+    }
+    _driverIndex = value.driverIndex;
+    _placa.text = value.placa ?? '';
+    _marca.text = value.marca ?? '';
+    _color.text = value.color ?? '';
+    _tipo.text = value.tipo ?? '';
+    _servicio.text = value.servicio ?? '';
+  }
+
+  @override
   void dispose() {
     _placa.dispose();
     _marca.dispose();
@@ -1079,10 +1184,12 @@ class _VehicleDialogState extends State<_VehicleDialog> {
   @override
   Widget build(BuildContext context) {
     return _InputDialog(
-      title: 'Agregar vehiculo',
+      title:
+          widget.initialValue == null ? 'Agregar vehiculo' : 'Revisar vehiculo',
+      submitLabel: widget.initialValue == null ? 'Agregar' : 'Guardar',
       formKey: _formKey,
       children: [
-        if (widget.driverCount > 0)
+        if (widget.conductores.isNotEmpty)
           DropdownButtonFormField<int?>(
             initialValue: _driverIndex,
             decoration: const InputDecoration(
@@ -1094,10 +1201,10 @@ class _VehicleDialogState extends State<_VehicleDialog> {
                 child: Text('No aplica'),
               ),
               ...List.generate(
-                widget.driverCount,
+                widget.conductores.length,
                 (index) => DropdownMenuItem<int?>(
                   value: index,
-                  child: Text('Conductor ${index + 1}'),
+                  child: Text(widget.conductores[index].nombreCompleto),
                 ),
               ),
             ],
@@ -1105,12 +1212,12 @@ class _VehicleDialogState extends State<_VehicleDialog> {
               _driverIndex = value;
             }),
           ),
-        if (widget.driverCount > 0) const SizedBox(height: 12),
-        _field(_placa, 'Placa', required: false),
-        _field(_marca, 'Marca', required: false),
-        _field(_color, 'Color', required: false),
-        _field(_tipo, 'Tipo', required: false),
-        _field(_servicio, 'Servicio', required: false),
+        if (widget.conductores.isNotEmpty) const SizedBox(height: 12),
+        _field(_placa, 'Placa'),
+        _field(_marca, 'Marca'),
+        _field(_color, 'Color'),
+        _field(_tipo, 'Tipo'),
+        _field(_servicio, 'Servicio'),
       ],
       onSubmit: () {
         if (!(_formKey.currentState?.validate() ?? false)) {
@@ -1132,7 +1239,9 @@ class _VehicleDialogState extends State<_VehicleDialog> {
 }
 
 class _PersonDialog extends StatefulWidget {
-  const _PersonDialog();
+  const _PersonDialog({this.initialValue});
+
+  final PersonInput? initialValue;
 
   @override
   State<_PersonDialog> createState() => _PersonDialogState();
@@ -1146,6 +1255,19 @@ class _PersonDialogState extends State<_PersonDialog> {
   String _tipo = 'HERIDO';
 
   @override
+  void initState() {
+    super.initState();
+    final value = widget.initialValue;
+    if (value == null) {
+      return;
+    }
+    _nombre.text = value.nombre;
+    _edad.text = value.edad?.toString() ?? '';
+    _tipo = value.tipo;
+    _lugarEvacuacion.text = value.lugarEvacuacion ?? '';
+  }
+
+  @override
   void dispose() {
     _nombre.dispose();
     _edad.dispose();
@@ -1156,16 +1278,18 @@ class _PersonDialogState extends State<_PersonDialog> {
   @override
   Widget build(BuildContext context) {
     return _InputDialog(
-      title: 'Agregar persona involucrada',
+      title: widget.initialValue == null
+          ? 'Agregar persona involucrada'
+          : 'Revisar persona involucrada',
+      submitLabel: widget.initialValue == null ? 'Agregar' : 'Guardar',
       formKey: _formKey,
       children: [
         _field(_nombre, 'Nombre'),
         _field(
           _edad,
           'Edad',
-          required: false,
           keyboardType: TextInputType.number,
-          validator: _validateOptionalInt,
+          validator: _validateRequiredInt,
         ),
         DropdownButtonFormField<String>(
           initialValue: _tipo,
@@ -1201,12 +1325,14 @@ class _PersonDialogState extends State<_PersonDialog> {
 class _InputDialog extends StatelessWidget {
   const _InputDialog({
     required this.title,
+    required this.submitLabel,
     required this.formKey,
     required this.children,
     required this.onSubmit,
   });
 
   final String title;
+  final String submitLabel;
   final GlobalKey<FormState> formKey;
   final List<Widget> children;
   final VoidCallback onSubmit;
@@ -1234,7 +1360,7 @@ class _InputDialog extends StatelessWidget {
         ),
         FilledButton(
           onPressed: onSubmit,
-          child: const Text('Agregar'),
+          child: Text(submitLabel),
         ),
       ],
     );
@@ -1384,6 +1510,14 @@ String? _validateOptionalInt(String? value) {
     return 'Ingrese un numero valido.';
   }
   return null;
+}
+
+String? _validateRequiredInt(String? value) {
+  final text = (value ?? '').trim();
+  if (text.isEmpty) {
+    return 'Campo obligatorio.';
+  }
+  return _validateOptionalInt(value);
 }
 
 double? _parseOptionalDouble(String value) {
