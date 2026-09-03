@@ -9,6 +9,8 @@ import 'package:app_acc_transito/features/auth/data/password_hasher.dart';
 import 'package:app_acc_transito/features/auth/domain/app_role.dart';
 import 'package:app_acc_transito/features/auth/domain/auth_exceptions.dart';
 import 'package:app_acc_transito/features/auth/domain/authenticated_user.dart';
+import 'package:app_acc_transito/features/officers/application/officer_management_controller.dart';
+import 'package:app_acc_transito/features/officers/data/officer_management_repository.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -91,7 +93,11 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         onGenerateRoute: (settings) {
-          return AppRoutes.onGenerateRoute(settings, controller);
+          return AppRoutes.onGenerateRoute(
+            settings,
+            controller,
+            _unusedOfficerController(),
+          );
         },
         initialRoute: '/ruta-no-registrada',
       ),
@@ -166,6 +172,20 @@ AuthRepository _unusedRepository() {
   return AuthRepository(
     userRepository: UserRepository(database),
     policeRepository: PoliceRepository(database),
+    passwordHasher: PasswordHasher(
+      algorithm: Pbkdf2(
+        macAlgorithm: Hmac.sha256(),
+        iterations: 1000,
+        bits: 256,
+      ),
+    ),
+  );
+}
+
+OfficerManagementController _unusedOfficerController() {
+  final database = AppDatabase(databasePath: ':memory:');
+  return OfficerManagementController(
+    repository: OfficerManagementRepository(database),
     passwordHasher: PasswordHasher(
       algorithm: Pbkdf2(
         macAlgorithm: Hmac.sha256(),

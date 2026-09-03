@@ -7,6 +7,8 @@ import '../features/auth/application/auth_controller.dart';
 import '../features/auth/application/auth_scope.dart';
 import '../features/auth/data/auth_repository.dart';
 import '../features/auth/data/password_hasher.dart';
+import '../features/officers/application/officer_management_controller.dart';
+import '../features/officers/data/officer_management_repository.dart';
 import 'routes/app_routes.dart';
 import 'theme/app_theme.dart';
 
@@ -27,19 +29,25 @@ class AccTransitoApp extends StatefulWidget {
 
 class _AccTransitoAppState extends State<AccTransitoApp> {
   late final AuthController _authController;
+  late final OfficerManagementController _officerManagementController;
 
   @override
   void initState() {
     super.initState();
     final database = widget._database ?? AppDatabase();
+    final passwordHasher = PasswordHasher();
     _authController = widget._authController ??
         AuthController(
           AuthRepository(
             userRepository: UserRepository(database),
             policeRepository: PoliceRepository(database),
-            passwordHasher: PasswordHasher(),
+            passwordHasher: passwordHasher,
           ),
         );
+    _officerManagementController = OfficerManagementController(
+      repository: OfficerManagementRepository(database),
+      passwordHasher: passwordHasher,
+    );
   }
 
   @override
@@ -52,7 +60,11 @@ class _AccTransitoAppState extends State<AccTransitoApp> {
         theme: AppTheme.light,
         initialRoute: AppRoutes.splash,
         onGenerateRoute: (settings) {
-          return AppRoutes.onGenerateRoute(settings, _authController);
+          return AppRoutes.onGenerateRoute(
+            settings,
+            _authController,
+            _officerManagementController,
+          );
         },
       ),
     );

@@ -39,6 +39,19 @@ class UserDao {
     return rows.isEmpty ? null : rows.first;
   }
 
+  Future<Map<String, Object?>?> findByUsernameExceptId(
+    String username,
+    int idUsuario,
+  ) async {
+    final rows = await _db.query(
+      'usuarios',
+      where: 'nombre_usuario = ? AND id_usuario <> ?',
+      whereArgs: [username, idUsuario],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : rows.first;
+  }
+
   Future<int> countAdmins() async {
     final rows = await _db.rawQuery(
       'SELECT COUNT(*) AS total FROM usuarios WHERE rol = ?',
@@ -56,6 +69,34 @@ class UserDao {
       'usuarios',
       {
         'contrasena_hash': passwordHash,
+        'fecha_modificacion': modifiedAt,
+      },
+      where: 'id_usuario = ?',
+      whereArgs: [idUsuario],
+    );
+  }
+
+  Future<int> updateUsername(
+    int idUsuario,
+    String username,
+    String modifiedAt,
+  ) {
+    return _db.update(
+      'usuarios',
+      {
+        'nombre_usuario': username,
+        'fecha_modificacion': modifiedAt,
+      },
+      where: 'id_usuario = ?',
+      whereArgs: [idUsuario],
+    );
+  }
+
+  Future<int> updateStatus(int idUsuario, int estado, String modifiedAt) {
+    return _db.update(
+      'usuarios',
+      {
+        'estado': estado,
         'fecha_modificacion': modifiedAt,
       },
       where: 'id_usuario = ?',

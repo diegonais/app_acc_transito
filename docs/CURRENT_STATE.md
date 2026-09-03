@@ -1,22 +1,25 @@
-# Estado actual - Fase 3 completada
+# Estado actual - Fase 4 completada
 
 ## Etapa
 
-**Fase 3 - Autenticacion local y roles**: finalizada.
+**Fase 4 - Gestion de policias**: finalizada.
 
-La aplicacion cuenta con autenticacion completamente local sobre SQLite, configuracion inicial del primer `ADMIN`, login por usuario/contrasena, sesion en memoria, logout y autorizacion logica por roles `ADMIN` y `POLICE`.
+La aplicacion mantiene autenticacion local sobre SQLite y ahora permite al
+`ADMIN` gestionar funcionarios policiales y sus cuentas locales asociadas.
 
-No se implementaron dashboard real, gestion completa de policias, formularios de informes, GPS, fotografias desde camara/galeria, croquis, PDF ni QR.
+No se implementaron todavia el Informe de Accion Directa, dashboard real, GPS,
+fotografias desde camara/galeria, croquis, PDF ni QR.
 
-## Dependencias agregadas
+## Dependencias
 
-- `cryptography`: usada para derivar contrasenas con PBKDF2-HMAC-SHA256, salt aleatorio y comparacion de hash sin almacenar texto plano.
+Sin dependencias nuevas en esta fase.
 
 Se mantienen:
 
+- `cryptography`: hash de contrasenas con PBKDF2-HMAC-SHA256 y salt aleatorio.
 - `sqflite`: motor SQLite local.
 - `path`: construccion portable de la ruta del archivo de base de datos.
-- `sqflite_common_ffi` como dependencia de desarrollo para pruebas SQLite reales en memoria.
+- `sqflite_common_ffi`: SQLite real en memoria para pruebas.
 
 ## Autenticacion
 
@@ -25,59 +28,65 @@ Se mantienen:
 - Repositorio de autenticacion: `lib/features/auth/data/auth_repository.dart`.
 - Hashing de contrasena: `lib/features/auth/data/password_hasher.dart`.
 
-Flujos implementados:
+Flujos vigentes:
 
 - Si no existe ningun `ADMIN`, el splash redirige a configuracion inicial.
-- La configuracion inicial crea el primer `ADMIN` con usuario y contrasena validados.
-- Cuando ya existe un `ADMIN`, el flujo inicial deja de mostrarse.
-- Login busca usuario localmente, valida estado activo, verifica contrasena y carga rol.
+- La configuracion inicial crea el primer `ADMIN`.
+- Login local valida usuario activo, contrasena y rol.
 - Usuarios inactivos no acceden.
-- Usuario inexistente y contrasena incorrecta devuelven error generico de credenciales.
+- Usuarios `POLICE` requieren perfil policial activo asociado.
 - La sesion vive solo en memoria mientras la app esta abierta.
-- No existe `Recordarme` ni sesion persistente automatica.
+- No existe `Recordarme`.
 - Logout limpia la sesion y vuelve a login.
-- La ruta protegida de dashboard redirige a login si no existe sesion.
 
-## Seguridad de contrasena
+## Gestion de policias
 
-- Nunca se guarda la contrasena en texto plano.
-- `usuarios.contrasena_hash` almacena un valor codificado con formato:
-  `pbkdf2_sha256$iteraciones$saltBase64$hashBase64`.
-- El salt se genera con `Random.secure`.
-- La verificacion deriva nuevamente la clave y compara bytes sin exponer hash ni contrasena en UI.
-- No se implementaron email, SMS, preguntas de seguridad ni recuperacion cloud.
+Implementado solo para `ADMIN`:
 
-## Roles y datos del policia
-
-- Roles modelados en `lib/features/auth/domain/app_role.dart`.
-- Sesion autenticada modelada en `lib/features/auth/domain/authenticated_user.dart`.
-- La autorizacion se aplica en logica mediante `requireRole`.
-- El dashboard minimo muestra datos de sesion y restringe el restablecimiento a `ADMIN`.
-- Para usuarios `POLICE`, el login carga datos activos de `policias`:
-  - `id_policia`;
+- Ruta protegida `/officers` accesible desde el dashboard del Administrador.
+- Listado de policias registrados con estados loading/error/empty.
+- Visualizacion de estado activo/inactivo.
+- Alta de funcionario policial con:
+  - numero de placa;
   - grado;
-  - nombres y apellidos;
+  - nombres;
+  - apellidos;
   - unidad;
   - sigla;
+  - C.I.;
+  - nombre de usuario;
+  - contrasena inicial;
+  - estado.
+- Modificacion de datos administrativos permitidos:
   - numero de placa;
-  - C.I. administrativo.
-- Estos datos quedan disponibles en la sesion para asociar informes en fases posteriores.
+  - grado;
+  - nombres;
+  - apellidos;
+  - unidad;
+  - sigla;
+  - C.I.;
+  - nombre de usuario.
+- Activacion/desactivacion sincronizada de policia y usuario asociado.
+- Restablecimiento de contrasena por Admin sin mostrar la anterior.
 
-## Restablecimiento
+No se agregaron celular del policia ni numero de escalafon.
 
-- `ADMIN` puede establecer una nueva contrasena para un usuario `POLICE`.
-- No se requiere conocer ni visualizar la contrasena anterior.
-- El restablecimiento reemplaza solamente el hash almacenado y actualiza `fecha_modificacion`.
-- Un usuario no `ADMIN` recibe error de autorizacion en la capa logica.
-
-## Base de datos
+## Persistencia
 
 - No se modifico el esquema ni la version de base de datos.
-- Se agregaron consultas parametrizadas en DAO para:
-  - buscar usuario por nombre;
-  - contar administradores;
-  - actualizar hash de contrasena;
-  - cargar policia activo por usuario.
+- Se reutilizan las tablas existentes `usuarios` y `policias`.
+- Alta de usuario `POLICE` + registro `policias` se realiza dentro de una transaccion.
+- Activacion/desactivacion actualiza ambas tablas dentro de una transaccion.
+- Actualizacion administrativa mantiene la identidad interna `id_usuario` /
+  `id_policia` y no toca tablas de informes.
+- No hay borrado fisico destructivo.
+- Se agregaron consultas parametrizadas para:
+  - listar policias con su usuario;
+  - buscar duplicados de usuario;
+  - buscar duplicados de placa;
+  - actualizar datos administrativos;
+  - actualizar estado de usuario/policia;
+  - restablecer hash de contrasena.
 
 ## Pruebas y validacion
 
@@ -85,41 +94,36 @@ Comandos ejecutados:
 
 | Comando | Estado | Resultado |
 |---|---|---|
-| `flutter pub get` | correcto | dependencias resueltas |
 | `dart format .` | correcto | formato aplicado |
 | `flutter analyze` | correcto | sin issues |
 | `flutter test` | correcto | todos los tests pasaron |
 
 Pruebas agregadas:
 
+- `test/features/officers/officer_management_repository_test.dart`
+  - alta valida;
+  - usuario duplicado;
+  - placa duplicada;
+  - ausencia de registros parciales;
+  - actualizacion administrativa;
+  - activacion/desactivacion sincronizada;
+  - login bloqueado para inactivo;
+  - relacion usuario-policia;
+  - restablecimiento de contrasena.
+
+Pruebas existentes conservadas:
+
 - `test/features/auth/auth_repository_test.dart`
-  - primer `ADMIN`;
-  - hash + salt y ausencia de texto plano;
-  - bloqueo de recreacion del flujo inicial;
-  - login valido `ADMIN`;
-  - login valido `POLICE` con datos de policia;
-  - contrasena incorrecta;
-  - usuario inexistente;
-  - usuario inactivo;
-  - autorizacion por rol;
-  - restablecimiento local de contrasena policial.
 - `test/features/auth/auth_controller_test.dart`
-  - sesion en memoria;
-  - logout limpia autenticacion.
+- `test/data/database/persistence_test.dart`
 - `test/app_startup_test.dart`
-  - configuracion inicial sin `ADMIN`;
-  - login valido;
-  - logout y proteccion de ruta;
-  - error por credenciales incorrectas;
-  - ruta desconocida a login.
 
 ## Problemas conocidos
 
 - No se probo en dispositivo Android fisico en esta fase.
-- El dashboard sigue siendo minimo; los indicadores reales quedan para una fase posterior.
-- La gestion completa de policias y cuentas locales queda para fases posteriores.
+- El dashboard sigue siendo minimo; los indicadores reales quedan para fase posterior.
 - Informes, GPS, camara/galeria, croquis, PDF y QR siguen pendientes.
 
 ## Siguiente fase
 
-**Fase 4.**
+**Fase 5.**
