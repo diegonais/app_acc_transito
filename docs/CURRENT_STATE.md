@@ -1,204 +1,188 @@
-# Estado actual - Fase 11 completada
+# Estado actual - Fase 12 completada
 
 ## Etapa
 
-**Fase 11 - Codigo QR**: finalizada.
+**Fase 12 - Integracion completa**: finalizada.
 
-La aplicacion mantiene autenticacion local sobre SQLite, gestion de policias,
-registro de Informes de Accion Directa, evidencias fotograficas, dashboard,
-consultas y soft delete de informes. Esta fase agrego el QR institucional local
-asociado al policia propietario del informe y un punto minimo de integracion con
-PDF para que el documento solicite el QR al servicio centralizado.
+La aplicacion fue validada como producto local coherente sobre lo implementado
+hasta Fase 11. Esta fase no agrego funcionalidades nuevas, no modifico el
+esquema SQLite y no incorporo dependencias. Se revisaron los flujos principales
+de `POLICE` y `ADMIN`, la separacion por roles, autorizacion en controladores y
+repositorios, persistencia, soft delete, correlativo, PDF/QR, GPS, fotografias,
+croquis y estados de interfaz.
 
-## Dependencias
+## Flujos validados
 
-Se agregaron dependencias justificadas para generacion local:
+### Flujo POLICE
 
-- `qr`: construccion local de la matriz QR.
-- `pdf`: integracion local del QR dentro del PDF generado.
+Validado por inspeccion de UI/controladores/repositorios y pruebas
+automatizadas:
 
-Se mantienen:
+- login local con contrasena hash + salt;
+- bienvenida/dashboard con grado, nombre, unidad y placa;
+- acceso a registro de nuevo informe solo para usuario `POLICE`;
+- formulario por secciones con datos en memoria;
+- EPI como dato textual del formulario, fuera del correlativo;
+- conductores, vehiculos relacionados y personas involucradas;
+- coordenadas opcionales y preservacion del lugar textual cuando GPS falla;
+- fotografias desde el servicio de medios, categorias y rutas persistidas;
+- croquis cartografico simple con ruta PNG opcional;
+- cancelar descarta informacion en memoria sin persistir borradores;
+- finalizar valida obligatorios y guarda en transaccion;
+- correlativo `AAAA-NNNNNN` asignado solo al finalizar;
+- consulta propia de informes activos;
+- detalle en modo lectura;
+- PDF local con QR institucional del policia propietario.
 
-- `image_picker`: captura desde camara y seleccion multiple desde galeria.
-- `mime`: identificacion basica del tipo de archivo seleccionado para metadato.
-- `geolocator`: permisos, estado del servicio de ubicacion y latitud/longitud.
-- `flutter_map`: croquis cartografico sencillo con OpenStreetMap.
-- `latlong2`: modelo de coordenadas usado por `flutter_map`.
-- `url_launcher`: apertura de coordenadas con una aplicacion externa compatible.
-- `path_provider`: rutas persistentes y temporales de la aplicacion.
-- `cryptography`: hash de contrasenas con PBKDF2-HMAC-SHA256 y salt aleatorio.
-- `sqflite`: motor SQLite local.
-- `path`: construccion portable de rutas.
-- `sqflite_common_ffi`: SQLite real en memoria para pruebas.
+### Flujo ADMIN
 
-## QR institucional
+Validado por inspeccion de UI/controladores/repositorios y pruebas
+automatizadas:
 
-Implementado:
+- login local;
+- dashboard con estadisticas calculadas desde SQLite;
+- gestion de policias;
+- creacion, actualizacion administrativa, activacion/desactivacion y
+  restablecimiento de contrasena sin visualizarla;
+- consulta de informes activos del dispositivo;
+- filtros por policia y rango de fechas;
+- detalle de informes activos;
+- inactivacion con confirmacion;
+- PDF local consultado por Admin usando QR del policia propietario, no del Admin.
 
-- Servicio centralizado `lib/services/qr/institutional_qr_service.dart`.
-- Modelo `InstitutionalQrPolice` con solo los datos permitidos:
-  - nombre completo;
-  - grado;
-  - numero de placa;
-  - unidad.
-- Payload textual estructurado, simple y legible:
+## Integracion y reglas verificadas
 
-```text
-FUNCIONARIO POLICIAL
-Nombre completo: ...
-Grado: ...
-Numero de placa: ...
-Unidad: ...
-```
+- Navegacion protegida: rutas autenticadas redirigen a login si no hay sesion.
+- Logout limpia la sesion y protege la navegacion posterior.
+- La ruta de gestion de policias queda restringida a `ADMIN`.
+- `POLICE` no puede crear informes para terceros ni ampliar consultas con
+  `id_policia` ajeno.
+- `POLICE` no puede leer detalle ajeno ni inactivar informes.
+- `ADMIN` no puede finalizar informes desde el controlador.
+- `PRAGMA foreign_keys = ON` esta habilitado.
+- La relacion vehiculo-conductor queda restringida al mismo informe mediante
+  triggers SQLite.
+- `Finalizar informe` persiste informe, relaciones y fotografias en una
+  transaccion.
+- Si falla una insercion dependiente o la copia de fotografias, no queda informe
+  parcial.
+- El correlativo se calcula dentro de la transaccion y considera informes
+  activos e inactivos.
+- Soft delete cambia solo `estado = 0`.
+- Informes inactivos permanecen en SQLite y conservan relaciones y archivos.
+- Consultas, dashboard y detalle usan solamente informes activos.
+- No existe reactivacion de informes desde interfaz.
+- El contenido del informe finalizado se muestra en detalle de lectura; no hay
+  flujo de edicion posterior.
+- QR incluye solo nombre completo, grado, numero de placa y unidad.
+- PDF no construye el QR por cuenta propia; delega en el servicio QR.
+- Estados loading/error/empty existen en login, setup, dashboard, policias e
+  informes.
 
-- Generacion local de QR mediante matriz `QrImage`.
-- Validacion de datos obligatorios del payload.
-- Se elimino la construccion previa de texto QR desde el usuario autenticado
-  para evitar duplicacion de logica.
+## Problemas corregidos
 
-No se incluye:
+No se detectaron defectos de integracion que requirieran cambios de codigo en
+esta fase. Los comandos de validacion pasaron limpios sobre el estado recibido.
 
-- C.I.;
-- usuario;
-- contrasena/hash;
-- IDs internos;
-- informacion del dispositivo;
-- datos no aprobados.
+Solo se actualizo este documento para reflejar la integracion validada y los
+pendientes reales.
 
-## Integracion PDF
-
-Implementado:
-
-- Servicio `lib/services/pdf/direct_action_report_pdf_service.dart`.
-- El PDF no arma el payload por su cuenta; solicita el QR al
-  `InstitutionalQrService`.
-- El controlador `ReportController.buildReadablePdf`:
-  - respeta permisos de lectura del actor;
-  - carga el detalle persistido del informe;
-  - resuelve el policia propietario por `id_policia`;
-  - genera el PDF con el QR del propietario, aunque quien consulte sea Admin.
-- El repositorio permite resolver la identidad QR del propietario desde SQLite
-  sin exponer datos no autorizados al payload.
-
-Nota: la maquetacion completa, guardado, visualizacion, compartir e impresion
-del PDF quedan como superficie de Fase 10/12 pendiente en el estado recibido del
-proyecto. La integracion QR-PDF queda preparada y probada.
-
-## Dashboard y consultas
-
-Se mantiene:
-
-- Dashboard `ADMIN` con total activos, policias activos, informes por policia,
-  informes del dia, del mes, por fecha seleccionada y resumen mensual.
-- Dashboard `POLICE` con totales propios, indicadores del dia, mes, fecha
-  seleccionada y resumen mensual propio.
-- Estadisticas calculadas siempre desde SQLite.
-- Sin tablas de contadores duplicados.
-- Consultas de informes activos filtradas por rol, policia y fechas.
-- Restriccion `POLICE` en controlador y repositorio para impedir alcance ajeno.
-
-## Informe de Accion Directa
-
-Se mantiene:
-
-- Ruta `/reports` accesible desde dashboard.
-- `POLICE` puede registrar informes nuevos.
-- `ADMIN` consulta informes activos del dispositivo.
-- Formulario por secciones con estado en memoria.
-- Coordenadas, croquis OSM, captura PNG opcional y apertura externa de mapas.
-- Fotografias desde camara y galeria con categorias.
-- No existen borradores persistidos.
-- `Finalizar informe` valida obligatorios y persiste definitivamente.
-- Informe finalizado inmutable y detalle en modo lectura.
-
-## Persistencia
-
-- Version de esquema SQLite actual: `3`.
-- No se modifico el esquema en esta fase.
-- `PRAGMA foreign_keys = ON` se mantiene habilitado.
-- `Finalizar informe` usa transaccion SQLite.
-- El correlativo se calcula dentro de la transaccion considerando activos e
-  inactivos.
-- SQLite guarda rutas/metadatos de archivos; nunca bytes ni BLOB.
-- Consultas, filtros y estadisticas filtran `estado = 1`.
-- Inactivar solo cambia `estado` y conserva contenido, relaciones y archivos.
-
-## Servicios
-
-- `lib/services/qr/institutional_qr_service.dart`
-  - construye payload QR institucional;
-  - valida datos requeridos;
-  - genera QR local no vacio.
-- `lib/services/pdf/direct_action_report_pdf_service.dart`
-  - incorpora el QR solicitado al servicio QR;
-  - conserva el payload usado para trazabilidad y pruebas;
-  - genera bytes PDF locales.
-- `lib/services/media/evidence_photo.dart`
-  - define la representacion centralizada de categorias fotograficas.
-- `lib/services/media/evidence_media_service.dart`
-  - obtiene imagenes desde camara y galeria;
-  - copia selecciones a temporales propios de la app;
-  - copia evidencias definitivas a `reports/NUMERO_CASO/images/`.
-- `lib/services/geolocation/geolocation_service.dart`
-  - conserva la obtencion de coordenadas y mensajes de permisos/fallas.
-- `lib/services/maps/simple_sketch_map.dart`
-  - conserva el croquis OSM sencillo.
-- `lib/services/maps/map_snapshot_service.dart`
-  - conserva captura PNG de croquis en documentos de la app.
-- `lib/services/external_apps/external_maps_service.dart`
-  - conserva apertura externa de coordenadas.
-
-## Pruebas y validacion
-
-Comandos ejecutados:
+## Pruebas ejecutadas
 
 | Comando | Estado | Resultado |
 |---|---|---|
-| `dart format .` | correcto | formato aplicado |
+| `dart format .` | correcto | 55 archivos revisados, 0 cambios |
 | `flutter analyze` | correcto | sin issues |
-| `flutter test` | correcto | todos los tests pasaron |
+| `flutter test` | correcto | 51 tests pasaron |
+| `flutter devices` | informativo | no hay Android fisico ni emulador conectado |
 
-Pruebas agregadas o actualizadas:
+Durante `flutter test` aparecieron advertencias conocidas de la libreria `pdf`
+sobre fuentes Helvetica sin soporte Unicode. No fallan pruebas, pero conviene
+validar visualmente el PDF final en Android y, si aparecen caracteres faltantes,
+tratarlo en Fase 13 sin cambiar alcance funcional.
 
-- `test/services/institutional_qr_service_test.dart`
-  - contenido correcto del payload;
-  - datos excluidos ausentes;
-  - QR local no vacio con matriz legible;
-  - rechazo de datos obligatorios vacios.
-- `test/services/direct_action_report_pdf_service_test.dart`
-  - PDF local no vacio;
-  - integracion del payload QR dentro del servicio PDF;
-  - nombre de archivo segun formato documentado.
-- `test/features/reports/report_controller_test.dart`
-  - Admin generando/consultando PDF usa QR del policia propietario del informe;
-  - se excluyen datos del Admin, otros policias y C.I.
+## Cobertura automatizada relevante
+
+- Inicio de app con setup cuando no existe `ADMIN`.
+- Login valido, logout y proteccion de navegacion.
+- Error de credenciales invalidas.
+- Rutas desconocidas hacia login.
+- Creacion de BD versionada y foreign keys.
+- Restricciones SQLite y relaciones FK.
+- Trigger que impide relacionar vehiculo con conductor de otro informe.
+- Rollback completo ante falla dependiente.
+- Correlativo por gestion sin reutilizar informes inactivos.
+- Soft delete conservando datos y excluyendo inactivos de consultas.
+- Dashboard Admin/Police filtrando activos.
+- Validacion de obligatorios antes de finalizar.
+- Finalizacion asociada al policia autenticado.
+- GPS fallido sin bloqueo.
+- Persistencia de coordenadas y ruta de croquis.
+- Fotografias persistidas con categorias y relacion al informe.
+- Falla de fotografia sin informe parcial.
+- Relaciones de conductores, vehiculos y personas.
+- Filtros de consulta por fecha y policia.
+- PDF/QR con propietario correcto y sin datos excluidos.
+
+## Pruebas manuales razonables realizadas
+
+Se realizo una revision manual de integracion por codigo sobre:
+
+- flujo de rutas y redirecciones;
+- pantallas de login, setup inicial, dashboard, gestion de policias, listado,
+  formulario y detalle de informes;
+- confirmaciones de cancelar/inactivar;
+- botones de refresh/logout/navegacion;
+- estados de carga, error y vacio;
+- restricciones visibles por rol;
+- ausencia de UI para reactivar informes inactivos;
+- uso de logo institucional desde `assets/images/logo_transito.png`;
+- servicios de GPS, mapas, fotografias, PDF y QR conectados desde UI/controlador.
+
+No se ejecuto prueba fisica en Android porque `flutter devices` solo detecto
+Windows, Chrome y Edge.
 
 ## Pruebas fisicas pendientes
 
-Requieren dispositivo Android real:
+Requieren dispositivo Android real o emulador con capacidades equivalentes:
 
-- Permitir camara y confirmar captura de una fotografia.
-- Denegar camara y confirmar mensaje de permisos no destructivo.
-- Seleccionar una imagen desde galeria.
-- Seleccionar varias imagenes desde galeria.
-- Confirmar miniaturas, cambio de categoria y quitar fotografia.
-- Cancelar informe con fotografias y confirmar limpieza de temporales propios de
-  la app.
-- Finalizar informe con varias fotografias y confirmar archivos persistentes en
-  almacenamiento interno de la app.
-- Confirmar que las rutas persistidas no apuntan a cache/temporales.
-- Inactivar informe y confirmar que fotografias/metadatos se conservan.
-- Probar dashboard y filtros en dispositivo con datos reales.
-- Repetir validaciones fisicas pendientes de GPS, mapa, croquis PNG y apertura
-  externa de coordenadas.
-- Validar lectura de QR desde un PDF generado en dispositivo.
+- Permitir y denegar permisos de camara.
+- Capturar una fotografia desde camara.
+- Seleccionar una y varias imagenes desde galeria.
+- Confirmar miniaturas, cambio de categoria y eliminacion de fotografia.
+- Cancelar informe con fotografias y confirmar limpieza de temporales propios.
+- Finalizar informe con fotografias y confirmar rutas persistentes internas.
+- Verificar que las rutas persistidas no apunten a cache temporal.
+- Permitir, denegar y deshabilitar GPS.
+- Confirmar que una falla GPS no bloquea finalizacion.
+- Visualizar mapa/croquis con OpenStreetMap.
+- Capturar PNG del croquis cuando el mapa este disponible.
+- Abrir coordenadas en aplicacion externa de mapas.
+- Generar, visualizar, guardar, compartir e imprimir PDF.
+- Leer el QR desde un PDF generado en dispositivo.
+- Inactivar informe y comprobar en la app que desaparece de dashboard,
+  listados Admin y listados Police.
+- Verificar en SQLite del dispositivo que el informe inactivo, relaciones y
+  archivos asociados permanecen.
+- Validar visualmente textos largos y consistencia institucional en pantallas
+  pequenas.
 
 ## Problemas conocidos
 
-- La implementacion recibida no tenia el PDF completo de Fase 10; esta fase dejo
-  una integracion QR-PDF minima, local y testeada.
-- No se probo en dispositivo Android fisico en esta fase.
+- La implementacion recibida aun mantiene una generacion PDF minima respecto al
+  documento oficial completo. PDF/QR esta integrado y probado, pero la validacion
+  visual final del PDF contra el Word oficial sigue pendiente.
+- No se realizo prueba fisica Android en esta fase por falta de dispositivo o
+  emulador conectado.
+- Las advertencias de Helvetica sin soporte Unicode del paquete `pdf` deben
+  observarse durante la validacion visual del PDF.
+
+## Estado de integracion
+
+Integracion local coherente y estable para el alcance automatizable de Fase 12.
+No hay errores de analisis ni pruebas fallidas. Los riesgos restantes dependen
+de validacion fisica Android y de la estabilizacion final.
 
 ## Siguiente fase
 
-**Fase 12.**
+**Fase 13.**
