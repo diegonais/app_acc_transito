@@ -21,6 +21,8 @@ dependencies:
   path_provider: ^2.1.6
   image_picker: ^1.2.3
   mime: ^2.1.0
+  qr: ^3.0.2
+  pdf: ^3.13.0
 
 dev_dependencies:
   flutter_test:

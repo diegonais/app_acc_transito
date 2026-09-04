@@ -22,8 +22,6 @@ class PoliceProfile {
   final String ci;
 
   String get nombreCompleto => '$nombres $apellidos'.trim();
-
-  String get qrDisplayData => '$nombreCompleto\n$grado\n$numeroPlaca\n$unidad';
 }
 
 class AuthenticatedUser {

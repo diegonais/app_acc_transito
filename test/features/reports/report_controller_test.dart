@@ -500,6 +500,40 @@ void main() {
     expect(stored.single['estado'], 0);
   });
 
+  test('PDF consultado por ADMIN usa QR del policia propietario', () async {
+    final admin = _adminSession();
+    final owner = await _createPoliceSession(
+      userRepository,
+      policeRepository,
+      username: 'policia.dueno.pdf',
+      plate: 'PL-020',
+    );
+    await _createPoliceSession(
+      userRepository,
+      policeRepository,
+      username: 'policia.no.dueno.pdf',
+      plate: 'PL-021',
+    );
+    final report = await controller.finalize(
+      actor: owner,
+      draft: _validDraft(),
+      now: DateTime.utc(2026),
+    );
+
+    final pdf = await controller.buildReadablePdf(
+      actor: admin,
+      idInforme: report.idInforme,
+    );
+    final payload = pdf.qrPayload.toStructuredText();
+
+    expect(pdf.bytes, isNotEmpty);
+    expect(payload, contains('Ana Quispe'));
+    expect(payload, contains('PL-020'));
+    expect(payload, isNot(contains('PL-021')));
+    expect(payload, isNot(contains('admin.local')));
+    expect(payload, isNot(contains('1234567')));
+  });
+
   test('POLICE no puede inactivar ni leer informes ajenos', () async {
     final firstPolice = await _createPoliceSession(
       userRepository,

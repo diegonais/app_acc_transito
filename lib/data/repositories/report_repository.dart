@@ -1,6 +1,8 @@
 import '../database/app_database.dart';
+import '../database/dao/police_dao.dart';
 import '../database/dao/report_dao.dart';
 import '../../services/media/evidence_photo.dart';
+import '../../services/qr/institutional_qr_service.dart';
 
 class ReportValidationException implements Exception {
   const ReportValidationException(this.messages);
@@ -678,6 +680,23 @@ class ReportRepository {
       vehiculos: (await dao.findVehicles(idInforme)).map(_mapVehicle).toList(),
       personas: (await dao.findPeople(idInforme)).map(_mapPerson).toList(),
       fotografias: (await dao.findPhotos(idInforme)).map(_mapPhoto).toList(),
+    );
+  }
+
+  Future<InstitutionalQrPolice> findReportOwnerQrIdentity(
+    int idPolicia,
+  ) async {
+    final db = await _database.instance;
+    final row = await PoliceDao(db).findById(idPolicia);
+    if (row == null) {
+      throw StateError('No se encontro el policia propietario del informe.');
+    }
+    return InstitutionalQrPolice(
+      nombreCompleto:
+          '${row['nombres'] as String} ${row['apellidos'] as String}'.trim(),
+      grado: row['grado'] as String,
+      numeroPlaca: row['numero_placa'] as String,
+      unidad: row['unidad'] as String,
     );
   }
 

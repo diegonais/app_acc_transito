@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../data/repositories/report_repository.dart';
+import '../../../services/pdf/direct_action_report_pdf_service.dart';
 import '../../auth/domain/app_role.dart';
 import '../../auth/domain/authenticated_user.dart';
 
@@ -187,6 +188,22 @@ class ReportController extends ChangeNotifier {
       throw StateError('El informe no existe o esta inactivo.');
     }
     return report;
+  }
+
+  Future<DirectActionReportPdf> buildReadablePdf({
+    required AuthenticatedUser actor,
+    required int idInforme,
+    DirectActionReportPdfService? pdfService,
+  }) async {
+    final report = await findReadableDetail(
+      actor: actor,
+      idInforme: idInforme,
+    );
+    final owner = await _repository.findReportOwnerQrIdentity(report.idPolicia);
+    return (pdfService ?? DirectActionReportPdfService()).build(
+      report: report,
+      owner: owner,
+    );
   }
 
   Future<void> inactivate({
