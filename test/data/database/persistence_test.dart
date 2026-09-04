@@ -1,9 +1,13 @@
+import 'dart:io';
+
+import 'package:app_acc_transito/data/database/app_database_migrations.dart';
 import 'package:app_acc_transito/data/database/app_database.dart';
 import 'package:app_acc_transito/data/repositories/police_repository.dart';
 import 'package:app_acc_transito/data/repositories/report_repository.dart';
 import 'package:app_acc_transito/data/repositories/user_repository.dart';
 import 'package:app_acc_transito/services/media/evidence_photo.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 var _policeSequence = 0;
@@ -44,6 +48,51 @@ void main() {
     expect(versionRows.single['user_version'], AppDatabase.schemaVersion);
     expect(foreignKeyRows.single['foreign_keys'], 1);
     expect(tableRows, hasLength(7));
+  });
+
+  test('migra incrementalmente de version 1 a version actual', () async {
+    final sandbox = await Directory.systemTemp.createTemp('migration_test_');
+    final databasePath = p.join(sandbox.path, 'legacy.db');
+    AppDatabase? migratedDatabase;
+    try {
+      final legacy = await databaseFactory.openDatabase(
+        databasePath,
+        options: OpenDatabaseOptions(
+          version: 1,
+          onConfigure: (db) async {
+            await db.execute('PRAGMA foreign_keys = ON');
+          },
+          onCreate: (db, version) async {
+            await AppDatabaseMigrations.create(db, version);
+          },
+        ),
+      );
+      await legacy.close();
+
+      migratedDatabase = AppDatabase(databasePath: databasePath);
+      final db = await migratedDatabase.instance;
+
+      final versionRows = await db.rawQuery('PRAGMA user_version');
+      final triggerRows = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type = 'trigger' AND name IN "
+        "('trg_vehiculos_conductor_mismo_informe_insert', "
+        "'trg_vehiculos_conductor_mismo_informe_update')",
+      );
+      final indexRows = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type = 'index' AND name IN "
+        "('idx_informes_estado_fecha_hecho', "
+        "'idx_informes_estado_policia_fecha_hecho')",
+      );
+
+      expect(versionRows.single['user_version'], AppDatabase.schemaVersion);
+      expect(triggerRows, hasLength(2));
+      expect(indexRows, hasLength(2));
+    } finally {
+      await migratedDatabase?.close();
+      if (await sandbox.exists()) {
+        await sandbox.delete(recursive: true);
+      }
+    }
   });
 
   test('inserta usuarios, policias e informe finalizado con relaciones',
@@ -255,6 +304,20 @@ void main() {
       _validReportInput(
         idPolicia: idPolicia,
         epi: 'EPI Inactivo',
+        conductores: const [_validDriver],
+        vehiculos: const [
+          VehicleInput(
+            driverIndex: 0,
+            placa: '456DEF',
+            marca: 'Nissan',
+            color: 'Rojo',
+            tipo: 'Automovil',
+            servicio: 'Publico',
+          ),
+        ],
+        personas: const [
+          PersonInput(nombre: 'Luis Roca', edad: 42, tipo: 'FALLECIDO'),
+        ],
         fotografias: const [
           PhotoInput(
             ruta: '/evidencias/inactiva.jpg',
@@ -272,6 +335,23 @@ void main() {
 
     final db = await appDatabase.instance;
     final activeReports = await reportRepository.findActiveReports();
+    final inactiveDetail =
+        await reportRepository.findActiveReportDetail(inactive.idInforme);
+    final inactiveDrivers = await db.query(
+      'conductores',
+      where: 'id_informe = ?',
+      whereArgs: [inactive.idInforme],
+    );
+    final inactiveVehicles = await db.query(
+      'vehiculos',
+      where: 'id_informe = ?',
+      whereArgs: [inactive.idInforme],
+    );
+    final inactivePeople = await db.query(
+      'personas_involucradas',
+      where: 'id_informe = ?',
+      whereArgs: [inactive.idInforme],
+    );
     final inactivePhotos = await db.query(
       'fotografias',
       where: 'id_informe = ?',
@@ -280,6 +360,10 @@ void main() {
 
     expect(activeReports, hasLength(1));
     expect(activeReports.single['id_informe'], active.idInforme);
+    expect(inactiveDetail, isNull);
+    expect(inactiveDrivers.single['nombre_completo'], 'Juan Perez');
+    expect(inactiveVehicles.single['placa'], '456DEF');
+    expect(inactivePeople.single['tipo'], 'FALLECIDO');
     expect(inactivePhotos.single['ruta'], '/evidencias/inactiva.jpg');
   });
 

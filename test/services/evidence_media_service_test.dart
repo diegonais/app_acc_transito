@@ -103,4 +103,24 @@ void main() {
       throwsA(isA<FileSystemException>()),
     );
   });
+
+  test('limpia fotos persistentes cuando una transaccion debe revertirse',
+      () async {
+    final source = File(p.join(sandbox.path, 'foto-rollback.jpg'));
+    await source.writeAsBytes([7, 8, 9]);
+    final staged = await service.stageFile(
+      source,
+      category: EvidencePhotoCategory.otra,
+    );
+    final persisted = await service.persistPhotosForReport(
+      numeroCaso: '2026-000099',
+      photos: [staged],
+    );
+
+    expect(await File(persisted.single.ruta).exists(), isTrue);
+
+    await service.cleanupPersistentPhotos(persisted);
+
+    expect(await File(persisted.single.ruta).exists(), isFalse);
+  });
 }

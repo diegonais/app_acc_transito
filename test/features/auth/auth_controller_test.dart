@@ -11,6 +11,9 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
   late AppDatabase appDatabase;
+  late UserRepository userRepository;
+  late PoliceRepository policeRepository;
+  late PasswordHasher passwordHasher;
   late AuthController controller;
 
   setUpAll(() {
@@ -20,8 +23,9 @@ void main() {
 
   setUp(() async {
     appDatabase = AppDatabase(databasePath: inMemoryDatabasePath);
-    final userRepository = UserRepository(appDatabase);
-    final passwordHasher = PasswordHasher(
+    userRepository = UserRepository(appDatabase);
+    policeRepository = PoliceRepository(appDatabase);
+    passwordHasher = PasswordHasher(
       algorithm: Pbkdf2(
         macAlgorithm: Hmac.sha256(),
         iterations: 1000,
@@ -31,7 +35,7 @@ void main() {
     controller = AuthController(
       AuthRepository(
         userRepository: userRepository,
-        policeRepository: PoliceRepository(appDatabase),
+        policeRepository: policeRepository,
         passwordHasher: passwordHasher,
       ),
     );
@@ -61,5 +65,54 @@ void main() {
 
     expect(controller.isAuthenticated, isFalse);
     expect(controller.currentUser, isNull);
+  });
+
+  test('reset desde controlador exige ADMIN y cambia solo el hash', () async {
+    final idUsuario = await userRepository.createUser(
+      username: 'policia.local',
+      passwordHash: await passwordHasher.hash('ClavePolicia123'),
+      role: AppRole.police.databaseValue,
+    );
+    await policeRepository.createPolice(
+      idUsuario: idUsuario,
+      numeroPlaca: 'PL-001',
+      grado: 'Sgto.',
+      nombres: 'Ana',
+      apellidos: 'Quispe',
+      unidad: 'Transito',
+      sigla: 'UT',
+      ci: '1234567',
+    );
+
+    await controller.login(
+      username: 'admin.local',
+      password: 'ClaveSegura123',
+    );
+    await controller.resetPolicePassword(
+      policeUsername: 'policia.local',
+      newPassword: 'NuevaClave123',
+    );
+    controller.logout();
+
+    await expectLater(
+      controller.login(
+        username: 'policia.local',
+        password: 'ClavePolicia123',
+      ),
+      throwsA(isA<Exception>()),
+    );
+    await controller.login(
+      username: 'policia.local',
+      password: 'NuevaClave123',
+    );
+    expect(controller.currentUser?.role, AppRole.police);
+
+    await expectLater(
+      controller.resetPolicePassword(
+        policeUsername: 'policia.local',
+        newPassword: 'OtraClave123',
+      ),
+      throwsA(isA<Exception>()),
+    );
   });
 }

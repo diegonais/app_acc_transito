@@ -14,4 +14,13 @@ void main() {
       'geo:-17.783327,-63.18214?q=-17.783327,-63.18214(Lugar%20del%20hecho)',
     );
   });
+
+  test('construye URI estable para coordenadas cero', () {
+    final uri = const ExternalMapsService().coordinatesUri(
+      latitude: 0,
+      longitude: 0,
+    );
+
+    expect(uri.toString(), 'geo:0.0,0.0?q=0.0,0.0(Lugar%20del%20hecho)');
+  });
 }
