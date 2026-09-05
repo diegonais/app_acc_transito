@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../app/routes/app_routes.dart';
+import '../../app/theme/app_theme.dart';
 import '../../data/repositories/report_repository.dart';
 import '../../shared/scaffold_shell.dart';
-import '../../shared/ui/app_button.dart';
 import '../../shared/ui/app_state_view.dart';
 import '../auth/application/auth_scope.dart';
 import '../auth/domain/app_role.dart';
@@ -69,22 +69,21 @@ class _DashboardPageState extends State<DashboardPage> {
           final error = controller.errorMessage;
 
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             children: [
               _WelcomeCard(
-                title: user.isAdmin ? 'Administrador' : 'Policia',
+                username: user.username,
+                role: user.role.databaseValue,
                 subtitle: user.isAdmin
                     ? 'Consulta operativa local del dispositivo.'
-                    : '${profile?.grado ?? ''} ${profile?.nombreCompleto ?? user.username}'
-                        .trim(),
-                details: [
-                  'Usuario: ${user.username}',
-                  'Rol: ${user.role.databaseValue}',
-                  if (profile != null) 'Unidad: ${profile.unidad}',
-                  if (profile != null) 'Placa: ${profile.numeroPlaca}',
-                ],
+                    : 'Consulta y registro operativo del dispositivo.',
+                profileSummary: user.isAdmin
+                    ? 'Administrador'
+                    : profile == null
+                        ? null
+                        : '${profile.grado} ${profile.nombreCompleto}'.trim(),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               if (controller.isLoading && stats == null)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 40),
@@ -101,6 +100,8 @@ class _DashboardPageState extends State<DashboardPage> {
                   children: [
                     _MetricCard(
                       icon: Icons.assignment_turned_in_outlined,
+                      accentColor: AppColors.primaryGreen,
+                      backgroundColor: const Color(0xFFEAF8EE),
                       label: user.isAdmin
                           ? 'Informes activos'
                           : 'Mis informes activos',
@@ -109,53 +110,69 @@ class _DashboardPageState extends State<DashboardPage> {
                     if (user.isAdmin)
                       _MetricCard(
                         icon: Icons.local_police_outlined,
+                        accentColor: AppColors.institutionalBlue,
+                        backgroundColor: const Color(0xFFEAF5FF),
                         label: 'Policias activos',
                         value: stats.activePoliceCount.toString(),
                       ),
                     _MetricCard(
                       icon: Icons.today_outlined,
+                      accentColor: AppColors.darkGold,
+                      backgroundColor: const Color(0xFFFFF4E3),
                       label: 'Informes del dia',
                       value: stats.reportsToday.toString(),
                     ),
                     _MetricCard(
                       icon: Icons.calendar_month_outlined,
+                      accentColor: const Color(0xFF7B2CBF),
+                      backgroundColor: const Color(0xFFF3EAFF),
                       label: 'Informes del mes',
                       value: stats.reportsThisMonth.toString(),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                _DateMetricCard(
+                const SizedBox(height: 20),
+                _QuickSummarySection(
                   selectedDate: controller.selectedDate,
-                  total: stats.reportsBySelectedDate,
                   onPickDate: () => _pickDashboardDate(user),
+                  children: [
+                    if (user.isAdmin)
+                      _PoliceSummaryCard(values: stats.reportsByPolice),
+                    _MonthlySummaryCard(values: stats.reportsByMonth),
+                    _DateSummaryCard(
+                      selectedDate: controller.selectedDate,
+                      total: stats.reportsBySelectedDate,
+                      onPickDate: () => _pickDashboardDate(user),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                if (user.isAdmin)
-                  _PoliceSummaryCard(values: stats.reportsByPolice),
-                if (user.isAdmin) const SizedBox(height: 16),
-                _MonthlySummaryCard(values: stats.reportsByMonth),
               ],
-              const SizedBox(height: 16),
-              AppButton(
-                label:
-                    user.isAdmin ? 'Consultar informes' : 'Registrar informe',
-                icon: user.isAdmin
-                    ? Icons.assignment_outlined
-                    : Icons.note_add_outlined,
-                onPressed: () {
-                  Navigator.of(context).pushNamed(AppRoutes.reports);
-                },
+              const SizedBox(height: 20),
+              if (user.role == AppRole.admin) const _InformationBanner(),
+              if (user.role == AppRole.admin) const SizedBox(height: 20),
+              _ActionGrid(
+                children: [
+                  _DashboardActionButton(
+                    label: user.isAdmin
+                        ? 'Consultar informes'
+                        : 'Registrar informe',
+                    icon: user.isAdmin
+                        ? Icons.assignment_outlined
+                        : Icons.note_add_outlined,
+                    onPressed: () {
+                      Navigator.of(context).pushNamed(AppRoutes.reports);
+                    },
+                  ),
+                  if (user.role == AppRole.admin)
+                    _DashboardActionButton(
+                      label: 'Gestionar policias',
+                      icon: Icons.groups_2_outlined,
+                      onPressed: () {
+                        Navigator.of(context).pushNamed(AppRoutes.officers);
+                      },
+                    ),
+                ],
               ),
-              const SizedBox(height: 12),
-              if (user.role == AppRole.admin)
-                AppButton(
-                  label: 'Gestionar policias',
-                  icon: Icons.admin_panel_settings_outlined,
-                  onPressed: () {
-                    Navigator.of(context).pushNamed(AppRoutes.officers);
-                  },
-                ),
             ],
           );
         },
@@ -180,33 +197,162 @@ class _DashboardPageState extends State<DashboardPage> {
 
 class _WelcomeCard extends StatelessWidget {
   const _WelcomeCard({
-    required this.title,
+    required this.username,
+    required this.role,
     required this.subtitle,
-    required this.details,
+    this.profileSummary,
   });
 
-  final String title;
+  final String username;
+  final String role;
   final String subtitle;
-  final List<String> details;
+  final String? profileSummary;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+    final textTheme = Theme.of(context).textTheme;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 360;
+        final userInfo = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              title,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
+              'Bienvenido,',
+              style: textTheme.titleLarge?.copyWith(
+                color: AppColors.ink,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            Text(
+              username,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.headlineMedium?.copyWith(
+                color: AppColors.ink,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _RoleBadge(role: role),
+            if (profileSummary != null) ...[
+              const SizedBox(height: 10),
+              Text(
+                profileSummary!,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: AppColors.ink.withValues(alpha: 0.76),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ],
+        );
+
+        final institutionalText = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Comprometidos\ncon una ciudad\nmas segura',
+              style: textTheme.titleMedium?.copyWith(
+                color: AppColors.ink.withValues(alpha: 0.92),
+                height: 1.22,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              width: 44,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.primaryGreen,
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+          ],
+        );
+
+        return Container(
+          decoration: _softCardDecoration(
+            background: const Color(0xFFEFFAF2),
+            borderColor: AppColors.primaryGreen.withValues(alpha: 0.08),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (isNarrow) ...[
+                  userInfo,
+                  const SizedBox(height: 16),
+                  institutionalText,
+                ] else
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(flex: 7, child: userInfo),
+                      const SizedBox(width: 16),
+                      Container(
+                        width: 1,
+                        height: 92,
+                        color: AppColors.ink.withValues(alpha: 0.12),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(flex: 5, child: institutionalText),
+                    ],
+                  ),
+                const SizedBox(height: 16),
+                Text(
+                  subtitle,
+                  style: textTheme.bodyLarge?.copyWith(
+                    color: AppColors.ink.withValues(alpha: 0.78),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _RoleBadge extends StatelessWidget {
+  const _RoleBadge({required this.role});
+
+  final String role;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.primaryGreen,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryGreen.withValues(alpha: 0.18),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.verified_user_outlined,
+              color: AppColors.white,
+              size: 18,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              role,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.w900,
                   ),
             ),
-            const SizedBox(height: 4),
-            Text(subtitle),
-            const SizedBox(height: 12),
-            ...details.map((detail) => Text(detail)),
           ],
         ),
       ),
@@ -223,12 +369,20 @@ class _MetricGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 700 ? 4 : 2;
+        final columns = constraints.maxWidth >= 700
+            ? 4
+            : constraints.maxWidth < 340
+                ? 1
+                : 2;
         return GridView.count(
           crossAxisCount: columns,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
-          childAspectRatio: columns == 4 ? 1.35 : 1.15,
+          childAspectRatio: columns == 4
+              ? 1.55
+              : columns == 2
+                  ? 1.18
+                  : 2.45,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           children: children,
@@ -241,33 +395,68 @@ class _MetricGrid extends StatelessWidget {
 class _MetricCard extends StatelessWidget {
   const _MetricCard({
     required this.icon,
+    required this.accentColor,
+    required this.backgroundColor,
     required this.label,
     required this.value,
   });
 
   final IconData icon;
+  final Color accentColor;
+  final Color backgroundColor;
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Card(
+    final textTheme = Theme.of(context).textTheme;
+    return Container(
+      decoration: _softCardDecoration(
+        background: backgroundColor,
+        borderColor: accentColor.withValues(alpha: 0.08),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(icon, color: colorScheme.primary),
-            const Spacer(),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
+            Container(
+              width: 54,
+              height: 54,
+              decoration: BoxDecoration(
+                color: AppColors.white.withValues(alpha: 0.48),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(icon, color: accentColor, size: 30),
             ),
-            const SizedBox(height: 4),
-            Text(label, maxLines: 2, overflow: TextOverflow.ellipsis),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.headlineMedium?.copyWith(
+                      color: AppColors.ink,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  Text(
+                    label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: AppColors.ink.withValues(alpha: 0.86),
+                      height: 1.14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: accentColor, size: 28),
           ],
         ),
       ),
@@ -275,8 +464,86 @@ class _MetricCard extends StatelessWidget {
   }
 }
 
-class _DateMetricCard extends StatelessWidget {
-  const _DateMetricCard({
+class _QuickSummarySection extends StatelessWidget {
+  const _QuickSummarySection({
+    required this.selectedDate,
+    required this.onPickDate,
+    required this.children,
+  });
+
+  final DateTime selectedDate;
+  final VoidCallback onPickDate;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Container(
+      decoration: _softCardDecoration(),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.analytics_outlined,
+                      color: AppColors.primaryGreen,
+                      size: 30,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Resumen rapido',
+                      style: textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+                TextButton.icon(
+                  onPressed: onPickDate,
+                  icon: const Icon(Icons.calendar_month_outlined),
+                  label: Text(_formatDate(selectedDate)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final useColumns = constraints.maxWidth >= 620;
+                final width = useColumns
+                    ? (constraints.maxWidth - 12) / 2
+                    : constraints.maxWidth;
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: children
+                      .map(
+                        (child) => SizedBox(
+                          width: width,
+                          child: child,
+                        ),
+                      )
+                      .toList(growable: false),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DateSummaryCard extends StatelessWidget {
+  const _DateSummaryCard({
     required this.selectedDate,
     required this.total,
     required this.onPickDate,
@@ -288,18 +555,19 @@ class _DateMetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        leading: const Icon(Icons.event_available_outlined),
-        title: Text('Informes por fecha: ${_formatDate(selectedDate)}'),
-        subtitle:
-            Text(total == 1 ? '1 informe activo' : '$total informes activos'),
-        trailing: IconButton(
-          tooltip: 'Elegir fecha',
-          onPressed: onPickDate,
-          icon: const Icon(Icons.edit_calendar_outlined),
-        ),
+    final status = total == 1 ? '1 informe activo' : '$total informes activos';
+    return _SummaryCard(
+      title: 'Informes por fecha',
+      icon: Icons.event_available_outlined,
+      emptyMessage: 'No existen informes activos para esta fecha.',
+      action: IconButton(
+        tooltip: 'Elegir fecha',
+        onPressed: onPickDate,
+        icon: const Icon(Icons.edit_calendar_outlined),
       ),
+      children: [
+        _SummaryLine(label: _formatDate(selectedDate), value: status),
+      ],
     );
   }
 }
@@ -313,20 +581,13 @@ class _PoliceSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return _SummaryCard(
       title: 'Informes por policia',
-      icon: Icons.badge_outlined,
+      icon: Icons.groups_2_outlined,
       emptyMessage: 'No hay policias activos para resumir.',
       children: values
           .map(
-            (value) => ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              title: Text(value.displayName),
-              trailing: Text(
-                value.total.toString(),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
+            (value) => _SummaryLine(
+              label: value.displayName,
+              value: value.total.toString(),
             ),
           )
           .toList(growable: false),
@@ -347,16 +608,9 @@ class _MonthlySummaryCard extends StatelessWidget {
       emptyMessage: 'No existen informes activos en el periodo registrado.',
       children: values
           .map(
-            (value) => ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              title: Text('${_monthName(value.mes)} ${value.gestion}'),
-              trailing: Text(
-                value.total.toString(),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
+            (value) => _SummaryLine(
+              label: '${_monthName(value.mes)} ${value.gestion}',
+              value: value.total.toString(),
             ),
           )
           .toList(growable: false),
@@ -370,42 +624,262 @@ class _SummaryCard extends StatelessWidget {
     required this.icon,
     required this.emptyMessage,
     required this.children,
+    this.action,
   });
 
   final String title;
   final IconData icon;
   final String emptyMessage;
   final List<Widget> children;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    final textTheme = Theme.of(context).textTheme;
+    return Container(
+      decoration: _softCardDecoration(
+        background: AppColors.surface,
+        borderColor: AppColors.ink.withValues(alpha: 0.04),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(icon, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(width: 8),
+                Icon(icon, color: AppColors.primaryGreen, size: 28),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
+                if (action != null) action!,
               ],
             ),
-            const SizedBox(height: 8),
-            if (children.isEmpty) Text(emptyMessage) else ...children,
+            const SizedBox(height: 12),
+            if (children.isEmpty)
+              Text(
+                emptyMessage,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: AppColors.ink.withValues(alpha: 0.62),
+                  height: 1.28,
+                ),
+              )
+            else
+              ...children,
           ],
         ),
       ),
     );
   }
+}
+
+class _SummaryLine extends StatelessWidget {
+  const _SummaryLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.bodyMedium?.copyWith(
+                color: AppColors.ink.withValues(alpha: 0.78),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            value,
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InformationBanner extends StatelessWidget {
+  const _InformationBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Container(
+      decoration: _softCardDecoration(
+        background: const Color(0xFFEAF5FF),
+        borderColor: AppColors.institutionalBlue.withValues(alpha: 0.08),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: AppColors.institutionalBlue.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.info_outline_rounded,
+                color: AppColors.institutionalBlue,
+                size: 30,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Manten tu informacion actualizada',
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Gestiona policias y revisa los informes para un mejor control operativo.',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: AppColors.ink.withValues(alpha: 0.64),
+                      height: 1.25,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionGrid extends StatelessWidget {
+  const _ActionGrid({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useColumns = children.length > 1 && constraints.maxWidth >= 360;
+        final width =
+            useColumns ? (constraints.maxWidth - 12) / 2 : constraints.maxWidth;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: children
+              .map(
+                (child) => SizedBox(
+                  width: width,
+                  child: child,
+                ),
+              )
+              .toList(growable: false),
+        );
+      },
+    );
+  }
+}
+
+class _DashboardActionButton extends StatelessWidget {
+  const _DashboardActionButton({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Material(
+      color: AppColors.primaryGreen,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onPressed,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 76),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primaryGreen.withValues(alpha: 0.18),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: AppColors.white, size: 30),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.titleMedium?.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.white,
+                size: 30,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+BoxDecoration _softCardDecoration({
+  Color background = AppColors.white,
+  Color? borderColor,
+}) {
+  return BoxDecoration(
+    color: background,
+    borderRadius: BorderRadius.circular(16),
+    border: Border.all(
+      color: borderColor ?? AppColors.ink.withValues(alpha: 0.08),
+    ),
+    boxShadow: [
+      BoxShadow(
+        color: AppColors.ink.withValues(alpha: 0.04),
+        blurRadius: 18,
+        offset: const Offset(0, 8),
+      ),
+    ],
+  );
 }
 
 String _formatDate(DateTime value) {

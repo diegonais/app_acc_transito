@@ -1,3 +1,30 @@
+# Estado actual — Dashboard ADMIN rediseñado, release funcional condicionado
+
+## Actualizacion 2026-09-05 — Dashboard ADMIN
+
+Se rediseño la pantalla principal del Administrador tomando como referencia una
+captura visual provista por el usuario. El cambio fue acotado a UI en
+`lib/features/dashboard/dashboard_placeholder_page.dart`: bienvenida con usuario
+y badge de rol, tarjetas de metricas en grilla, seccion "Resumen rapido" con
+fecha seleccionable, tarjetas de resumen, banner informativo y acciones
+principales destacadas.
+
+Se preservo la arquitectura existente: `DashboardController`, `ReportRepository`,
+consultas SQLite, refresh, logout y navegacion a consultas/gestion de policias.
+No se agregaron dependencias, rutas, backend, sincronizacion ni cambios de
+esquema.
+
+Validaciones ejecutadas:
+
+- `dart format lib test`: correcto, 55 archivos revisados, 0 cambios finales.
+- `flutter analyze`: sin issues.
+- `flutter test`: 56 tests pasaron. Persisten advertencias Helvetica/Unicode del
+  servicio PDF ya conocidas y no relacionadas con este cambio.
+
+Nota: `dart format .` sigue fallando si recorre residuos dentro de `build/`, tal
+como ya estaba documentado en Fase 14. Para esta intervencion se formatearon las
+fuentes versionadas (`lib` y `test`) sin limpiar artefactos de build.
+
 # Estado actual — Fase 14: APK release generado, entrega condicionada
 
 ## Etapa y resultado
