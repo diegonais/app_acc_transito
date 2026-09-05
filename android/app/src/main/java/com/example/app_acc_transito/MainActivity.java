@@ -7,4 +7,5 @@ public class MainActivity extends FlutterActivity {
   @Override
   public void configureFlutterEngine(FlutterEngine engine) {
     super.configureFlutterEngine(engine);
+  }
 }

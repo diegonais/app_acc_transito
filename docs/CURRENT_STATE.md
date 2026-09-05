@@ -1,182 +1,164 @@
-# Estado actual - Fase 13 completada
+# Estado actual — Fase 14: APK release generado, entrega condicionada
 
-## Etapa
+## Etapa y resultado
 
-**Fase 13 - Pruebas y estabilizacion**: finalizada para el alcance
-automatizable en entorno local.
+Fase 14 — Release y APK ejecutada el 2026-09-05, exclusivamente sobre
+empaquetado, configuracion Android, seguridad y validacion. Sin funcionalidades
+nuevas, sin cambios en lib/, SQLite v3 ni decisiones consolidadas.
 
-La aplicacion queda integrada y estable sobre lo implementado hasta Fase 12. En
-esta fase no se agregaron funcionalidades nuevas, no se modifico el esquema
-SQLite y no se incorporaron dependencias. El trabajo se limito a revisar el
-producto integrado, ampliar pruebas automatizadas y registrar validaciones
-pendientes para dispositivo Android real.
+APK release instalable generado y probado en emulador Android 15. No se declara
+la entrega funcional completa: PDF/QR no esta accesible desde UI y falta el flujo
+de compartir/guardar/imprimir. La afirmacion de integracion PDF de Fase 13 se
+corrige con la revision de codigo y la prueba de release.
 
-## Flujos validados
+## Version y artefacto
 
-### Autenticacion
+- Version: **1.0.0**. Build number: **1** (`pubspec.yaml`: `1.0.0+1`).
+- Nombre visible: **ACC Transito**.
+- Application ID conservado: `com.example.app_acc_transito`.
+- APK: **app-release.apk**, universal ARMv7 / ARM64 / x86_64.
+- Ruta: `C:/Users/Desktop/Desktop/projects/app_acc_transito/build/app/outputs/flutter-apk/app-release.apk`.
+- Tamano: 55 027 051 bytes (52.5 MiB).
+- SHA256: `7988934A61C63B7F85B2332DC31AFB22ECEDB0C2AD332950D7E0A702C4941E3C`.
+- Android minimo 7 / API 24; target y compile API 36.
+- Comando: `flutter build apk --release --no-pub --build-name=1.0.0 --build-number=1 --obfuscate --split-debug-info=.release-private/symbols/1.0.0+1`.
+- Ejecutado mediante `scripts/package_release.ps1`; el script aplica un mapeo
+  temporal del registrador generado a URI de paquete. Para reproducir desde cero,
+  usar `scripts/build_release.ps1`, no el comando Flutter aislado.
+- Firma release RSA 3072 dedicada, verificada con apksigner, esquema v2.
+- Certificado SHA256: `c128cf8762bc52a4df3fb226bcc3a0c6537c39c628980053bd3928ef0f841b55`.
+- No depurable: verificado con manifiesto y `run-as` rechazado por Android.
 
-- creacion del primer `ADMIN` solo cuando no existe administrador;
-- contrasenas almacenadas con hash + salt, no texto plano;
-- login valido de `ADMIN` y `POLICE`;
-- logout con sesion conservada solo en memoria;
-- credenciales incorrectas rechazadas;
-- usuario inactivo rechazado;
-- reset local de contrasena policial por `ADMIN`;
-- roles aplicados en repositorios/controladores.
+## Cambios de Fase 14
 
-### Persistencia
+- Firma debug sustituida por firma release privada; build falla si falta su
+  configuracion. Clave fuera del repositorio y propiedades excluidas de Git.
+- Icono Android invalido corregido, legacy y adaptativo usando copia exacta del
+  logo institucional. Asset Flutter original preservado.
+- Nombre visible alineado con la aplicacion.
+- Backup Android y HTTP claro deshabilitados; permisos revisados; GPS/camara
+  opcionales para instalacion; query geo para apertura de mapas.
+- Dependencias Java de tests no usados y viewBinding retirados; no dependencias
+  nuevas. Lockfile conservado.
+- Cambios Android que ya existian al iniciar preservados.
+- Script `scripts/build_release.ps1` y plantilla `android/key.properties.example`.
+- `scripts/package_release.ps1` evita que Flutter incluya la ruta local del
+  registrador generado; restaura package_config.json al terminar. Ofuscacion y
+  simbolos separados bajo `.release-private/symbols/1.0.0+1`. Verificacion de las
+  tres bibliotecas AOT finales: sin URI de desarrollo ni DWARF.
+- Revision de lib/ y Android sin admin/admin, contrasenas precargadas, logs
+  sensibles ni rutas de desarrollo en fuentes de produccion. APK sin bases de
+  datos precargadas, fixtures, keystore ni propiedades privadas.
 
-- creacion de BD versionada;
-- migracion incremental desde version 1 hasta version actual;
-- `PRAGMA foreign_keys = ON`;
-- restricciones `UNIQUE`, `CHECK` y FK;
-- triggers para impedir relacion vehiculo-conductor de otro informe;
-- transaccion completa al finalizar informe;
-- rollback sin informes parciales ante falla dependiente;
-- manejo y limpieza de fotografias temporales/persistentes en escenarios de
-  cancelacion o reversa.
+## Controles ejecutados
 
-### Informe y correlativo
+| Control | Resultado |
+|---|---|
+| `dart format .` | 55 archivos, 0 cambios tras limpiar build |
+| `flutter analyze` | Sin issues |
+| `flutter test` | 56 tests pasaron |
+| Analyze y test tras clean con `--no-pub` | Sin issues / 56 pasaron |
+| `flutter build apk --release --no-pub --build-name=1.0.0 --build-number=1 --obfuscate --split-debug-info=.release-private/symbols/1.0.0+1` | Correcto, 54.8 s |
+| `apksigner verify --verbose --print-certs` | Firma valida y distinta de debug |
+| `aapt dump badging` | Version, API, nombre y tres ABI correctos |
+| `adb install` en emulador nuevo | Success |
+| SQLite real del APK | integrity_check=ok, v3, sin errores FK |
+| Logcat AndroidRuntime:E / flutter:E | Sin errores capturados |
+| `git diff --check` | Sin errores de whitespace |
 
-- validacion de obligatorios antes de finalizar;
-- cancelar descarta informacion en memoria sin crear borradores;
-- `Finalizar informe` persiste informe, conductores, vehiculos, personas y
-  fotografias en una transaccion;
-- informe finalizado se consulta en modo lectura;
-- `POLICE` no puede crear informes para terceros;
-- `ADMIN` no puede finalizar informes desde controlador;
-- correlativo `AAAA-NNNNNN`;
-- correlativo por gestion/anio;
-- reinicio de secuencia al cambiar de gestion;
-- no reutilizacion de numeros;
-- informes inactivos cuentan para el siguiente correlativo.
+Las pruebas unitarias/persistencia/widgets conservan cobertura de roles, hash,
+transacciones/rollback, migraciones, correlativo anual/no reutilizacion, relaciones,
+soft delete, dashboard, QR y generacion PDF. No equivalen a pruebas release de
+servicios de dispositivo.
 
-### Relaciones
+## Validacion del APK release
 
-- conductores multiples;
-- vehiculos multiples;
-- relacion conductor-vehiculo valida dentro del mismo informe;
-- personas involucradas `HERIDO` y `FALLECIDO`;
-- fotografias con categorias aprobadas y rutas en SQLite, no BLOB.
+Emulador nuevo `TransitoReleasePhase14`, Android 15 / API 35, x86_64, resolucion
+720x1280, densidad 240. No se reemplazo ni borro la instalacion del AVD anterior.
+Datos sinteticos creados por UI solo dentro del emulador; no incluidos en APK.
 
-### Soft Delete
+| Flujo | Resultado release |
+|---|---|
+| Instalacion limpia y arranque | Correctos; muestra Crear primer Administrador |
+| Primer Admin | Creado mediante UI; luego muestra login |
+| Reapertura | Force-stop + arranque solicita login repetidamente |
+| Login Admin y POLICE | Ambos correctos |
+| Registro de policia | Correcto desde Admin |
+| Dashboard | Vacio, un informe y cero tras inactivar/actualizar |
+| Finalizacion | Formulario incompleto rechazado; completo guarda `2026-000001` |
+| Inmutabilidad | Detalle en modo lectura |
+| Persistencia | Tras reiniciar, Admin consulta informe, coordenadas y fotografia |
+| Correlativo | `2026-000001` real; tras inactivar, MAX+1=2 en SQLite |
+| GPS | Permiso concedido y coordenadas simuladas obtenidas |
+| Croquis | Tiles OSM visibles, captura PNG y ruta persistente |
+| Camara | Permiso, captura, confirmacion, miniatura y archivo persistente |
+| Galeria | Selector Android, seleccion de dos imagenes y miniaturas |
+| Cancelacion | Formulario con galeria descartado; BD sigue con un solo informe |
+| Soft delete | Solo Admin en UI; informe oculto tambien a POLICE |
+| Conservacion | SQLite mantiene estado=0 y fotografia relacionada; JPG y PNG existen |
+| PDF/QR/compartir | Bloqueado: generador solo en servicio/controlador, sin acceso UI |
 
-- inactivar cambia solo `estado = 0`;
-- solo `ADMIN` puede inactivar;
-- contenido, relaciones y archivos asociados se conservan;
-- informes inactivos quedan excluidos de listados, detalle activo y dashboard;
-- no existe UI de reactivacion en el alcance actual.
+La inspeccion SQLite se hizo por adb root **del emulador** despues de probar los
+flujos UI; la aplicacion siguio siendo release no depurable. Se devolvio adb a
+modo no root. No se modificaron datos mediante SQL. La no reutilizacion tras
+crear un segundo informe y el cambio de gestion estan cubiertos por tests, pero
+no se ejecutaron como segundo flujo completo en este APK.
 
-### Dashboard
+El recorrido funcional completo anterior se hizo con el primer APK release
+firmado. El APK final agrega solamente endurecimiento de empaquetado (URI del
+registrador, ofuscacion y simbolos externos). Su instalacion como actualizacion
+en el emulador conservo la BD y volvio a mostrar login. Analyze y 56 tests pasaron
+nuevamente. No se repitio todo el recorrido funcional sobre el binario final.
 
-- dashboard `ADMIN` calcula total activo, policias activos, dia, mes, fecha,
-  totales por policia y meses;
-- dashboard `POLICE` calcula solo indicadores propios;
-- inactivos quedan excluidos;
-- escenario vacio cubierto por consultas y widgets de estado.
+Durante la sesion aparecio un Samsung SM-A556E / Android 16 / API 36 sin la app.
+Se instalo release y luego se actualizo al APK final: ambos arrancaron en Crear
+primer Administrador. No se crearon cuentas de prueba en el telefono.
 
-### Dispositivo, PDF y QR
+Evidencias: `docs/release-evidence/` (13 PNG, SQLite, firma y log de errores).
+Capturas 01-11: primer release; 12-13: artefacto final en Samsung y emulador.
+Registro tecnico/reproduccion/custodia: `docs/RELEASE_1.0.0_1.md`.
 
-- manifiesto Android declara permisos de ubicacion, camara e internet;
-- GPS maneja servicio deshabilitado, permisos denegados y errores sin bloquear
-  la finalizacion;
-- mapa/croquis conserva coordenadas y ruta PNG opcional;
-- apertura externa de coordenadas construye URI `geo`;
-- fotografias se copian a almacenamiento persistente y no usan BLOB;
-- PDF se genera localmente con nombre
-  `NUMERO_CASO_GRADO_APELLIDO_NOMBRE.pdf`;
-- nombre PDF se normaliza para evitar caracteres inseguros;
-- QR contiene nombre completo, grado, numero de placa y unidad del policia
-  propietario;
-- PDF consultado por `ADMIN` usa el QR del policia propietario, no del Admin.
+## Problemas y pendientes
 
-## Pruebas ampliadas en Fase 13
+1. **Bloqueo funcional de entrega:** `buildReadablePdf` no tiene llamada desde UI;
+   no existe flujo de visualizar, guardar, imprimir o compartir PDF. El generador
+   es parcial frente al Word oficial (omite relacionados, fotos, GPS y croquis).
+   No se agregaron estas funcionalidades en Fase 14.
+2. PDF emite advertencias Helvetica sin soporte Unicode; validacion visual con
+   documento oficial y lectura QR desde PDF final pendientes.
+3. Pendiente telefono real: GPS real, permisos denegados/permanentes, GPS apagado,
+   fallo de cartografia, apertura externa de mapas y variaciones de camara/galeria.
+4. Dashboard al volver de inactivar puede conservar cifras previas hasta pulsar
+   Actualizar; la consulta actualizada excluye correctamente los inactivos.
+5. Primer `dart format .` fallo por residuos en build; `flutter clean` lo resolvio.
+6. En Windows `flutter pub get --enforce-lockfile` resolvio dependencias pero
+   reporto falta de symlinks para escritorio. Analyze/test/build Android posteriores
+   con `--no-pub` correctos. Para el script desde cero habilitar soporte de symlinks.
+7. Advertencias no bloqueantes de futura compatibilidad Gradle/AGP/Kotlin y XML
+   del SDK; versiones registradas sin actualizaciones ajenas al alcance.
+   Android Studio aparecio durante la sesion y Flutter eligio JDK 25, causando
+   un build fallido. Se fijo `flutter config --jdk-dir` al JDK 17 de JAVA_HOME;
+   la reconstruccion final paso. La ruta local del registrador AOT se detecto y
+   elimino mediante el script de empaquetado, no editando el binario.
+8. Custodiar y respaldar de forma privada el keystore y `android/key.properties`
+   para futuras actualizaciones; no distribuirlos junto al APK.
 
-- migracion real de una BD version 1 a la version actual;
-- presencia de triggers de version 2 e indices de version 3 tras migrar;
-- soft delete con conductores, vehiculos, personas y fotografias conservados;
-- detalle activo excluye informes inactivos;
-- limpieza de fotos persistentes cuando una transaccion debe revertirse;
-- reset de contrasena policial desde controlador;
-- normalizacion de nombre de archivo PDF;
-- URI estable de mapas para coordenadas limite `0,0`.
+## Informacion para manual (sin generar el manual)
 
-## Defectos corregidos
-
-- No se detectaron defectos de produccion que requirieran cambios en `lib/`.
-- Durante la ampliacion de pruebas se corrigio un problema del test de migracion
-  en Windows: la BD se cerraba despues de intentar borrar el directorio temporal.
-  Ahora se cierra antes de limpiar el sandbox.
-- Se elimino un import redundante detectado por `flutter analyze`.
-
-## Pruebas ejecutadas
-
-| Comando | Estado | Resultado |
-|---|---|---|
-| `dart format .` | correcto | 55 archivos revisados, 0 cambios |
-| `flutter analyze` | correcto | sin issues |
-| `flutter test` | correcto | 56 tests pasaron |
-| `flutter devices` | informativo | no hay Android fisico ni emulador conectado |
-
-Durante `flutter test` siguen apareciendo advertencias conocidas del paquete
-`pdf` sobre fuentes Helvetica sin soporte Unicode. No fallan pruebas, pero
-deben observarse durante la validacion visual final del PDF.
-
-## Checklist de dispositivo real pendiente
-
-Requiere Android fisico compatible o emulador con capacidades equivalentes:
-
-- [ ] Instalar y abrir APK en Android.
-- [ ] Confirmar que cada nuevo inicio solicita login.
-- [ ] Validar permisos de ubicacion permitidos, denegados y denegados
-  permanentemente.
-- [ ] Validar GPS activo y GPS deshabilitado.
-- [ ] Confirmar que una falla de GPS no bloquea `Finalizar informe`.
-- [ ] Capturar fotografia desde camara.
-- [ ] Denegar permiso de camara y revisar mensaje/estado.
-- [ ] Seleccionar una imagen desde galeria.
-- [ ] Seleccionar multiples imagenes desde galeria.
-- [ ] Confirmar miniaturas, cambio de categoria y eliminacion de fotografia.
-- [ ] Cancelar informe con fotografias y confirmar limpieza de temporales
-  propios.
-- [ ] Finalizar informe con fotografias y confirmar rutas persistentes internas.
-- [ ] Verificar que las rutas persistidas no apunten a cache temporal.
-- [ ] Visualizar mapa/croquis con OpenStreetMap.
-- [ ] Mover/ajustar zoom del mapa solo para encuadre.
-- [ ] Capturar PNG del croquis cuando el mapa este disponible.
-- [ ] Finalizar informe aunque falle la cartografia.
-- [ ] Abrir coordenadas en aplicacion externa de mapas.
-- [ ] Verificar almacenamiento local de archivos asociados.
-- [ ] Generar PDF en dispositivo.
-- [ ] Visualizar PDF.
-- [ ] Guardar PDF.
-- [ ] Compartir PDF mediante share sheet Android.
-- [ ] Imprimir PDF.
-- [ ] Confirmar nombre del PDF con `NUMERO_CASO_GRADO_APELLIDO_NOMBRE.pdf`.
-- [ ] Leer QR desde el PDF generado y verificar propietario.
-- [ ] Inactivar informe y confirmar exclusion de dashboard/listados.
-- [ ] Verificar en SQLite del dispositivo que informe inactivo, relaciones y
-  archivos asociados permanecen.
-- [ ] Validar pantallas largas, teclado, rotacion razonable y ausencia de
-  overflow visible.
-- [ ] Generar APK release final y validar instalacion.
-
-## Problemas conocidos
-
-- No se pudo realizar validacion fisica Android porque `flutter devices` no
-  detecto telefono ni emulador Android conectado.
-- La generacion PDF sigue siendo minima respecto al documento oficial completo.
-  PDF/QR esta integrado y probado, pero la validacion visual final contra el
-  Word oficial continua pendiente.
-- Las advertencias de Helvetica sin soporte Unicode del paquete `pdf` podrian
-  afectar caracteres especiales en el PDF final; validar visualmente en Android.
-
-## Estado de estabilidad
-
-Estable en entorno local automatizado. No hay errores de formato, analisis ni
-tests. La app puede pasar a preparacion de release solamente despues de completar
-el checklist de dispositivo real y validar visualmente el PDF oficial.
+- Instalacion Android API 24+, nombre ACC Transito e icono institucional.
+- Primera configuracion crea Admin; no hay credenciales por defecto.
+- Login en cada inicio; Admin registra policias y restablece contrasenas.
+- Sin borradores; cancelar descarta; finalizar asigna caso y deja solo lectura.
+- GPS es opcional; cartografia requiere internet; BD y archivos permanecen locales.
+- Permisos de ubicacion/camara y selector de galeria; evidencias por categorias.
+- Admin inactiva; no hay reactivacion ni eliminacion fisica; actualizar dashboard.
+- No presentar PDF/compartir como funcionales hasta resolver los bloqueos.
+- Desinstalar/borrar datos elimina almacenamiento local; no hay sincronizacion ni
+  recuperacion cloud. Instalaciones futuras requieren conservar la misma firma.
 
 ## Siguiente fase
 
-**Fase 14.**
+**Fase 15 — Documentacion/manual.** Insumos tecnicos y evidencias disponibles.
+APK listo para documentar el estado real y realizar validacion adicional, pero
+**no listo para entrega funcional definitiva** hasta resolver bloqueos y pendientes.
+No se genero el manual completo ni se modifico `docs/DECISIONS.md`.

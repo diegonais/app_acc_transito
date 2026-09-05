@@ -34,6 +34,10 @@ android/app/profile/
 android/app/release/
 android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
 local.properties
+android/key.properties
+*.jks
+*.keystore
+.release-private/
 
 # iOS / macOS generated files
 ios/Pods/

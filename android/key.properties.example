@@ -1,0 +1,6 @@
+# Copiar como key.properties (ignorado por Git) y completar fuera del repositorio.
+# storeFile se resuelve desde android/; usar / como separador en Windows.
+storeFile=
+storePassword=
+keyAlias=
+keyPassword=
