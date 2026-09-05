@@ -1,10 +1,12 @@
 import 'package:app_acc_transito/app/app.dart';
 import 'package:app_acc_transito/app/routes/app_routes.dart';
+import 'package:app_acc_transito/app/theme/app_theme.dart';
 import 'package:app_acc_transito/data/database/app_database.dart';
 import 'package:app_acc_transito/data/repositories/police_repository.dart';
 import 'package:app_acc_transito/data/repositories/report_repository.dart';
 import 'package:app_acc_transito/data/repositories/user_repository.dart';
 import 'package:app_acc_transito/features/auth/application/auth_controller.dart';
+import 'package:app_acc_transito/features/auth/application/auth_scope.dart';
 import 'package:app_acc_transito/features/auth/data/auth_repository.dart';
 import 'package:app_acc_transito/features/auth/data/password_hasher.dart';
 import 'package:app_acc_transito/features/auth/domain/app_role.dart';
@@ -13,6 +15,8 @@ import 'package:app_acc_transito/features/auth/domain/authenticated_user.dart';
 import 'package:app_acc_transito/features/dashboard/application/dashboard_controller.dart';
 import 'package:app_acc_transito/features/officers/application/officer_management_controller.dart';
 import 'package:app_acc_transito/features/officers/data/officer_management_repository.dart';
+import 'package:app_acc_transito/features/officers/domain/officer_record.dart';
+import 'package:app_acc_transito/features/officers/officer_management_page.dart';
 import 'package:app_acc_transito/features/reports/application/report_controller.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/material.dart';
@@ -112,6 +116,65 @@ void main() {
     expect(find.text('Ingreso'), findsOneWidget);
     expect(find.text('Login local'), findsOneWidget);
   });
+
+  testWidgets('gestion de policias mueve acciones administrativas al detalle',
+      (tester) async {
+    final authController = _FakeAuthController(hasAdmin: true)
+      .._user = const AuthenticatedUser(
+        idUsuario: 1,
+        username: 'admin.local',
+        role: AppRole.admin,
+      );
+    final officerController = _FakeOfficerManagementController(
+      officers: const [
+        OfficerRecord(
+          idPolicia: 1,
+          idUsuario: 2,
+          numeroPlaca: 'PL-001',
+          grado: 'Sgto.',
+          nombres: 'Ana Maria',
+          apellidos: 'Quispe Rojas',
+          unidad: 'Transito Norte',
+          sigla: 'UTN',
+          ci: '1234567',
+          username: 'ana.quispe',
+          estadoPolicia: 1,
+          estadoUsuario: 1,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      AuthScope(
+        controller: authController,
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: OfficerManagementPage(controller: officerController),
+        ),
+      ),
+    );
+    await _pumpUntilVisible(tester, find.text('Ver'));
+
+    expect(find.text('Policias registrados'), findsOneWidget);
+    expect(find.text('1 policia registrado'), findsOneWidget);
+    expect(find.text('Sgto. Ana Maria Quispe Rojas'), findsOneWidget);
+    expect(find.text('Editar'), findsNothing);
+    expect(find.text('Restablecer contrasena'), findsNothing);
+    expect(find.text('Desactivar usuario'), findsNothing);
+
+    await tester.tap(find.text('Ver'));
+    await _pumpUntilVisible(tester, find.text('Detalle del policia'));
+
+    expect(find.text('Informacion del policia'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Acciones'),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('Editar'), findsOneWidget);
+    expect(find.text('Restablecer contrasena'), findsOneWidget);
+    expect(find.text('Desactivar usuario'), findsOneWidget);
+  });
 }
 
 Widget _buildTestApp(AuthController controller) {
@@ -170,6 +233,38 @@ class _FakeAuthController extends AuthController {
     required String policeUsername,
     required String newPassword,
   }) async {}
+}
+
+class _FakeOfficerManagementController extends OfficerManagementController {
+  _FakeOfficerManagementController({
+    required List<OfficerRecord> officers,
+  })  : _officers = officers,
+        super(
+          repository: OfficerManagementRepository(
+            AppDatabase(databasePath: ':memory:'),
+          ),
+          passwordHasher: PasswordHasher(
+            algorithm: Pbkdf2(
+              macAlgorithm: Hmac.sha256(),
+              iterations: 1000,
+              bits: 256,
+            ),
+          ),
+        );
+
+  final List<OfficerRecord> _officers;
+
+  @override
+  bool get isLoading => false;
+
+  @override
+  String? get errorMessage => null;
+
+  @override
+  List<OfficerRecord> get officers => _officers;
+
+  @override
+  Future<void> load(AuthenticatedUser actor) async {}
 }
 
 AuthRepository _unusedRepository() {

@@ -1,3 +1,33 @@
+# Estado actual — Gestion de policias redisenada, release funcional condicionado
+
+## Actualizacion 2026-09-05 — Gestion de policias
+
+Se rediseno el modulo ADMIN de gestion de policias tomando como referencia dos
+capturas provistas por el usuario. El cambio fue acotado a UI/UX en
+`lib/features/officers/officer_management_page.dart`: listado compacto con
+encabezado, conteo dinamico, tarjetas resumidas, badge de estado y accion unica
+`Ver`; las acciones administrativas `Editar`, `Restablecer contrasena` y
+`Activar/Desactivar usuario` pasaron a una nueva vista de detalle de solo
+lectura dentro del mismo modulo.
+
+Se preservo el funcionamiento existente: alta de policias, formulario de
+edicion, restablecimiento de contrasena, confirmacion de activacion/
+desactivacion, refresh mediante el controller, validaciones, repositorio,
+transacciones SQLite y modelos. No se agregaron dependencias, rutas globales,
+backend, sincronizacion ni cambios de esquema.
+
+Validaciones ejecutadas:
+
+- `dart format .`: vuelve a fallar por residuos existentes dentro de `build/`,
+  igual que en la Fase 14 documentada.
+- `dart format lib test`: correcto, 55 archivos revisados.
+- `flutter analyze`: sin issues.
+- `flutter test test/app_startup_test.dart`: 5 tests pasaron, incluyendo el
+  nuevo flujo que verifica que el listado solo expone `Ver` y que las acciones
+  administrativas aparecen en el detalle.
+- `flutter test`: 57 tests pasaron. Persisten advertencias Helvetica/Unicode del
+  servicio PDF ya conocidas y no relacionadas con este cambio.
+
 # Estado actual — Dashboard ADMIN rediseñado, release funcional condicionado
 
 ## Actualizacion 2026-09-05 — Dashboard ADMIN

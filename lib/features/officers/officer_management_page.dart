@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/routes/app_routes.dart';
+import '../../app/theme/app_theme.dart';
 import '../../shared/scaffold_shell.dart';
 import '../../shared/ui/app_button.dart';
 import '../../shared/ui/app_state_view.dart';
@@ -84,26 +85,52 @@ class _OfficerManagementPageState extends State<OfficerManagementPage> {
             );
           }
           if (controller.officers.isEmpty) {
-            return _EmptyOfficers(onCreate: () => _openForm(actor: user));
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _Header(
+                  total: controller.officers.length,
+                  onCreate: () => _openForm(actor: user),
+                ),
+                const SizedBox(height: 40),
+                _EmptyOfficers(onCreate: () => _openForm(actor: user)),
+              ],
+            );
           }
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemBuilder: (context, index) {
               if (index == 0) {
-                return _Header(onCreate: () => _openForm(actor: user));
+                return _Header(
+                  total: controller.officers.length,
+                  onCreate: () => _openForm(actor: user),
+                );
               }
               final officer = controller.officers[index - 1];
-              return _OfficerTile(
+              return _OfficerListCard(
                 officer: officer,
-                onEdit: () => _openForm(actor: user, officer: officer),
-                onToggleStatus: () => _confirmStatusChange(user, officer),
-                onResetPassword: () => _openResetPassword(user, officer),
+                onView: () => _openDetail(actor: user, officer: officer),
               );
             },
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemCount: controller.officers.length + 1,
           );
         },
+      ),
+    );
+  }
+
+  Future<void> _openDetail({
+    required AuthenticatedUser actor,
+    required OfficerRecord officer,
+  }) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _OfficerDetailPage(
+          controller: widget.controller,
+          actor: actor,
+          officer: officer,
+        ),
       ),
     );
   }
@@ -130,101 +157,54 @@ class _OfficerManagementPageState extends State<OfficerManagementPage> {
       );
     }
   }
-
-  Future<void> _confirmStatusChange(
-    AuthenticatedUser actor,
-    OfficerRecord officer,
-  ) async {
-    final activate = !officer.isActive;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(activate ? 'Activar policia' : 'Desactivar policia'),
-        content: Text(
-          activate
-              ? 'El usuario asociado podra iniciar sesion nuevamente.'
-              : 'El usuario asociado quedara sin acceso. No se borraran datos.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(activate ? 'Activar' : 'Desactivar'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) {
-      return;
-    }
-    try {
-      await widget.controller.setOfficerActive(
-        actor: actor,
-        officer: officer,
-        isActive: activate,
-      );
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(activate ? 'Policia activado.' : 'Policia inactivo.'),
-        ),
-      );
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
-    }
-  }
-
-  Future<void> _openResetPassword(
-    AuthenticatedUser actor,
-    OfficerRecord officer,
-  ) async {
-    final didReset = await showDialog<bool>(
-      context: context,
-      builder: (_) => _ResetPasswordDialog(
-        controller: widget.controller,
-        actor: actor,
-        officer: officer,
-      ),
-    );
-    if (didReset == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Contrasena restablecida.')),
-      );
-    }
-  }
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.onCreate});
+  const _Header({
+    required this.total,
+    required this.onCreate,
+  });
 
+  final int total;
   final VoidCallback onCreate;
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: Text(
-            'Policias registrados',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Policias registrados',
+                style: textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
+                  color: AppColors.ink,
                 ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '$total ${total == 1 ? 'policia registrado' : 'policias registrados'}',
+                style: textTheme.titleMedium?.copyWith(
+                  color: AppColors.ink.withValues(alpha: 0.68),
+                ),
+              ),
+            ],
           ),
         ),
+        const SizedBox(width: 12),
         FilledButton.icon(
           onPressed: onCreate,
-          icon: const Icon(Icons.person_add_alt_1_rounded),
+          icon: const Icon(Icons.add_rounded),
           label: const Text('Nuevo'),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size(0, 48),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          ),
         ),
       ],
     );
@@ -262,25 +242,22 @@ class _EmptyOfficers extends StatelessWidget {
   }
 }
 
-class _OfficerTile extends StatelessWidget {
-  const _OfficerTile({
+class _OfficerListCard extends StatelessWidget {
+  const _OfficerListCard({
     required this.officer,
-    required this.onEdit,
-    required this.onToggleStatus,
-    required this.onResetPassword,
+    required this.onView,
   });
 
   final OfficerRecord officer;
-  final VoidCallback onEdit;
-  final VoidCallback onToggleStatus;
-  final VoidCallback onResetPassword;
+  final VoidCallback onView;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -293,58 +270,456 @@ class _OfficerTile extends StatelessWidget {
                     children: [
                       Text(
                         '${officer.grado} ${officer.nombreCompleto}',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w800),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.ink,
+                        ),
                       ),
-                      const SizedBox(height: 4),
-                      Text('Placa ${officer.numeroPlaca} · ${officer.unidad}'),
-                      Text('Usuario: ${officer.username}'),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Placa ${officer.numeroPlaca} · ${officer.unidad}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: AppColors.ink.withValues(alpha: 0.68),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Usuario: ${officer.username}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: AppColors.ink.withValues(alpha: 0.68),
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                Chip(
-                  label: Text(officer.isActive ? 'Activo' : 'Inactivo'),
-                  avatar: Icon(
-                    officer.isActive
-                        ? Icons.check_circle_outline_rounded
-                        : Icons.pause_circle_outline_rounded,
-                    size: 18,
-                  ),
-                  side: BorderSide(
-                    color: officer.isActive
-                        ? colorScheme.primary
-                        : colorScheme.outline,
-                  ),
-                ),
+                const SizedBox(width: 8),
+                _PoliceStatusBadge(isActive: officer.isActive),
               ],
             ),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: onEdit,
-                  icon: const Icon(Icons.edit_outlined),
-                  label: const Text('Editar'),
+            Align(
+              alignment: Alignment.centerRight,
+              child: OutlinedButton.icon(
+                onPressed: onView,
+                icon: const Icon(Icons.visibility_outlined),
+                label: const Text('Ver'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(112, 44),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                 ),
-                OutlinedButton.icon(
-                  onPressed: onResetPassword,
-                  icon: const Icon(Icons.lock_reset_rounded),
-                  label: const Text('Restablecer'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: onToggleStatus,
-                  icon: Icon(
-                    officer.isActive
-                        ? Icons.person_off_outlined
-                        : Icons.person_outline_rounded,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OfficerDetailPage extends StatefulWidget {
+  const _OfficerDetailPage({
+    required this.controller,
+    required this.actor,
+    required this.officer,
+  });
+
+  final OfficerManagementController controller;
+  final AuthenticatedUser actor;
+  final OfficerRecord officer;
+
+  @override
+  State<_OfficerDetailPage> createState() => _OfficerDetailPageState();
+}
+
+class _OfficerDetailPageState extends State<_OfficerDetailPage> {
+  OfficerRecord get _currentOfficer {
+    for (final officer in widget.controller.officers) {
+      if (officer.idPolicia == widget.officer.idPolicia) {
+        return officer;
+      }
+    }
+    return widget.officer;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AppScaffoldShell(
+      title: 'Detalle del policia',
+      body: AnimatedBuilder(
+        animation: widget.controller,
+        builder: (context, _) {
+          final officer = _currentOfficer;
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _OfficerDetailHeader(officer: officer),
+              const SizedBox(height: 16),
+              _OfficerInfoSection(officer: officer),
+              const SizedBox(height: 16),
+              _OfficerActionsSection(
+                officer: officer,
+                onEdit: () => _openForm(officer),
+                onResetPassword: () => _openResetPassword(officer),
+                onToggleStatus: () => _confirmStatusChange(officer),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _openForm(OfficerRecord officer) async {
+    final didSave = await showDialog<bool>(
+      context: context,
+      builder: (_) => _OfficerFormDialog(
+        controller: widget.controller,
+        actor: widget.actor,
+        officer: officer,
+      ),
+    );
+    if (didSave == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Policia actualizado.')),
+      );
+    }
+  }
+
+  Future<void> _confirmStatusChange(OfficerRecord officer) async {
+    final activate = !officer.isActive;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(activate ? 'Activar policia' : 'Desactivar policia'),
+        content: Text(
+          activate
+              ? 'El usuario asociado podra iniciar sesion nuevamente.'
+              : 'El usuario asociado quedara sin acceso. No se borraran datos.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(activate ? 'Activar' : 'Desactivar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) {
+      return;
+    }
+    try {
+      await widget.controller.setOfficerActive(
+        actor: widget.actor,
+        officer: officer,
+        isActive: activate,
+      );
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(activate ? 'Policia activado.' : 'Policia inactivo.'),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    }
+  }
+
+  Future<void> _openResetPassword(OfficerRecord officer) async {
+    final didReset = await showDialog<bool>(
+      context: context,
+      builder: (_) => _ResetPasswordDialog(
+        controller: widget.controller,
+        actor: widget.actor,
+        officer: officer,
+      ),
+    );
+    if (didReset == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Contrasena restablecida.')),
+      );
+    }
+  }
+}
+
+class _PoliceStatusBadge extends StatelessWidget {
+  const _PoliceStatusBadge({required this.isActive});
+
+  final bool isActive;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = isActive
+        ? AppColors.primaryGreen
+        : AppColors.ink.withValues(alpha: 0.64);
+    final background = isActive
+        ? AppColors.secondaryGreen.withValues(alpha: 0.14)
+        : AppColors.ink.withValues(alpha: 0.08);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isActive
+                  ? Icons.check_circle_rounded
+                  : Icons.pause_circle_outline_rounded,
+              size: 18,
+              color: foreground,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              isActive ? 'Activo' : 'Inactivo',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: foreground,
+                    fontWeight: FontWeight.w800,
                   ),
-                  label: Text(officer.isActive ? 'Desactivar' : 'Activar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OfficerDetailHeader extends StatelessWidget {
+  const _OfficerDetailHeader({required this.officer});
+
+  final OfficerRecord officer;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              radius: 32,
+              backgroundColor: AppColors.secondaryGreen.withValues(alpha: 0.16),
+              child: Text(
+                _initialsFor(officer.nombreCompleto),
+                style: textTheme.titleLarge?.copyWith(
+                  color: AppColors.primaryGreen,
+                  fontWeight: FontWeight.w900,
                 ),
-              ],
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${officer.grado} ${officer.nombreCompleto}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Usuario: ${officer.username}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.titleMedium?.copyWith(
+                      color: AppColors.ink.withValues(alpha: 0.68),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            _PoliceStatusBadge(isActive: officer.isActive),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _initialsFor(String value) {
+    final words = value
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((word) => word.isNotEmpty)
+        .toList(growable: false);
+    if (words.isEmpty) {
+      return '--';
+    }
+    final initials = words.take(2).map((word) => word[0].toUpperCase()).join();
+    return initials.padRight(2, '-');
+  }
+}
+
+class _OfficerInfoSection extends StatelessWidget {
+  const _OfficerInfoSection({required this.officer});
+
+  final OfficerRecord officer;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Informacion del policia',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink,
+                  ),
+            ),
+            const SizedBox(height: 16),
+            _OfficerInfoField(
+              label: 'Nombre completo',
+              value: '${officer.grado} ${officer.nombreCompleto}',
+            ),
+            _OfficerInfoField(label: 'Placa', value: officer.numeroPlaca),
+            _OfficerInfoField(label: 'Unidad', value: officer.unidad),
+            _OfficerInfoField(
+              label: 'Sigla',
+              value: officer.sigla.trim().isEmpty
+                  ? 'No registrada'
+                  : officer.sigla,
+            ),
+            _OfficerInfoField(label: 'C.I.', value: officer.ci),
+            _OfficerInfoField(label: 'Usuario', value: officer.username),
+            const _OfficerInfoField(label: 'Rol', value: 'POLICE'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OfficerInfoField extends StatelessWidget {
+  const _OfficerInfoField({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: textTheme.bodyMedium?.copyWith(
+              color: AppColors.ink.withValues(alpha: 0.66),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: AppColors.ink.withValues(alpha: 0.12),
+              ),
+            ),
+            child: Text(
+              value,
+              style: textTheme.bodyLarge?.copyWith(color: AppColors.ink),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OfficerActionsSection extends StatelessWidget {
+  const _OfficerActionsSection({
+    required this.officer,
+    required this.onEdit,
+    required this.onResetPassword,
+    required this.onToggleStatus,
+  });
+
+  final OfficerRecord officer;
+  final VoidCallback onEdit;
+  final VoidCallback onResetPassword;
+  final VoidCallback onToggleStatus;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Acciones',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink,
+                  ),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: onEdit,
+              icon: const Icon(Icons.edit_outlined),
+              label: const Text('Editar'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: onResetPassword,
+              icon: const Icon(Icons.lock_reset_rounded),
+              label: const Text('Restablecer contrasena'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: onToggleStatus,
+              icon: Icon(
+                officer.isActive
+                    ? Icons.person_off_outlined
+                    : Icons.person_outline_rounded,
+              ),
+              label: Text(
+                  officer.isActive ? 'Desactivar usuario' : 'Activar usuario'),
             ),
           ],
         ),
