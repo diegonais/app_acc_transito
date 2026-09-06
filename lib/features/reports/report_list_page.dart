@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import '../../app/routes/app_routes.dart';
+import '../../app/theme/app_theme.dart';
 import '../../data/repositories/report_repository.dart';
 import '../../services/external_apps/external_maps_service.dart';
 import '../../services/geolocation/geolocation_service.dart';
@@ -555,7 +556,9 @@ class DirectActionReportFormPage extends StatefulWidget {
 
 class _DirectActionReportFormPageState
     extends State<DirectActionReportFormPage> {
-  final _formKey = GlobalKey<FormState>();
+  static const _totalSteps = 6;
+  final _stepFormKeys =
+      List.generate(_totalSteps, (_) => GlobalKey<FormState>());
   final _mapBoundaryKey = GlobalKey();
   final _epi = TextEditingController();
   final _llegada = TextEditingController();
@@ -584,6 +587,7 @@ class _DirectActionReportFormPageState
   bool _isLocating = false;
   bool _isCapturingSketch = false;
   bool _isPickingPhoto = false;
+  int _currentStep = 0;
   String? _errorMessage;
   String? _geoMessage;
   String? _mapMessage;
@@ -621,326 +625,437 @@ class _DirectActionReportFormPageState
       },
       child: AppScaffoldShell(
         title: 'Informe de Accion Directa',
-        body: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _Section(
-                title: 'Datos generales',
+        body: Column(
+          children: [
+            _WizardProgress(
+              currentStep: _currentStep + 1,
+              totalSteps: _totalSteps,
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 children: [
-                  _field(_epi, 'EPI / Estacion Policial Integral'),
-                  _dateField(
-                    controller: _llegada,
-                    label: 'Fecha y hora de llegada',
-                    value: _fechaHoraLlegada,
-                    onChanged: (value) => setState(() {
-                      _fechaHoraLlegada = value;
-                      _llegada.text = _formatDateTime(value);
-                    }),
+                  Form(
+                    key: _stepFormKeys[_currentStep],
+                    child: _stepCard(_currentStep),
                   ),
-                  _dateField(
-                    controller: _hecho,
-                    label: 'Fecha y hora del hecho',
-                    value: _fechaHoraHecho,
-                    onChanged: (value) => setState(() {
-                      _fechaHoraHecho = value;
-                      _hecho.text = _formatDateTime(value);
-                    }),
-                  ),
-                  _field(_naturaleza, 'Naturaleza'),
-                  _field(_lugar, 'Lugar'),
-                ],
-              ),
-              _Section(
-                title: 'Denunciante',
-                children: [
-                  _field(_denuncianteNombre, 'Denunciante'),
-                  _field(
-                    _denuncianteDocumento,
-                    'Documento del denunciante',
-                    required: false,
-                  ),
-                  _field(_denuncianteContacto, 'Contacto del denunciante'),
-                ],
-              ),
-              _Section(
-                title: 'Descripcion y condiciones',
-                children: [
-                  _field(_descripcion, 'Descripcion', maxLines: 5),
-                  _field(_condicionesClimaticas, 'Condiciones climaticas'),
-                  _boolChoice(
-                    label: 'Vehiculos movidos',
-                    value: _vehiculosMovidos,
-                    onChanged: (value) => setState(() {
-                      _vehiculosMovidos = value;
-                    }),
-                  ),
-                  _boolChoice(
-                    label: 'Protagonistas presentes',
-                    value: _protagonistasPresentes,
-                    onChanged: (value) => setState(() {
-                      _protagonistasPresentes = value;
-                    }),
-                  ),
-                  _field(
-                    _testigos,
-                    'Testigos',
-                    helperText: 'Use No existe cuando corresponda.',
-                  ),
-                  _field(
-                    _efectosPersonales,
-                    'Efectos personales',
-                    helperText: 'Use No aplica cuando corresponda.',
-                  ),
-                ],
-              ),
-              _Section(
-                title: 'Coordenadas y croquis',
-                children: [
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: _isLocating ? null : _locateIncident,
-                        icon: _isLocating
-                            ? const SizedBox.square(
-                                dimension: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.my_location_outlined),
-                        label: Text(
-                          _isLocating
-                              ? 'Obteniendo ubicacion'
-                              : 'Obtener ubicacion',
-                        ),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: _hasCoordinates
-                            ? () => _openCoordinatesExternally(
-                                  _currentLatitude!,
-                                  _currentLongitude!,
-                                )
-                            : null,
-                        icon: const Icon(Icons.map_outlined),
-                        label: const Text('Abrir en mapas'),
-                      ),
-                    ],
-                  ),
-                  if (_geoMessage != null) ...[
-                    const SizedBox(height: 8),
-                    _InlineNotice(message: _geoMessage!),
-                  ],
-                  const SizedBox(height: 12),
-                  _field(
-                    _latitud,
-                    'Latitud',
-                    required: false,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    validator: _validateOptionalDouble,
-                  ),
-                  _field(
-                    _longitud,
-                    'Longitud',
-                    required: false,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    validator: _validateOptionalDouble,
-                  ),
-                  _field(
-                    _rutaCroquis,
-                    'Ruta de croquis',
-                    required: false,
-                    readOnly: true,
-                  ),
-                  if (_hasCoordinates) ...[
-                    RepaintBoundary(
-                      key: _mapBoundaryKey,
-                      child: SimpleSketchMap(
-                        latitude: _currentLatitude!,
-                        longitude: _currentLongitude!,
-                        onTileErrorChanged: (hasError) {
-                          if (mounted) {
-                            setState(() {
-                              _mapMessage = hasError
-                                  ? 'La cartografia no cargo correctamente. Las coordenadas se conservan y el informe puede finalizarse.'
-                                  : null;
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 8),
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 12),
                     Text(
-                      'Mover el mapa solo cambia el encuadre; las coordenadas registradas no se modifican.',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    if (_mapMessage != null) ...[
-                      const SizedBox(height: 8),
-                      _InlineNotice(message: _mapMessage!),
-                    ],
-                    const SizedBox(height: 8),
-                    OutlinedButton.icon(
-                      onPressed: _isCapturingSketch ? null : _captureSketchMap,
-                      icon: _isCapturingSketch
-                          ? const SizedBox.square(
-                              dimension: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.image_outlined),
-                      label: Text(
-                        _isCapturingSketch
-                            ? 'Preparando croquis'
-                            : 'Preparar PNG para PDF',
+                      _errorMessage!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ] else
-                    const _InlineNotice(
-                      message:
-                          'Sin coordenadas registradas. Puede finalizar el informe conservando el lugar textual.',
-                    ),
-                ],
-              ),
-              _Section(
-                title: 'Fotografias y archivos',
-                children: [
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: _isPickingPhoto
-                            ? null
-                            : () => _addPhotoFromCamera(),
-                        icon: _isPickingPhoto
-                            ? const SizedBox.square(
-                                dimension: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.photo_camera_outlined),
-                        label: const Text('Camara'),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: _isPickingPhoto
-                            ? null
-                            : () => _addPhotosFromGallery(),
-                        icon: const Icon(Icons.photo_library_outlined),
-                        label: const Text('Galeria'),
-                      ),
-                    ],
-                  ),
-                  if (_photoMessage != null) ...[
-                    const SizedBox(height: 8),
-                    _InlineNotice(message: _photoMessage!),
                   ],
-                  const SizedBox(height: 12),
-                  if (_fotografias.isEmpty)
-                    const Text('No existen fotografias agregadas.')
-                  else
-                    _PhotoGrid(
-                      photos: _fotografias,
-                      onCategoryChanged: (index, category) => setState(() {
-                        _fotografias[index] = _fotografias[index].copyWith(
-                          tipo: category,
-                        );
-                      }),
-                      onRemove: _removePhoto,
-                    ),
+                  const SizedBox(height: 16),
+                  _WizardNavigation(
+                    isFirstStep: _currentStep == 0,
+                    isLastStep: _currentStep == _totalSteps - 1,
+                    isBusy: _isSubmitting,
+                    onPrevious: _previousStep,
+                    onNext: _nextStep,
+                    onFinalize: _finalize,
+                    onCancel: _cancel,
+                  ),
                 ],
               ),
-              _RelationSection(
-                title: 'Conductores',
-                emptyText: 'No existen conductores registrados.',
-                count: _conductores.length,
-                onAdd: _addDriver,
-                itemBuilder: (index) {
-                  final driver = _conductores[index];
-                  return _EditableSummary(
-                    title: driver.nombreCompleto,
-                    subtitle: [
-                      'Licencia: ${driver.licencia}',
-                      'Categoria: ${driver.categoria}',
-                      'Contactos: ${driver.contactos}',
-                    ].join(' / '),
-                    onTap: () => _editDriver(index),
-                    onDelete: () => _removeDriver(index),
-                  );
-                },
-              ),
-              _RelationSection(
-                title: 'Vehiculos',
-                emptyText: 'No existen vehiculos registrados.',
-                count: _vehiculos.length,
-                onAdd: _addVehicle,
-                itemBuilder: (index) {
-                  final vehicle = _vehiculos[index];
-                  return _EditableSummary(
-                    title: vehicle.placa ?? 'Sin placa',
-                    subtitle: [
-                      vehicle.marca,
-                      vehicle.color,
-                      vehicle.tipo,
-                      vehicle.servicio,
-                    ].whereType<String>().join(' / '),
-                    onTap: () => _editVehicle(index),
-                    onDelete: () => setState(() {
-                      _vehiculos.removeAt(index);
-                    }),
-                  );
-                },
-              ),
-              _RelationSection(
-                title: 'Personas involucradas',
-                emptyText: 'No existen personas involucradas registradas.',
-                count: _personas.length,
-                onAdd: _addPerson,
-                itemBuilder: (index) {
-                  final person = _personas[index];
-                  return _EditableSummary(
-                    title: person.nombre,
-                    subtitle: '${person.tipo} / Edad: ${person.edad}',
-                    onTap: () => _editPerson(index),
-                    onDelete: () => setState(() {
-                      _personas.removeAt(index);
-                    }),
-                  );
-                },
-              ),
-              if (_errorMessage != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  _errorMessage!,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.error,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 16),
-              AppButton(
-                label: _isSubmitting ? 'Finalizando' : 'Finalizar informe',
-                icon: Icons.check_circle_outline_rounded,
-                onPressed: _isSubmitting ? null : _finalize,
-              ),
-              const SizedBox(height: 8),
-              AppButton(
-                label: 'Cancelar',
-                icon: Icons.close_rounded,
-                variant: AppButtonVariant.secondary,
-                onPressed: _isSubmitting ? null : _cancel,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
+
+  Widget _stepCard(int step) {
+    final content = switch (step) {
+      0 => _generalDataStep(),
+      1 => _complainantStep(),
+      2 => _descriptionConditionsStep(),
+      3 => _coordinatesStep(),
+      4 => _photosDriversStep(),
+      _ => _vehiclesPeopleStep(),
+    };
+
+    return _WizardStepCard(
+      icon: _stepIcon(step),
+      title: _stepTitle(step),
+      description: _stepDescription(step),
+      child: content,
+    );
+  }
+
+  Widget _generalDataStep() {
+    return Column(
+      children: [
+        _field(_epi, 'EPI / Estacion Policial Integral'),
+        _dateField(
+          controller: _llegada,
+          label: 'Fecha y hora de llegada',
+          value: _fechaHoraLlegada,
+          onChanged: (value) => setState(() {
+            _fechaHoraLlegada = value;
+            _llegada.text = _formatDateTime(value);
+          }),
+        ),
+        _dateField(
+          controller: _hecho,
+          label: 'Fecha y hora del hecho',
+          value: _fechaHoraHecho,
+          onChanged: (value) => setState(() {
+            _fechaHoraHecho = value;
+            _hecho.text = _formatDateTime(value);
+          }),
+        ),
+        _field(_naturaleza, 'Naturaleza'),
+        _field(_lugar, 'Lugar'),
+      ],
+    );
+  }
+
+  Widget _complainantStep() {
+    return Column(
+      children: [
+        _field(_denuncianteNombre, 'Denunciante'),
+        _field(
+          _denuncianteDocumento,
+          'Documento del denunciante',
+          required: false,
+        ),
+        _field(_denuncianteContacto, 'Contacto del denunciante'),
+      ],
+    );
+  }
+
+  Widget _descriptionConditionsStep() {
+    return Column(
+      children: [
+        _field(_descripcion, 'Descripcion', maxLines: 5),
+        _field(_condicionesClimaticas, 'Condiciones climaticas'),
+        _boolChoice(
+          label: 'Vehiculos movidos',
+          value: _vehiculosMovidos,
+          onChanged: (value) => setState(() {
+            _vehiculosMovidos = value;
+          }),
+        ),
+        _boolChoice(
+          label: 'Protagonistas presentes',
+          value: _protagonistasPresentes,
+          onChanged: (value) => setState(() {
+            _protagonistasPresentes = value;
+          }),
+        ),
+        _field(
+          _testigos,
+          'Testigos',
+          helperText: 'Use No existe cuando corresponda.',
+        ),
+        _field(
+          _efectosPersonales,
+          'Efectos personales',
+          helperText: 'Use No aplica cuando corresponda.',
+        ),
+      ],
+    );
+  }
+
+  Widget _coordinatesStep() {
+    return Column(
+      children: [
+        _FullWidthOutlinedButton(
+          onPressed: _isLocating ? null : _locateIncident,
+          icon: _isLocating ? null : Icons.location_on_outlined,
+          label: _isLocating ? 'Obteniendo ubicacion' : 'Obtener ubicacion',
+          isBusy: _isLocating,
+        ),
+        const SizedBox(height: 10),
+        _FullWidthOutlinedButton(
+          onPressed: _hasCoordinates
+              ? () => _openCoordinatesExternally(
+                    _currentLatitude!,
+                    _currentLongitude!,
+                  )
+              : null,
+          icon: Icons.map_outlined,
+          label: 'Abrir en mapas',
+        ),
+        if (_geoMessage != null) ...[
+          const SizedBox(height: 8),
+          _InlineNotice(message: _geoMessage!),
+        ],
+        const SizedBox(height: 12),
+        _field(
+          _latitud,
+          'Latitud',
+          required: false,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          validator: _validateOptionalDouble,
+        ),
+        _field(
+          _longitud,
+          'Longitud',
+          required: false,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          validator: _validateOptionalDouble,
+        ),
+        _field(
+          _rutaCroquis,
+          'Ruta de croquis',
+          required: false,
+          readOnly: true,
+        ),
+        if (_hasCoordinates) ...[
+          RepaintBoundary(
+            key: _mapBoundaryKey,
+            child: SimpleSketchMap(
+              latitude: _currentLatitude!,
+              longitude: _currentLongitude!,
+              onTileErrorChanged: (hasError) {
+                if (mounted) {
+                  setState(() {
+                    _mapMessage = hasError
+                        ? 'La cartografia no cargo correctamente. Las coordenadas se conservan y el informe puede finalizarse.'
+                        : null;
+                  });
+                }
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Mover el mapa solo cambia el encuadre; las coordenadas registradas no se modifican.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          if (_mapMessage != null) ...[
+            const SizedBox(height: 8),
+            _InlineNotice(message: _mapMessage!),
+          ],
+          const SizedBox(height: 8),
+          _FullWidthOutlinedButton(
+            onPressed: _isCapturingSketch ? null : _captureSketchMap,
+            icon: _isCapturingSketch ? null : Icons.image_outlined,
+            label: _isCapturingSketch
+                ? 'Preparando croquis'
+                : 'Preparar PNG para PDF',
+            isBusy: _isCapturingSketch,
+          ),
+        ] else
+          const _InlineNotice(
+            message:
+                'Sin coordenadas registradas. Puede finalizar el informe conservando el lugar textual.',
+          ),
+      ],
+    );
+  }
+
+  Widget _photosDriversStep() {
+    return Column(
+      children: [
+        _FullWidthOutlinedButton(
+          onPressed: _isPickingPhoto ? null : () => _addPhotoFromCamera(),
+          icon: _isPickingPhoto ? null : Icons.photo_camera_outlined,
+          label: 'Camara',
+          isBusy: _isPickingPhoto,
+        ),
+        const SizedBox(height: 10),
+        _FullWidthOutlinedButton(
+          onPressed: _isPickingPhoto ? null : () => _addPhotosFromGallery(),
+          icon: Icons.photo_library_outlined,
+          label: 'Galeria',
+        ),
+        if (_photoMessage != null) ...[
+          const SizedBox(height: 8),
+          _InlineNotice(message: _photoMessage!),
+        ],
+        const SizedBox(height: 12),
+        if (_fotografias.isEmpty)
+          const _EmptyStepText('No existen fotografias agregadas.')
+        else
+          _PhotoGrid(
+            photos: _fotografias,
+            onCategoryChanged: (index, category) => setState(() {
+              _fotografias[index] = _fotografias[index].copyWith(
+                tipo: category,
+              );
+            }),
+            onRemove: _removePhoto,
+          ),
+        const SizedBox(height: 22),
+        _RelationSection(
+          title: 'Conductores',
+          emptyText: 'No existen conductores registrados.',
+          count: _conductores.length,
+          onAdd: _addDriver,
+          itemBuilder: (index) {
+            final driver = _conductores[index];
+            return _EditableSummary(
+              title: driver.nombreCompleto,
+              subtitle: [
+                'Licencia: ${driver.licencia}',
+                'Categoria: ${driver.categoria}',
+                'Contactos: ${driver.contactos}',
+              ].join(' / '),
+              onTap: () => _editDriver(index),
+              onDelete: () => _removeDriver(index),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _vehiclesPeopleStep() {
+    return Column(
+      children: [
+        _RelationSection(
+          title: 'Vehiculos',
+          emptyText: 'No existen vehiculos registrados.',
+          count: _vehiculos.length,
+          onAdd: _addVehicle,
+          itemBuilder: (index) {
+            final vehicle = _vehiculos[index];
+            return _EditableSummary(
+              title: vehicle.placa ?? 'Sin placa',
+              subtitle: [
+                vehicle.marca,
+                vehicle.color,
+                vehicle.tipo,
+                vehicle.servicio,
+              ].whereType<String>().join(' / '),
+              onTap: () => _editVehicle(index),
+              onDelete: () => setState(() {
+                _vehiculos.removeAt(index);
+              }),
+            );
+          },
+        ),
+        const SizedBox(height: 16),
+        _RelationSection(
+          title: 'Personas involucradas',
+          emptyText: 'No existen personas involucradas registradas.',
+          count: _personas.length,
+          onAdd: _addPerson,
+          itemBuilder: (index) {
+            final person = _personas[index];
+            return _EditableSummary(
+              title: person.nombre,
+              subtitle: '${person.tipo} / Edad: ${person.edad}',
+              onTap: () => _editPerson(index),
+              onDelete: () => setState(() {
+                _personas.removeAt(index);
+              }),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  IconData _stepIcon(int step) {
+    return switch (step) {
+      0 => Icons.description_outlined,
+      1 => Icons.person_outline_rounded,
+      2 => Icons.article_outlined,
+      3 => Icons.location_on_outlined,
+      4 => Icons.photo_camera_outlined,
+      _ => Icons.checklist_rounded,
+    };
+  }
+
+  String _stepTitle(int step) {
+    return switch (step) {
+      0 => 'Datos generales',
+      1 => 'Denunciante',
+      2 => 'Descripcion y condiciones',
+      3 => 'Coordenadas y croquis',
+      4 => 'Fotografias y archivos',
+      _ => 'Vehiculos y personas involucradas',
+    };
+  }
+
+  String _stepDescription(int step) {
+    return switch (step) {
+      0 => 'Registre la informacion basica del hecho.',
+      1 => 'Identifique a la persona denunciante.',
+      2 => 'Detalle lo sucedido y las condiciones observadas.',
+      3 => 'Registre la ubicacion y la referencia del lugar.',
+      4 => 'Adjunte evidencia y registre conductores.',
+      _ => 'Complete los registros finales antes de cerrar el informe.',
+    };
+  }
+
+  void _nextStep() {
+    FocusScope.of(context).unfocus();
+    if (!(_stepFormKeys[_currentStep].currentState?.validate() ?? false)) {
+      return;
+    }
+    if (_currentStep < _totalSteps - 1) {
+      setState(() {
+        _currentStep += 1;
+        _errorMessage = null;
+      });
+    }
+  }
+
+  void _previousStep() {
+    FocusScope.of(context).unfocus();
+    if (_currentStep > 0) {
+      setState(() {
+        _currentStep -= 1;
+        _errorMessage = null;
+      });
+    }
+  }
+
+  bool _validateBeforeFinalize() {
+    final invalidStep = _firstInvalidStep();
+    if (invalidStep == null) {
+      return true;
+    }
+    setState(() {
+      _currentStep = invalidStep;
+      _errorMessage = 'Revise los campos obligatorios de este paso.';
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _stepFormKeys[invalidStep].currentState?.validate();
+      }
+    });
+    return false;
+  }
+
+  int? _firstInvalidStep() {
+    if (_isBlank(_epi.text) ||
+        _fechaHoraLlegada == null ||
+        _fechaHoraHecho == null ||
+        _isBlank(_naturaleza.text) ||
+        _isBlank(_lugar.text)) {
+      return 0;
+    }
+    if (_isBlank(_denuncianteNombre.text) ||
+        _isBlank(_denuncianteContacto.text)) {
+      return 1;
+    }
+    if (_isBlank(_descripcion.text) ||
+        _isBlank(_condicionesClimaticas.text) ||
+        _vehiculosMovidos == null ||
+        _protagonistasPresentes == null ||
+        _isBlank(_testigos.text) ||
+        _isBlank(_efectosPersonales.text)) {
+      return 2;
+    }
+    if (_validateOptionalDouble(_latitud.text) != null ||
+        _validateOptionalDouble(_longitud.text) != null) {
+      return 3;
+    }
+    return null;
+  }
+
+  bool _isBlank(String value) => value.trim().isEmpty;
 
   DirectActionReportDraft get _draft {
     return DirectActionReportDraft(
@@ -976,7 +1091,8 @@ class _DirectActionReportFormPageState
   double? get _currentLongitude => _tryParseOptionalDouble(_longitud.text);
 
   Future<void> _finalize() async {
-    if (!(_formKey.currentState?.validate() ?? false)) {
+    FocusScope.of(context).unfocus();
+    if (!_validateBeforeFinalize()) {
       return;
     }
     setState(() {
@@ -1475,6 +1591,255 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('No se encontro una aplicacion compatible de mapas.'),
+      ),
+    );
+  }
+
+}
+
+class _WizardProgress extends StatelessWidget {
+  const _WizardProgress({
+    required this.currentStep,
+    required this.totalSteps,
+  });
+
+  final int currentStep;
+  final int totalSteps;
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = currentStep / totalSteps;
+    final percent = (progress * 100).round();
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: AppColors.ink.withValues(alpha: 0.08),
+          ),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Paso $currentStep de $totalSteps',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  Text(
+                    '$percent%',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  minHeight: 8,
+                  value: progress,
+                  backgroundColor: AppColors.ink.withValues(alpha: 0.10),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WizardStepCard extends StatelessWidget {
+  const _WizardStepCard({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.child,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Card(
+      elevation: 1,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AppColors.secondaryGreen.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Icon(icon, color: colorScheme.primary, size: 28),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style:
+                            Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 24,
+                                ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        description,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WizardNavigation extends StatelessWidget {
+  const _WizardNavigation({
+    required this.isFirstStep,
+    required this.isLastStep,
+    required this.isBusy,
+    required this.onPrevious,
+    required this.onNext,
+    required this.onFinalize,
+    required this.onCancel,
+  });
+
+  final bool isFirstStep;
+  final bool isLastStep;
+  final bool isBusy;
+  final VoidCallback onPrevious;
+  final VoidCallback onNext;
+  final VoidCallback onFinalize;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: AppButton(
+                label: 'Anterior',
+                icon: Icons.chevron_left_rounded,
+                variant: AppButtonVariant.secondary,
+                onPressed: isFirstStep || isBusy ? null : onPrevious,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: AppButton(
+                label: isLastStep
+                    ? (isBusy ? 'Finalizando' : 'Finalizar informe')
+                    : 'Siguiente',
+                icon: isLastStep
+                    ? Icons.check_circle_outline_rounded
+                    : Icons.chevron_right_rounded,
+                onPressed: isBusy ? null : (isLastStep ? onFinalize : onNext),
+              ),
+            ),
+          ],
+        ),
+        if (isLastStep) ...[
+          const SizedBox(height: 12),
+          AppButton(
+            label: 'Cancelar',
+            icon: Icons.close_rounded,
+            variant: AppButtonVariant.secondary,
+            onPressed: isBusy ? null : onCancel,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _FullWidthOutlinedButton extends StatelessWidget {
+  const _FullWidthOutlinedButton({
+    required this.onPressed,
+    required this.label,
+    this.icon,
+    this.isBusy = false,
+  });
+
+  final VoidCallback? onPressed;
+  final String label;
+  final IconData? icon;
+  final bool isBusy;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: isBusy
+            ? const SizedBox.square(
+                dimension: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Icon(icon),
+        label: Text(label),
+      ),
+    );
+  }
+}
+
+class _EmptyStepText extends StatelessWidget {
+  const _EmptyStepText(this.message);
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(
+          message,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+        ),
       ),
     );
   }

@@ -1,3 +1,42 @@
+# Estado actual — Wizard de Informe de Accion Directa implementado
+
+## Actualizacion 2026-09-05 — Informe de Accion Directa por pasos
+
+Se rediseño el flujo de creacion del Informe de Accion Directa en
+`lib/features/reports/report_list_page.dart`, transformando el formulario largo
+en un wizard de 6 pasos dentro de una sola ruta/pantalla:
+
+1. Datos generales.
+2. Denunciante.
+3. Descripcion y condiciones.
+4. Coordenadas y croquis.
+5. Fotografias y archivos / Conductores.
+6. Vehiculos / Personas involucradas.
+
+Se preservo el orden real del formulario, los `TextEditingController`, listas en
+memoria, selectores de fecha/hora, validadores existentes, geolocalizacion,
+apertura de mapas, croquis, camara, galeria, dialogs de conductores/vehiculos/
+personas, cancelacion y finalizacion transaccional mediante
+`ReportController.finalize` y `ReportRepository.finalizeReport`. No se agregaron
+dependencias, rutas, backend, sincronizacion ni cambios de esquema SQLite.
+
+El wizard incorpora indicador permanente `Paso X de 6` con porcentaje calculado
+desde el paso actual, tarjetas de paso con icono/titulo/descripcion, botones
+`Anterior`/`Siguiente`, y `Finalizar informe` + `Cancelar` en el ultimo paso.
+`Siguiente` valida solo el paso visible; `Anterior` no valida; `Finalizar
+informe` identifica el primer paso invalido antes de conservar la misma logica
+de guardado. Los datos se mantienen al cambiar de paso porque el estado completo
+permanece en el `State` padre.
+
+Validaciones ejecutadas:
+
+- `dart format .`: vuelve a fallar por residuos existentes dentro de `build/`,
+  igual que estaba documentado previamente.
+- `dart format lib test`: correcto, 55 archivos revisados, 1 archivo formateado.
+- `flutter analyze`: sin issues.
+- `flutter test`: 57 tests pasaron. Persisten advertencias Helvetica/Unicode del
+  servicio PDF ya conocidas y no relacionadas con este cambio.
+
 # Estado actual — Gestion de policias redisenada, release funcional condicionado
 
 ## Actualizacion 2026-09-05 — Gestion de policias
