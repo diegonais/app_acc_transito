@@ -793,6 +793,23 @@ class ReportRepository {
     }
   }
 
+  Future<void> updatePdfPath({
+    required int idInforme,
+    required String rutaPdf,
+    DateTime? now,
+  }) async {
+    final db = await _database.instance;
+    final updatedRows = await ReportDao(db).updatePdfPath(
+      idInforme,
+      rutaPdf,
+      (now ?? DateTime.now()).toIso8601String(),
+    );
+    if (updatedRows != 1) {
+      throw StateError(
+          'No se pudo guardar la ruta PDF del informe $idInforme.');
+    }
+  }
+
   static String formatCaseNumber(int gestion, int correlativo) {
     return '$gestion-${correlativo.toString().padLeft(6, '0')}';
   }

@@ -247,4 +247,20 @@ ORDER BY gestion DESC, mes DESC
       whereArgs: [idInforme, 1],
     );
   }
+
+  Future<int> updatePdfPath(
+    int idInforme,
+    String rutaPdf,
+    String fechaModificacion,
+  ) {
+    return _db.update(
+      'informes',
+      {
+        'ruta_pdf': rutaPdf,
+        'fecha_modificacion': fechaModificacion,
+      },
+      where: 'id_informe = ? AND estado = ?',
+      whereArgs: [idInforme, 1],
+    );
+  }
 }

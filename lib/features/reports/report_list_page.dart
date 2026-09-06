@@ -19,6 +19,7 @@ import '../auth/application/auth_scope.dart';
 import '../auth/domain/app_role.dart';
 import '../auth/domain/authenticated_user.dart';
 import 'application/report_controller.dart';
+import 'report_pdf_preview_page.dart';
 
 class ReportListPage extends StatefulWidget {
   ReportListPage({
@@ -1448,6 +1449,7 @@ class ReportDetailPage extends StatefulWidget {
 
 class _ReportDetailPageState extends State<ReportDetailPage> {
   late final Future<ReportRecord> _detail;
+  bool _isGeneratingPdf = false;
 
   @override
   void initState() {
@@ -1488,6 +1490,12 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
               ),
               const SizedBox(height: 8),
               const Text('Informe finalizado. Modo lectura.'),
+              const SizedBox(height: 12),
+              AppButton(
+                label: _isGeneratingPdf ? 'Generando PDF' : 'Ver informe PDF',
+                icon: Icons.picture_as_pdf_outlined,
+                onPressed: _isGeneratingPdf ? null : _openPdfPreview,
+              ),
               _ReadOnlySection(
                 title: 'Datos generales',
                 rows: {
@@ -1595,6 +1603,39 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
     );
   }
 
+  Future<void> _openPdfPreview() async {
+    setState(() => _isGeneratingPdf = true);
+    try {
+      final pdf = await widget.controller.buildReadablePdf(
+        actor: widget.actor,
+        idInforme: widget.idInforme,
+      );
+      if (!mounted) {
+        return;
+      }
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ReportPdfPreviewPage(
+            controller: widget.controller,
+            actor: widget.actor,
+            idInforme: widget.idInforme,
+            pdf: pdf,
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo generar el PDF: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isGeneratingPdf = false);
+      }
+    }
+  }
 }
 
 class _WizardProgress extends StatelessWidget {

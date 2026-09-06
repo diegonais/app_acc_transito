@@ -7,6 +7,7 @@ import 'package:app_acc_transito/data/repositories/user_repository.dart';
 import 'package:app_acc_transito/features/auth/domain/app_role.dart';
 import 'package:app_acc_transito/features/auth/domain/authenticated_user.dart';
 import 'package:app_acc_transito/features/reports/application/report_controller.dart';
+import 'package:app_acc_transito/services/files/report_pdf_file_service.dart';
 import 'package:app_acc_transito/services/media/evidence_photo.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -532,6 +533,49 @@ void main() {
     expect(payload, isNot(contains('PL-021')));
     expect(payload, isNot(contains('admin.local')));
     expect(payload, isNot(contains('1234567')));
+  });
+
+  test('guardar PDF persiste ruta_pdf sin modificar contenido', () async {
+    final sandbox = await Directory.systemTemp.createTemp('pdf_save_test_');
+    addTearDown(() async {
+      if (await sandbox.exists()) {
+        await sandbox.delete(recursive: true);
+      }
+    });
+    final police = await _createPoliceSession(
+      userRepository,
+      policeRepository,
+      username: 'policia.guarda.pdf',
+      plate: 'PL-022',
+    );
+    final finalized = await controller.finalize(
+      actor: police,
+      draft: _validDraft(),
+      now: DateTime.utc(2026),
+    );
+    final pdf = await controller.buildReadablePdf(
+      actor: police,
+      idInforme: finalized.idInforme,
+    );
+
+    final path = await controller.saveReadablePdf(
+      actor: police,
+      idInforme: finalized.idInforme,
+      pdf: pdf,
+      fileService: ReportPdfFileService(documentsRoot: sandbox),
+    );
+
+    expect(await File(path).exists(), isTrue);
+    final db = await appDatabase.instance;
+    final rows = await db.query(
+      'informes',
+      where: 'id_informe = ?',
+      whereArgs: [finalized.idInforme],
+    );
+    expect(rows.single['ruta_pdf'], path);
+    expect(rows.single['descripcion'], 'Descripcion del hecho');
+    expect(path, contains('reports'));
+    expect(path, endsWith('.pdf'));
   });
 
   test('POLICE no puede inactivar ni leer informes ajenos', () async {

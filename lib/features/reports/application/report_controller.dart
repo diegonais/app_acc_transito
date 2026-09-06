@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../data/repositories/report_repository.dart';
+import '../../../services/files/report_pdf_file_service.dart';
 import '../../../services/pdf/direct_action_report_pdf_service.dart';
 import '../../auth/domain/app_role.dart';
 import '../../auth/domain/authenticated_user.dart';
@@ -204,6 +205,21 @@ class ReportController extends ChangeNotifier {
       report: report,
       owner: owner,
     );
+  }
+
+  Future<String> saveReadablePdf({
+    required AuthenticatedUser actor,
+    required int idInforme,
+    required DirectActionReportPdf pdf,
+    ReportPdfFileService fileService = const ReportPdfFileService(),
+  }) async {
+    await findReadableDetail(actor: actor, idInforme: idInforme);
+    final path = await fileService.save(
+      bytes: pdf.bytes,
+      fileName: pdf.fileName,
+    );
+    await _repository.updatePdfPath(idInforme: idInforme, rutaPdf: path);
+    return path;
   }
 
   Future<void> inactivate({

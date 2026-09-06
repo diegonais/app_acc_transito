@@ -1,3 +1,40 @@
+# Estado actual — PDF completo con QR, preview, guardado y compartir
+
+## Actualizacion 2026-09-05 — Flujo PDF funcional
+
+Se implemento el flujo funcional desde el detalle de informe para generar y
+previsualizar el PDF del Informe de Accion Directa. En
+`lib/features/reports/report_list_page.dart`, `ReportDetailPage` ahora expone
+la accion `Ver informe PDF`, muestra estado de generacion y abre
+`ReportPdfPreviewPage` con los bytes generados desde el `idInforme` persistido.
+
+`DirectActionReportPdfService` fue ampliado sin reemplazar el QR existente:
+mantiene `InstitutionalQrService` como fuente del QR institucional y construye
+un PDF A4 multipagina con datos generales, fechas legibles, descripcion,
+denunciante, condiciones, conductores, vehiculos, personas involucradas,
+ubicacion, croquis si existe, fotografias disponibles, datos del funcionario
+responsable y QR. Fotografias y croquis se leen desde rutas de archivo; si un
+archivo falta o no puede leerse, se omite sin cancelar la generacion del PDF.
+
+Se agregaron `printing` y `share_plus` como dependencias directas para preview,
+impresion y share sheet estandar. `ReportPdfPreviewPage` permite Guardar PDF,
+Compartir e Imprimir. El guardado usa `ReportPdfFileService`, escribe bajo
+`documents/reports/<numeroCaso>/pdf/<nombre>.pdf` y persiste `informes.ruta_pdf`
+mediante `ReportController.saveReadablePdf`, `ReportRepository.updatePdfPath`
+y `ReportDao.updatePdfPath`, sin SQL desde UI ni cambios de esquema.
+
+Validaciones ejecutadas:
+
+- `flutter pub add printing share_plus`: agrego `printing 5.15.0`,
+  `share_plus 13.3.0` y transitorios; termino con el aviso Windows ya conocido
+  de symlink/developer mode para plugins de escritorio.
+- `dart format lib test`: correcto.
+- `flutter analyze`: sin issues.
+- `flutter test`: 61 tests pasaron. Persisten advertencias Helvetica/Unicode
+  del paquete `pdf`; la generacion no falla, pero queda pendiente validacion
+  visual final con documento oficial y fuente institucional si se requiere
+  cobertura tipografica completa.
+
 # Estado actual — Wizard de Informe de Accion Directa implementado
 
 ## Actualizacion 2026-09-05 — Informe de Accion Directa por pasos
