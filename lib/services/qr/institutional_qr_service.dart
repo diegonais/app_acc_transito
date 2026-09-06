@@ -32,7 +32,7 @@ class InstitutionalQrPayload {
       'FUNCIONARIO POLICIAL',
       'Nombre completo: $nombreCompleto',
       'Grado: $grado',
-      'Numero de placa: $numeroPlaca',
+      'Número de placa: $numeroPlaca',
       'Unidad: $unidad',
     ].join('\n');
   }
@@ -71,7 +71,7 @@ class InstitutionalQrService {
         'nombre completo',
       ),
       grado: _requiredText(police.grado, 'grado'),
-      numeroPlaca: _requiredText(police.numeroPlaca, 'numero de placa'),
+      numeroPlaca: _requiredText(police.numeroPlaca, 'número de placa'),
       unidad: _requiredText(police.unidad, 'unidad'),
     );
   }
@@ -91,7 +91,7 @@ class InstitutionalQrService {
   static String _requiredText(String value, String fieldName) {
     final trimmed = value.trim();
     if (trimmed.isEmpty) {
-      throw ArgumentError.value(value, fieldName, 'No puede estar vacio.');
+      throw ArgumentError.value(value, fieldName, 'No puede estar vacío.');
     }
     return trimmed;
   }

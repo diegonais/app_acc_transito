@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
+import '../../../shared/user_message.dart';
 
 import '../../../data/repositories/report_repository.dart';
 import '../../../services/files/report_pdf_file_service.dart';
 import '../../../services/pdf/direct_action_report_pdf_service.dart';
+import '../../../services/qr/institutional_qr_service.dart';
 import '../../auth/domain/app_role.dart';
 import '../../auth/domain/authenticated_user.dart';
 
@@ -91,6 +93,23 @@ class ReportController extends ChangeNotifier {
   List<ReportRecord> _reports = const [];
   List<PoliceReportCount> _policeOptions = const [];
   ReportQueryFilter _filter = const ReportQueryFilter();
+  int _loadGeneration = 0;
+
+  void reset() {
+    _loadGeneration++;
+    _reports = const [];
+    _policeOptions = const [];
+    _filter = const ReportQueryFilter();
+    _errorMessage = null;
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _loadGeneration++;
+    super.dispose();
+  }
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
@@ -102,6 +121,7 @@ class ReportController extends ChangeNotifier {
     AuthenticatedUser actor, {
     ReportQueryFilter? filter,
   }) async {
+    final generation = ++_loadGeneration;
     _isLoading = true;
     _errorMessage = null;
     if (filter != null) {
@@ -111,22 +131,32 @@ class ReportController extends ChangeNotifier {
 
     try {
       if (actor.role == AppRole.admin) {
-        _policeOptions = await _repository.listPoliceReportCounts();
-        _reports = await _repository.queryActiveReportsForAdmin(
+        final options = await _repository.listPoliceReportCounts();
+        final reports = await _repository.queryActiveReportsForAdmin(
           filter: _filter,
         );
+        if (generation != _loadGeneration) return;
+        _policeOptions = options;
+        _reports = reports;
       } else {
         _policeOptions = const [];
-        _reports = await _repository.queryActiveReportsForPolice(
+        final reports = await _repository.queryActiveReportsForPolice(
           idPolicia: actor.requiredPoliceId,
           filter: _filter,
         );
+        if (generation != _loadGeneration) return;
+        _reports = reports;
       }
     } catch (error) {
-      _errorMessage = error.toString();
+      if (generation != _loadGeneration) return;
+      _reports = const [];
+      _errorMessage =
+          userMessage(error, fallback: 'No se pudieron cargar los informes.');
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (generation == _loadGeneration) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -186,9 +216,17 @@ class ReportController extends ChangeNotifier {
             idPolicia: actor.requiredPoliceId,
           );
     if (report == null) {
-      throw StateError('El informe no existe o esta inactivo.');
+      throw StateError('El informe no existe o está inactivo.');
     }
     return report;
+  }
+
+  Future<InstitutionalQrPolice> findReadableOwner({
+    required AuthenticatedUser actor,
+    required int idInforme,
+  }) async {
+    final report = await findReadableDetail(actor: actor, idInforme: idInforme);
+    return _repository.findReportOwnerQrIdentity(report.idPolicia);
   }
 
   Future<DirectActionReportPdf> buildReadablePdf({

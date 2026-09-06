@@ -43,7 +43,7 @@ class AuthenticatedUser {
   int get requiredPoliceId {
     final profile = policeProfile;
     if (profile == null) {
-      throw StateError('La sesion no tiene datos de policia.');
+      throw StateError('La sesión no tiene datos de policía.');
     }
     return profile.idPolicia;
   }

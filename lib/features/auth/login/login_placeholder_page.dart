@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../shared/user_message.dart';
 
 import '../../../app/routes/app_routes.dart';
 import '../application/auth_scope.dart';
@@ -44,7 +45,7 @@ class _LoginPageState extends State<LoginPage> {
                 const Center(child: AppLogo(size: 96)),
                 const SizedBox(height: 24),
                 Text(
-                  'Login local',
+                  'Inicio de sesión',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w800,
@@ -69,7 +70,7 @@ class _LoginPageState extends State<LoginPage> {
                       TextFormField(
                         controller: _passwordController,
                         decoration: const InputDecoration(
-                          labelText: 'Contrasena',
+                          labelText: 'Contraseña',
                           prefixIcon: Icon(Icons.lock_outline_rounded),
                         ),
                         obscureText: true,
@@ -119,6 +120,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _submit() async {
+    if (_isSubmitting) return;
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
@@ -141,7 +143,8 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
       setState(() {
-        _errorMessage = error.toString();
+        _errorMessage = userMessage(error,
+            fallback: 'No se pudo iniciar sesión. Inténtelo nuevamente.');
       });
     } finally {
       if (mounted) {

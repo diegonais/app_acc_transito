@@ -31,10 +31,9 @@ class AuthRepository {
       throw const AuthorizationException('Ya existe una cuenta ADMIN.');
     }
 
-    return _userRepository.createUser(
+    return _userRepository.createFirstAdmin(
       username: username.trim(),
       passwordHash: await _passwordHasher.hash(password),
-      role: AppRole.admin.databaseValue,
       now: now,
     );
   }
@@ -94,7 +93,7 @@ class AuthRepository {
     );
     if (policeUser == null ||
         AppRole.fromDatabase(policeUser['rol'] as String) != AppRole.police) {
-      throw const AuthException('No existe un usuario policia con ese nombre.');
+      throw const AuthException('No existe un usuario policía con ese nombre.');
     }
 
     await _userRepository.updatePasswordHash(
@@ -107,7 +106,7 @@ class AuthRepository {
   void requireRole(AuthenticatedUser user, AppRole role) {
     if (user.role != role) {
       throw AuthorizationException(
-        'Operacion permitida solo para ${role.databaseValue}.',
+        'Operación permitida solo para ${role.databaseValue}.',
       );
     }
   }

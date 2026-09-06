@@ -9,6 +9,13 @@ class AuthController extends ChangeNotifier {
 
   final AuthRepository _authRepository;
   AuthenticatedUser? _currentUser;
+  int _loginGeneration = 0;
+
+  @override
+  void dispose() {
+    _loginGeneration++;
+    super.dispose();
+  }
 
   AuthenticatedUser? get currentUser => _currentUser;
   bool get isAuthenticated => _currentUser != null;
@@ -33,14 +40,18 @@ class AuthController extends ChangeNotifier {
     required String password,
   }) async {
     _validateCredentials(username: username, password: password);
-    _currentUser = await _authRepository.login(
+    final generation = ++_loginGeneration;
+    final user = await _authRepository.login(
       username: username,
       password: password,
     );
+    if (generation != _loginGeneration) return;
+    _currentUser = user;
     notifyListeners();
   }
 
   void logout() {
+    _loginGeneration++;
     if (_currentUser == null) {
       return;
     }
@@ -54,14 +65,14 @@ class AuthController extends ChangeNotifier {
   }) async {
     final actor = _currentUser;
     if (actor == null) {
-      throw StateError('No existe una sesion activa.');
+      throw StateError('No existe una sesión activa.');
     }
     if (policeUsername.trim().isEmpty) {
-      throw ArgumentError('Debe ingresar el usuario del policia.');
+      throw ArgumentError('Debe ingresar el usuario del policía.');
     }
     if (newPassword.length < 8) {
       throw ArgumentError(
-          'La nueva contrasena debe tener al menos 8 caracteres.');
+          'La nueva contraseña debe tener al menos 8 caracteres.');
     }
 
     await _authRepository.resetPolicePassword(
@@ -74,7 +85,7 @@ class AuthController extends ChangeNotifier {
   void requireRole(AppRole role) {
     final user = _currentUser;
     if (user == null) {
-      throw StateError('No existe una sesion activa.');
+      throw StateError('No existe una sesión activa.');
     }
     _authRepository.requireRole(user, role);
   }
@@ -87,7 +98,7 @@ class AuthController extends ChangeNotifier {
       throw ArgumentError('El usuario debe tener al menos 3 caracteres.');
     }
     if (password.length < 8) {
-      throw ArgumentError('La contrasena debe tener al menos 8 caracteres.');
+      throw ArgumentError('La contraseña debe tener al menos 8 caracteres.');
     }
   }
 }

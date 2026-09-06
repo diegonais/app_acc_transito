@@ -35,10 +35,12 @@ class _SimpleSketchMapState extends State<SimpleSketchMap> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.latitude != widget.latitude ||
         oldWidget.longitude != widget.longitude) {
-      setState(() {
-        _hasTileError = false;
+      _hasTileError = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _mapController.move(_coordinates, _mapController.camera.zoom);
+        widget.onTileErrorChanged?.call(false);
       });
-      widget.onTileErrorChanged?.call(false);
     }
   }
 
@@ -154,7 +156,7 @@ class _SimpleSketchMapState extends State<SimpleSketchMap> {
 
   void _moveToCurrentCenter(double zoomDelta) {
     final camera = _mapController.camera;
-    _mapController.move(camera.center, camera.zoom + zoomDelta);
+    _mapController.move(camera.center, (camera.zoom + zoomDelta).clamp(3, 19));
   }
 }
 

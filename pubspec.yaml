@@ -9,8 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
-  cupertino_icons: ^1.0.6
   cryptography: ^2.7.0
   path: ^1.9.0
   sqflite: ^2.3.3+1
@@ -20,7 +21,6 @@ dependencies:
   url_launcher: ^6.3.2
   path_provider: ^2.1.6
   image_picker: ^1.2.3
-  mime: ^2.1.0
   qr: ^3.0.2
   pdf: ^3.13.0
   printing: ^5.15.0
@@ -37,3 +37,5 @@ flutter:
 
   assets:
     - assets/images/logo_transito.png
+    - assets/fonts/roboto-regular.ttf
+    - assets/fonts/roboto-bold.ttf

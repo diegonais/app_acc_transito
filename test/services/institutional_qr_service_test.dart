@@ -7,7 +7,7 @@ void main() {
     nombreCompleto: 'Ana Quispe Rojas',
     grado: 'Sgto.',
     numeroPlaca: 'PL-123',
-    unidad: 'Unidad Operativa de Transito',
+    unidad: 'Unidad Operativa de Tránsito',
   );
 
   test('construye payload institucional con el contenido aprobado', () {
@@ -19,8 +19,8 @@ void main() {
         'FUNCIONARIO POLICIAL',
         'Nombre completo: Ana Quispe Rojas',
         'Grado: Sgto.',
-        'Numero de placa: PL-123',
-        'Unidad: Unidad Operativa de Transito',
+        'Número de placa: PL-123',
+        'Unidad: Unidad Operativa de Tránsito',
       ].join('\n'),
     );
   });
@@ -38,7 +38,7 @@ void main() {
     expect(payload.toLowerCase(), isNot(contains('dispositivo')));
   });
 
-  test('genera un QR local no vacio y con matriz legible', () {
+  test('genera un QR local no vacío y con matriz legible', () {
     final qr = service.generateForPolice(police);
 
     expect(qr.moduleCount, greaterThan(0));
@@ -53,10 +53,23 @@ void main() {
           nombreCompleto: ' ',
           grado: 'Sgto.',
           numeroPlaca: 'PL-123',
-          unidad: 'Transito',
+          unidad: 'Tránsito',
         ),
       ),
       throwsArgumentError,
     );
+  });
+
+  test('conserva ñ y tildes en el QR institucional', () {
+    final code = service.generateForPolice(const InstitutionalQrPolice(
+        nombreCompleto: 'José Muñoz Peña',
+        grado: 'Sgto.',
+        numeroPlaca: 'PL-Ñ01',
+        unidad: 'División de Tránsito'));
+    expect(code.payload.toStructuredText(),
+        contains('Nombre completo: José Muñoz Peña'));
+    expect(code.payload.toStructuredText(),
+        contains('Unidad: División de Tránsito'));
+    expect(code.hasDarkModules, isTrue);
   });
 }

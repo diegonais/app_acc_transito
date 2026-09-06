@@ -44,7 +44,7 @@ void main() {
     await appDatabase.close();
   });
 
-  test('alta valida crea usuario POLICE y policia relacionados', () async {
+  test('alta válida crea usuario POLICE y policía relacionados', () async {
     final idPolicia = await _createOfficer(
       officerRepository,
       passwordHasher,
@@ -61,6 +61,32 @@ void main() {
     expect(users.single['rol'], AppRole.police.databaseValue);
     expect(users.single['estado'], 1);
     expect(officers.single.estadoPolicia, 1);
+  });
+
+  test('no permite desactivar otra cuenta mezclando IDs de policía y usuario',
+      () async {
+    await authRepository.createFirstAdmin(
+        username: 'admin.local', password: 'ClaveSegura123');
+    final idPolicia = await _createOfficer(officerRepository, passwordHasher);
+    final db = await appDatabase.instance;
+    final admin =
+        (await db.query('usuarios', where: 'rol = ?', whereArgs: ['ADMIN']))
+            .single;
+    await expectLater(
+        officerRepository.setOfficerActive(
+            idPolicia: idPolicia,
+            idUsuario: admin['id_usuario'] as int,
+            isActive: false),
+        throwsStateError);
+    expect((await officerRepository.listOfficers()).single.isActive, isTrue);
+    expect(
+        (await db.query('usuarios', where: 'rol = ?', whereArgs: ['ADMIN']))
+            .single['estado'],
+        1);
+    await expectLater(
+        officerRepository.resetPassword(
+            idUsuario: admin['id_usuario'] as int, passwordHash: 'invalido'),
+        throwsStateError);
   });
 
   test('rechaza usuario duplicado y no crea registros parciales', () async {
@@ -109,7 +135,7 @@ void main() {
         grado: 'Tte.',
         nombres: 'Ana Maria',
         apellidos: 'Quispe Rojas',
-        unidad: 'Transito Norte',
+        unidad: 'Tránsito Norte',
         sigla: 'UTN',
         ci: '7654321',
         username: 'ana.quispe',
@@ -121,13 +147,13 @@ void main() {
     expect(updated.numeroPlaca, 'PL-010');
     expect(updated.grado, 'Tte.');
     expect(updated.nombreCompleto, 'Ana Maria Quispe Rojas');
-    expect(updated.unidad, 'Transito Norte');
+    expect(updated.unidad, 'Tránsito Norte');
     expect(updated.sigla, 'UTN');
     expect(updated.ci, '7654321');
     expect(updated.username, 'ana.quispe');
   });
 
-  test('activa y desactiva policia junto al usuario asociado', () async {
+  test('activa y desactiva policía junto al usuario asociado', () async {
     await _createOfficer(officerRepository, passwordHasher);
     final officer = (await officerRepository.listOfficers()).single;
 
@@ -156,7 +182,7 @@ void main() {
     expect(updated.isActive, isTrue);
   });
 
-  test('login queda bloqueado para policia inactivo', () async {
+  test('login queda bloqueado para policía inactivo', () async {
     await _createOfficer(officerRepository, passwordHasher);
     final officer = (await officerRepository.listOfficers()).single;
 
@@ -175,7 +201,7 @@ void main() {
     );
   });
 
-  test('login carga relacion usuario-policia activa', () async {
+  test('login carga relacion usuario-policía activa', () async {
     await _createOfficer(officerRepository, passwordHasher);
 
     final session = await authRepository.login(
@@ -189,7 +215,7 @@ void main() {
     expect(session.requiredPoliceId, isPositive);
   });
 
-  test('restablecimiento cambia hash sin exponer contrasena anterior',
+  test('restablecimiento cambia hash sin exponer contraseña anterior',
       () async {
     await _createOfficer(officerRepository, passwordHasher);
     final officer = (await officerRepository.listOfficers()).single;
@@ -229,7 +255,7 @@ Future<int> _createOfficer(
       grado: 'Sgto.',
       nombres: 'Ana',
       apellidos: 'Quispe',
-      unidad: 'Transito',
+      unidad: 'Tránsito',
       sigla: 'UT',
       ci: '1234567',
       username: username,

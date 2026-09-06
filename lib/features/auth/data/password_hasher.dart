@@ -54,6 +54,7 @@ class PasswordHasher {
 
       final salt = base64Decode(parts[2]);
       final expectedHash = base64Decode(parts[3]);
+      if (salt.isEmpty || expectedHash.length != 32) return false;
       final algorithm = Pbkdf2(
         macAlgorithm: Hmac.sha256(),
         iterations: iterations,

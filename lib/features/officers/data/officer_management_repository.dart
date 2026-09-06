@@ -78,6 +78,13 @@ class OfficerManagementRepository {
         throw const DuplicatePlateException();
       }
 
+      final owner = await police.findById(input.idPolicia);
+      final account = await users.findById(input.idUsuario);
+      if (owner?['id_usuario'] != input.idUsuario ||
+          account?['rol'] != 'POLICE') {
+        throw StateError('La cuenta no corresponde al policía.');
+      }
+
       final timestamp = (now ?? DateTime.now()).toIso8601String();
       final updatedPolice = await police.updateAdministrativeData(
         input.idPolicia,
@@ -99,7 +106,7 @@ class OfficerManagementRepository {
       );
 
       if (updatedPolice != 1 || updatedUser != 1) {
-        throw StateError('No se pudo actualizar el policia.');
+        throw StateError('No se pudo actualizar el policía.');
       }
     });
   }
@@ -111,6 +118,11 @@ class OfficerManagementRepository {
     DateTime? now,
   }) async {
     await _database.transaction((transaction) async {
+      final owner = await PoliceDao(transaction).findById(idPolicia);
+      final account = await UserDao(transaction).findById(idUsuario);
+      if (owner?['id_usuario'] != idUsuario || account?['rol'] != 'POLICE') {
+        throw StateError('La cuenta no corresponde al policía.');
+      }
       final timestamp = (now ?? DateTime.now()).toIso8601String();
       final estado = isActive ? 1 : 0;
       final updatedPolice = await PoliceDao(transaction).updateStatus(
@@ -125,7 +137,7 @@ class OfficerManagementRepository {
       );
 
       if (updatedPolice != 1 || updatedUser != 1) {
-        throw StateError('No se pudo actualizar el estado del policia.');
+        throw StateError('No se pudo actualizar el estado del policía.');
       }
     });
   }
@@ -136,13 +148,17 @@ class OfficerManagementRepository {
     DateTime? now,
   }) async {
     final db = await _database.instance;
+    final account = await UserDao(db).findById(idUsuario);
+    if (account?['rol'] != 'POLICE') {
+      throw StateError('Solo se pueden restablecer cuentas de policías.');
+    }
     final updatedRows = await UserDao(db).updatePasswordHash(
       idUsuario,
       passwordHash,
       (now ?? DateTime.now()).toIso8601String(),
     );
     if (updatedRows != 1) {
-      throw StateError('No se pudo restablecer la contrasena.');
+      throw StateError('No se pudo restablecer la contraseña.');
     }
   }
 

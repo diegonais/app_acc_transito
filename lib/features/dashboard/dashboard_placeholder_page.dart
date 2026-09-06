@@ -53,7 +53,7 @@ class _DashboardPageState extends State<DashboardPage> {
           icon: const Icon(Icons.refresh_rounded),
         ),
         IconButton(
-          tooltip: 'Cerrar sesion',
+          tooltip: 'Cerrar sesión',
           onPressed: () {
             auth.logout();
             Navigator.of(context).pushReplacementNamed(AppRoutes.login);
@@ -73,7 +73,7 @@ class _DashboardPageState extends State<DashboardPage> {
             children: [
               _WelcomeCard(
                 username: user.username,
-                role: user.role.databaseValue,
+                role: user.isAdmin ? 'ADMIN' : 'Policía',
                 subtitle: user.isAdmin
                     ? 'Consulta operativa local del dispositivo.'
                     : 'Consulta y registro operativo del dispositivo.',
@@ -87,11 +87,11 @@ class _DashboardPageState extends State<DashboardPage> {
               if (controller.isLoading && stats == null)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 40),
-                  child: AppLoadingState(message: 'Cargando dashboard'),
+                  child: AppLoadingState(message: 'Cargando resumen'),
                 )
               else if (error != null && stats == null)
                 AppErrorState(
-                  title: 'No se pudo cargar el dashboard',
+                  title: 'No se pudo cargar el resumen',
                   message: error,
                   onRetry: () => controller.load(user),
                 )
@@ -112,14 +112,14 @@ class _DashboardPageState extends State<DashboardPage> {
                         icon: Icons.local_police_outlined,
                         accentColor: AppColors.institutionalBlue,
                         backgroundColor: const Color(0xFFEAF5FF),
-                        label: 'Policias activos',
+                        label: 'Policías activos',
                         value: stats.activePoliceCount.toString(),
                       ),
                     _MetricCard(
                       icon: Icons.today_outlined,
                       accentColor: AppColors.darkGold,
                       backgroundColor: const Color(0xFFFFF4E3),
-                      label: 'Informes del dia',
+                      label: 'Informes del día',
                       value: stats.reportsToday.toString(),
                     ),
                     _MetricCard(
@@ -159,16 +159,19 @@ class _DashboardPageState extends State<DashboardPage> {
                     icon: user.isAdmin
                         ? Icons.assignment_outlined
                         : Icons.note_add_outlined,
-                    onPressed: () {
-                      Navigator.of(context).pushNamed(AppRoutes.reports);
+                    onPressed: () async {
+                      await Navigator.of(context).pushNamed(AppRoutes.reports);
+                      if (mounted) await widget.controller.load(user);
                     },
                   ),
                   if (user.role == AppRole.admin)
                     _DashboardActionButton(
-                      label: 'Gestionar policias',
+                      label: 'Gestionar policías',
                       icon: Icons.groups_2_outlined,
-                      onPressed: () {
-                        Navigator.of(context).pushNamed(AppRoutes.officers);
+                      onPressed: () async {
+                        await Navigator.of(context)
+                            .pushNamed(AppRoutes.officers);
+                        if (mounted) await widget.controller.load(user);
                       },
                     ),
                 ],
@@ -213,7 +216,7 @@ class _WelcomeCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isNarrow = constraints.maxWidth < 360;
+        final isNarrow = constraints.maxWidth < 600;
         final userInfo = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -226,8 +229,6 @@ class _WelcomeCard extends StatelessWidget {
             ),
             Text(
               username,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               style: textTheme.headlineMedium?.copyWith(
                 color: AppColors.ink,
                 fontWeight: FontWeight.w900,
@@ -252,7 +253,7 @@ class _WelcomeCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Comprometidos\ncon una ciudad\nmas segura',
+              'Comprometidos\ncon una ciudad\nmás segura',
               style: textTheme.titleMedium?.copyWith(
                 color: AppColors.ink.withValues(alpha: 0.92),
                 height: 1.22,
@@ -369,20 +370,16 @@ class _MetricGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 700
+        final columns = constraints.maxWidth >= 1120
             ? 4
-            : constraints.maxWidth < 340
+            : constraints.maxWidth < 560
                 ? 1
                 : 2;
         return GridView.count(
           crossAxisCount: columns,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
-          childAspectRatio: columns == 4
-              ? 1.55
-              : columns == 2
-                  ? 1.18
-                  : 2.45,
+          mainAxisExtent: 150 * MediaQuery.textScalerOf(context).scale(1),
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           children: children,
@@ -456,7 +453,6 @@ class _MetricCard extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: accentColor, size: 28),
           ],
         ),
       ),
@@ -500,7 +496,7 @@ class _QuickSummarySection extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      'Resumen rapido',
+                      'Resumen rápido',
                       style: textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w900,
                       ),
@@ -580,9 +576,9 @@ class _PoliceSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _SummaryCard(
-      title: 'Informes por policia',
+      title: 'Informes por policía',
       icon: Icons.groups_2_outlined,
-      emptyMessage: 'No hay policias activos para resumir.',
+      emptyMessage: 'No hay policías activos para resumir.',
       children: values
           .map(
             (value) => _SummaryLine(
@@ -749,14 +745,14 @@ class _InformationBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Manten tu informacion actualizada',
+                    'Manten tu información actualizada',
                     style: textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w900,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Gestiona policias y revisa los informes para un mejor control operativo.',
+                    'Gestiona policías y revisa los informes para un mejor control operativo.',
                     style: textTheme.bodyMedium?.copyWith(
                       color: AppColors.ink.withValues(alpha: 0.64),
                       height: 1.25,

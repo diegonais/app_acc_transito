@@ -44,8 +44,7 @@ void main() {
     expect(await source.exists(), isTrue);
   });
 
-  test(
-      'persiste evidencias bajo reports numero caso images y limpia temporales',
+  test('conserva temporales hasta confirmar la transacción y luego los limpia',
       () async {
     final firstSource = File(p.join(sandbox.path, 'foto-1.jpg'));
     final secondSource = File(p.join(sandbox.path, 'foto-2.png'));
@@ -78,6 +77,10 @@ void main() {
     expect(await File(persisted.first.ruta).exists(), isTrue);
     expect(await File(persisted.last.ruta).exists(), isTrue);
     for (final path in temporaryPaths) {
+      expect(await File(path).exists(), isTrue);
+    }
+    await service.cleanupTemporaryPhotos(staged);
+    for (final path in temporaryPaths) {
       expect(await File(path).exists(), isFalse);
     }
   });
@@ -102,6 +105,30 @@ void main() {
       ]),
       throwsA(isA<FileSystemException>()),
     );
+  });
+
+  test('fallo en segunda foto elimina copias parciales y permite reintentar',
+      () async {
+    final source = File(p.join(sandbox.path, 'primera.jpg'));
+    await source.writeAsBytes([1, 2, 3]);
+    final first =
+        await service.stageFile(source, category: EvidencePhotoCategory.otra);
+    final missing = File(p.join(sandbox.path, 'segunda.jpg'));
+    final photos = [
+      first,
+      PhotoInput(ruta: missing.path, tipo: EvidencePhotoCategory.placa)
+    ];
+    await expectLater(
+        service.persistPhotosForReport(
+            numeroCaso: '2026-000003', photos: photos),
+        throwsA(isA<FileSystemException>()));
+    expect(await File(first.ruta).readAsBytes(), [1, 2, 3]);
+    final target = await service.reportImagesDirectory('2026-000003');
+    expect(await target.list().toList(), isEmpty);
+    await missing.writeAsBytes([4, 5, 6]);
+    final persisted = await service.persistPhotosForReport(
+        numeroCaso: '2026-000003', photos: photos);
+    expect(persisted, hasLength(2));
   });
 
   test('limpia fotos persistentes cuando una transaccion debe revertirse',

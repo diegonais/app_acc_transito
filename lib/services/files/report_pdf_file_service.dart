@@ -26,7 +26,13 @@ class ReportPdfFileService {
       await directory.create(recursive: true);
     }
     final file = File(p.join(directory.path, safeName));
-    await file.writeAsBytes(bytes, flush: true);
+    final temporary = File('${file.path}.tmp');
+    try {
+      await temporary.writeAsBytes(bytes, flush: true);
+      await temporary.rename(file.path);
+    } finally {
+      if (await temporary.exists()) await temporary.delete();
+    }
     return file.path;
   }
 
@@ -39,7 +45,8 @@ class ReportPdfFileService {
 
   String _safeFileName(String fileName) {
     final stem = p.basenameWithoutExtension(fileName);
-    final safeStem = stem.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+    final safeStem =
+        stem.replaceAll(RegExp(r'[^A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ_-]'), '_');
     return '${safeStem.isEmpty ? 'informe_accion_directa' : safeStem}.pdf';
   }
 }

@@ -27,10 +27,10 @@ void main() {
     final controller = _FakeAuthController(hasAdmin: false);
 
     await tester.pumpWidget(_buildTestApp(controller));
-    await _pumpUntilVisible(tester, find.text('Configuracion inicial'));
+    await _pumpUntilVisible(tester, find.text('Configuración inicial'));
 
     expect(find.byType(Image), findsAtLeastNWidgets(1));
-    expect(find.text('Configuracion inicial'), findsOneWidget);
+    expect(find.text('Configuración inicial'), findsOneWidget);
     expect(find.text('Crear primer Administrador'), findsOneWidget);
 
     await tester.enterText(find.byType(TextFormField).at(0), 'admin.local');
@@ -40,10 +40,10 @@ void main() {
     await _pumpUntilVisible(tester, find.text('Ingreso'));
 
     expect(find.text('Ingreso'), findsAtLeastNWidgets(1));
-    expect(find.text('Login local'), findsOneWidget);
+    expect(find.text('Inicio de sesión'), findsOneWidget);
   });
 
-  testWidgets('login valido abre dashboard y logout protege navegacion',
+  testWidgets('login válido abre resumen y logout protege navegacion',
       (tester) async {
     final controller = _FakeAuthController(hasAdmin: true);
 
@@ -86,11 +86,11 @@ void main() {
     await tester.tap(find.text('Ingresar'));
     await _pumpUntilVisible(
       tester,
-      find.textContaining('Usuario o contrasena incorrectos'),
+      find.textContaining('Usuario o contraseña incorrectos'),
     );
 
     expect(
-      find.textContaining('Usuario o contrasena incorrectos'),
+      find.textContaining('Usuario o contraseña incorrectos'),
       findsOneWidget,
     );
   });
@@ -114,10 +114,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Ingreso'), findsOneWidget);
-    expect(find.text('Login local'), findsOneWidget);
+    expect(find.text('Inicio de sesión'), findsOneWidget);
   });
 
-  testWidgets('gestion de policias mueve acciones administrativas al detalle',
+  testWidgets('gestión de policías mueve acciones administrativas al detalle',
       (tester) async {
     final authController = _FakeAuthController(hasAdmin: true)
       .._user = const AuthenticatedUser(
@@ -134,7 +134,7 @@ void main() {
           grado: 'Sgto.',
           nombres: 'Ana Maria',
           apellidos: 'Quispe Rojas',
-          unidad: 'Transito Norte',
+          unidad: 'Tránsito Norte',
           sigla: 'UTN',
           ci: '1234567',
           username: 'ana.quispe',
@@ -155,24 +155,24 @@ void main() {
     );
     await _pumpUntilVisible(tester, find.text('Ver'));
 
-    expect(find.text('Policias registrados'), findsOneWidget);
-    expect(find.text('1 policia registrado'), findsOneWidget);
+    expect(find.text('Policías registrados'), findsOneWidget);
+    expect(find.text('1 policía registrado'), findsOneWidget);
     expect(find.text('Sgto. Ana Maria Quispe Rojas'), findsOneWidget);
     expect(find.text('Editar'), findsNothing);
-    expect(find.text('Restablecer contrasena'), findsNothing);
+    expect(find.text('Restablecer contraseña'), findsNothing);
     expect(find.text('Desactivar usuario'), findsNothing);
 
     await tester.tap(find.text('Ver'));
-    await _pumpUntilVisible(tester, find.text('Detalle del policia'));
+    await _pumpUntilVisible(tester, find.text('Detalle del policía'));
 
-    expect(find.text('Informacion del policia'), findsOneWidget);
+    expect(find.text('Información del policía'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Acciones'),
       300,
       scrollable: find.byType(Scrollable).last,
     );
     expect(find.text('Editar'), findsOneWidget);
-    expect(find.text('Restablecer contrasena'), findsOneWidget);
+    expect(find.text('Restablecer contraseña'), findsOneWidget);
     expect(find.text('Desactivar usuario'), findsOneWidget);
   });
 }

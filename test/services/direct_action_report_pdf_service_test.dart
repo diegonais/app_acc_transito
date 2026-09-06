@@ -7,6 +7,7 @@ import 'package:app_acc_transito/services/media/evidence_photo.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late Directory sandbox;
 
   setUp(() async {
@@ -21,14 +22,14 @@ void main() {
 
   test('integra el QR institucional en el PDF generado', () async {
     final report = _report(
-      naturaleza: 'Colision',
+      naturaleza: 'Colisión',
       lugar: 'Av. Principal',
     );
     const owner = InstitutionalQrPolice(
       nombreCompleto: 'Ana Quispe',
       grado: 'Sgto.',
       numeroPlaca: 'PL-123',
-      unidad: 'Transito',
+      unidad: 'Tránsito',
     );
 
     final pdf = await DirectActionReportPdfService().build(
@@ -52,7 +53,7 @@ void main() {
       nombreCompleto: 'Ana Maria Quispe/Rojas',
       grado: 'Sgto. 1ro',
       numeroPlaca: 'PL-123',
-      unidad: 'Transito',
+      unidad: 'Tránsito',
     );
 
     final fileName = DirectActionReportPdfService().buildFileName(
@@ -70,7 +71,7 @@ void main() {
     final image = await _writePng(sandbox, 'evidencia.png');
     final sketch = await _writePng(sandbox, 'croquis.png');
     final report = _report(
-      descripcion: 'Descripcion extensa del hecho ' * 30,
+      descripcion: 'Descripción extensa del hecho ' * 30,
       denuncianteNombre: 'Rosa Lima',
       denuncianteDocumento: 'CI-55',
       denuncianteContacto: '70000000',
@@ -127,9 +128,10 @@ void main() {
     expect(pdf.bytes, isNotEmpty);
     expect(String.fromCharCodes(pdf.bytes.take(5)), '%PDF-');
     expect(pdf.qrPayload.toStructuredText(), contains('PL-123'));
+    await _reviewOutput(pdf, 'completo');
   });
 
-  test('genera con listas vacias y multiples relaciones', () async {
+  test('genera con listas vacías y multiples relaciones', () async {
     final empty = await DirectActionReportPdfService().build(
       report: _report(
         conductores: const [],
@@ -158,9 +160,11 @@ void main() {
 
     expect(String.fromCharCodes(empty.bytes.take(5)), '%PDF-');
     expect(String.fromCharCodes(multiple.bytes.take(5)), '%PDF-');
+    await _reviewOutput(empty, 'vacio');
+    await _reviewOutput(multiple, 'relaciones');
   });
 
-  test('omite fotografia y croquis faltantes sin lanzar excepcion', () async {
+  test('omite fotografía y croquis faltantes sin lanzar excepcion', () async {
     final report = _report(
       rutaCroquis: '${sandbox.path}/croquis_faltante.png',
       fotografias: [
@@ -178,22 +182,119 @@ void main() {
     );
 
     expect(String.fromCharCodes(pdf.bytes.take(5)), '%PDF-');
+    await _reviewOutput(pdf, 'faltantes');
   });
+
+  test('genera muchas páginas con texto español, relaciones y fotos', () async {
+    final image = await _writePng(sandbox, 'foto.png');
+    final pdf = await DirectActionReportPdfService().build(
+      report: _report(
+        descripcion:
+            'José Muñoz Peña. Información, Descripción, Ubicación, Acción, Vehículo. ' *
+                180,
+        conductores: List.generate(
+            20,
+            (i) => DriverRecord(
+                idConductor: i + 1,
+                nombreCompleto: 'Conductor José Muñoz Peña ${i + 1}')),
+        fotografias: List.generate(
+            14,
+            (i) => PhotoRecord(
+                idFotografia: i + 1,
+                ruta: image.path,
+                tipo: EvidencePhotoCategory.panoramica)),
+      ),
+      owner: const InstitutionalQrPolice(
+          nombreCompleto: 'José Muñoz Peña',
+          grado: 'Sgto.',
+          numeroPlaca: 'PL-Ñ01',
+          unidad: 'División de Tránsito'),
+    );
+    expect(pdf.qrPayload.nombreCompleto, 'José Muñoz Peña');
+    expect(pdf.fileName, contains('Peña_José'));
+    expect(String.fromCharCodes(pdf.bytes), contains('/FontFile2'));
+    const output = String.fromEnvironment('PDF_REVIEW_OUTPUT');
+    if (output.isNotEmpty) await File(output).writeAsBytes(pdf.bytes);
+  });
+
+  test('omite imágenes corruptas sin impedir el PDF', () async {
+    final file = File('${sandbox.path}/corrupta.jpg');
+    await file.writeAsBytes([1, 2, 3, 4]);
+    final pdf = await DirectActionReportPdfService().build(
+        report: _report(rutaCroquis: file.path, fotografias: [
+          PhotoRecord(
+              idFotografia: 1,
+              ruta: file.path,
+              tipo: EvidencePhotoCategory.otra)
+        ]),
+        owner: _owner);
+    expect(String.fromCharCodes(pdf.bytes.take(5)), '%PDF-');
+  });
+
+  test('pagina campos relacionados y etiquetas extensas sin perder evidencia',
+      () async {
+    final image = await _writePng(sandbox, 'foto_etiquetada.png');
+    final pdf = await DirectActionReportPdfService().build(
+        report: _report(
+          naturaleza: null,
+          lugar: null,
+          descripcion: null,
+          denuncianteNombre: null,
+          denuncianteContacto: null,
+          conductores: [
+            DriverRecord(
+                idConductor: 1,
+                nombreCompleto: 'José Muñoz',
+                domicilio:
+                    'Domicilio extenso con referencia a la ubicación. ' * 100,
+                condicionEntrega: 'FIN CONDICIÓN')
+          ],
+          vehiculos: const [
+            VehicleRecord(idVehiculo: 1, idConductor: 1, placa: 'Ñ-123')
+          ],
+          personas: [
+            PersonRecord(
+                idPersona: 1,
+                nombre: 'María Peña',
+                tipo: 'HERIDO',
+                lugarEvacuacion: 'Información de evacuación. ' * 100)
+          ],
+          fotografias: [
+            PhotoRecord(
+                idFotografia: 1,
+                ruta: image.path,
+                tipo: EvidencePhotoCategory.otra,
+                descripcion:
+                    '${'Etiqueta con información de la fotografía. ' * 100}FIN ETIQUETA')
+          ],
+        ),
+        owner: _owner);
+    expect(String.fromCharCodes(pdf.bytes.take(5)), '%PDF-');
+    await _reviewOutput(pdf, 'campos-largos');
+  });
+}
+
+Future<void> _reviewOutput(DirectActionReportPdf pdf, String suffix) async {
+  const output = String.fromEnvironment('PDF_REVIEW_OUTPUT');
+  if (output.isNotEmpty) {
+    await File(output.replaceFirst(RegExp(r'\.pdf$'), '-$suffix.pdf'))
+        .writeAsBytes(pdf.bytes);
+  }
 }
 
 const _owner = InstitutionalQrPolice(
   nombreCompleto: 'Ana Quispe',
   grado: 'Sgto.',
   numeroPlaca: 'PL-123',
-  unidad: 'Transito',
+  unidad: 'Tránsito',
 );
 
 ReportRecord _report({
   int correlativo = 1,
   String numeroCaso = '2026-000001',
-  String? naturaleza = 'Colision',
+  String? naturaleza = 'Colisión',
   String? lugar = 'Av. Principal',
-  String? descripcion = 'Descripcion del hecho',
+  String? descripcion = 'Descripción del hecho',
   String? denuncianteNombre = 'No existe',
   String? denuncianteDocumento,
   String? denuncianteContacto = 'No existe',

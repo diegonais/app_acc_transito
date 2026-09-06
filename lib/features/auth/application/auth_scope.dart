@@ -12,7 +12,7 @@ class AuthScope extends InheritedNotifier<AuthController> {
   static AuthController of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<AuthScope>();
     if (scope == null || scope.notifier == null) {
-      throw StateError('AuthScope no esta disponible.');
+      throw StateError('AuthScope no está disponible.');
     }
     return scope.notifier!;
   }

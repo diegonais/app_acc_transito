@@ -68,7 +68,7 @@ void main() {
         isTrue);
   });
 
-  test('no permite recrear configuracion inicial si ya existe ADMIN', () async {
+  test('no permite recrear configuración inicial si ya existe ADMIN', () async {
     await authRepository.createFirstAdmin(
       username: 'admin.local',
       password: 'ClaveSegura123',
@@ -83,7 +83,31 @@ void main() {
     );
   });
 
-  test('login valido carga usuario ADMIN', () async {
+  test('creación concurrente del primer ADMIN deja una sola cuenta', () async {
+    Future<bool> create(String username) async {
+      try {
+        await authRepository.createFirstAdmin(
+            username: username, password: 'ClaveSegura123');
+        return true;
+      } on AuthorizationException {
+        return false;
+      }
+    }
+
+    final results =
+        await Future.wait([create('admin.uno'), create('admin.dos')]);
+    expect(results.where((value) => value), hasLength(1));
+    expect(await userRepository.countAdmins(), 1);
+  });
+
+  test('hash malformado con resultado vacío no autentica', () async {
+    expect(
+        await passwordHasher.verify(
+            password: 'cualquiera', encodedHash: r'pbkdf2_sha256$1$YWJjZA==$'),
+        isFalse);
+  });
+
+  test('login válido carga usuario ADMIN', () async {
     await authRepository.createFirstAdmin(
       username: 'admin.local',
       password: 'ClaveSegura123',
@@ -98,7 +122,7 @@ void main() {
     expect(session.policeProfile, isNull);
   });
 
-  test('login de POLICE carga datos del policia', () async {
+  test('login de POLICE carga datos del policía', () async {
     await _createPoliceUser(
       userRepository: userRepository,
       policeRepository: policeRepository,
@@ -113,11 +137,11 @@ void main() {
     expect(session.role, AppRole.police);
     expect(session.policeProfile?.grado, 'Sgto.');
     expect(session.policeProfile?.nombreCompleto, 'Ana Quispe');
-    expect(session.policeProfile?.unidad, 'Transito');
+    expect(session.policeProfile?.unidad, 'Tránsito');
     expect(session.policeProfile?.idPolicia, isPositive);
   });
 
-  test('rechaza contrasena incorrecta, usuario inexistente e inactivo',
+  test('rechaza contraseña incorrecta, usuario inexistente e inactivo',
       () async {
     await authRepository.createFirstAdmin(
       username: 'admin.local',
@@ -146,7 +170,7 @@ void main() {
     );
   });
 
-  test('aplica roles en logica y permite reset local de contrasena policial',
+  test('aplica roles en logica y permite reset local de contraseña policial',
       () async {
     await authRepository.createFirstAdmin(
       username: 'admin.local',
@@ -210,7 +234,7 @@ Future<void> _createPoliceUser({
     grado: 'Sgto.',
     nombres: 'Ana',
     apellidos: 'Quispe',
-    unidad: 'Transito',
+    unidad: 'Tránsito',
     sigla: 'UT',
     ci: '1234567',
     now: DateTime.utc(2026),

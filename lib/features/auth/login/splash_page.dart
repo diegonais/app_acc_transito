@@ -41,7 +41,7 @@ class _SplashPageState extends State<SplashPage> {
         return;
       }
       setState(() {
-        _errorMessage = 'No se pudo preparar la autenticacion local.';
+        _errorMessage = 'No se pudo preparar la autenticación local.';
       });
     }
   }
@@ -73,13 +73,13 @@ class _SplashPageState extends State<SplashPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Sistema local de informes de accidentes de transito',
+                    'Sistema local de informes de accidentes de tránsito',
                     textAlign: TextAlign.center,
                     style: textTheme.bodyLarge,
                   ),
                   const SizedBox(height: 32),
                   if (errorMessage == null)
-                    const AppLoadingState(message: 'Preparando aplicacion')
+                    const AppLoadingState(message: 'Preparando aplicación')
                   else
                     AppErrorState(
                       title: 'Error de inicio',

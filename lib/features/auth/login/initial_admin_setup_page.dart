@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../shared/user_message.dart';
 
 import '../../../app/routes/app_routes.dart';
 import '../../../shared/scaffold_shell.dart';
@@ -33,7 +34,7 @@ class _InitialAdminSetupPageState extends State<InitialAdminSetupPage> {
   @override
   Widget build(BuildContext context) {
     return AppScaffoldShell(
-      title: 'Configuracion inicial',
+      title: 'Configuración inicial',
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -67,7 +68,7 @@ class _InitialAdminSetupPageState extends State<InitialAdminSetupPage> {
                   TextFormField(
                     controller: _passwordController,
                     decoration: const InputDecoration(
-                      labelText: 'Contrasena',
+                      labelText: 'Contraseña',
                       prefixIcon: Icon(Icons.lock_outline_rounded),
                     ),
                     obscureText: true,
@@ -78,7 +79,7 @@ class _InitialAdminSetupPageState extends State<InitialAdminSetupPage> {
                   TextFormField(
                     controller: _confirmPasswordController,
                     decoration: const InputDecoration(
-                      labelText: 'Confirmar contrasena',
+                      labelText: 'Confirmar contraseña',
                       prefixIcon: Icon(Icons.lock_reset_rounded),
                     ),
                     obscureText: true,
@@ -127,12 +128,13 @@ class _InitialAdminSetupPageState extends State<InitialAdminSetupPage> {
 
   String? _validateConfirmation(String? value) {
     if (value != _passwordController.text) {
-      return 'Las contrasenas no coinciden.';
+      return 'Las contraseñas no coinciden.';
     }
     return null;
   }
 
   Future<void> _submit() async {
+    if (_isSubmitting) return;
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
@@ -155,7 +157,9 @@ class _InitialAdminSetupPageState extends State<InitialAdminSetupPage> {
         return;
       }
       setState(() {
-        _errorMessage = error.toString();
+        _errorMessage = userMessage(error,
+            fallback:
+                'No se pudo crear el Administrador. Inténtelo nuevamente.');
       });
     } finally {
       if (mounted) {

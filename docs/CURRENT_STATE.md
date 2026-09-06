@@ -1,4 +1,109 @@
-# Estado actual — PDF completo con QR, preview, guardado y compartir
+# Estado actual — Consulta de informes y PDF rediseñados
+
+## Actualización 2026-09-06 — UX/UI documental
+
+Se implementó el rediseño solicitado del detalle y del PDF sobre la versión
+estabilizada. El detalle ahora tiene cabecera de caso/estado/fecha, secciones
+semánticas, relaciones completas, descripción legible, coordenadas formateadas,
+mapa bajo demanda, croquis y fotografías ampliables, funcionario y QR.
+La consulta se separó del formulario en archivos y componentes específicos.
+
+El PDF incorpora logo, denominación del logo institucional, tablas, encabezados
+de continuación, pie con caso/páginas y espacio de firma. Conserva contenido,
+fuentes españolas locales y servicio QR; maneja valores largos, imágenes
+faltantes y metadatos MIME heredados sin exponer rutas. El preview conserva
+Guardar/Compartir/Imprimir con una barra más compacta. No hay dependencias nuevas
+ni cambios en esquema SQLite, modelos, repositorios o reglas de negocio.
+
+Verificación: `flutter analyze` sin incidencias y **85 pruebas correctas**.
+Consulta probada a 320/360/412/800 px con texto al 200 %. Se renderizaron seis
+PDF sintéticos (2, 3, 4, 7 y hasta 15 páginas), se revisaron visualmente y se
+verificó conservación del texto/relaciones/fotos por extracción. El QR se
+leyó desde las seis muestras y desde una captura de widgets. Se revisó además
+la presentación en escala de grises.
+
+`dart format .` sigue encontrando un residuo inválido de Gradle bajo `build/`;
+`dart format lib test` correcto (66 archivos). No se borraron builds ni se
+interrumpió la sesión Flutter existente. Se preservaron cambios previos.
+
+Detalle de archivos, componentes, pruebas y límites:
+`docs/REPORT_DETAIL_REDESIGN_2026-09-06.md`.
+Pendientes: Word/PDF de referencia no adjuntos, pruebas finales de dispositivo
+y nuevo empaquetado APK. El APK anterior no contiene esta intervención.
+La fase siguiente planificada sigue siendo Fase 15 (manual); DECISIONS no cambió.
+
+# Historial anterior
+
+# Estado actual — Revisión integral y estabilización
+
+## Actualización 2026-09-05 — Revisión solicitada por el usuario
+
+Se revisaron la aplicación existente, persistencia SQLite v3, autenticación,
+roles, administración, wizard, consultas, archivos, mapas, PDF/QR, pruebas y
+configuración Android. Esta intervención estabiliza las funciones existentes;
+la siguiente fase planificada sigue siendo el manual de usuario.
+
+- Corregida la pérdida de temporales de fotografías antes del commit. Una copia
+  parcial o un rollback SQLite conserva los originales para reintentar y limpia
+  únicamente las copias creadas por la operación fallida.
+- Validación de coordenadas completas, finitas y dentro de los rangos geográficos
+  tanto en UI como en repositorio. Cancelar ya no convierte entradas inválidas
+  mediante `double.parse`. Se bloquea salir o avanzar durante operaciones pendientes.
+- Croquis capturado al dejar el paso cartográfico, actualización del mapa al
+  cambiar coordenadas y liberación de la imagen de captura. Se limpian croquis
+  generados en el formulario y descartados, conservando el asociado al informe.
+- PDF con Roboto Regular/Bold local y licencia, paginación de descripciones largas,
+  relaciones y fotografías, nombres de archivo con tildes/ñ y nombre del conductor
+  en lugar de su ID técnico. Escritura mediante archivo temporal y renombrado.
+- Español corregido en interfaz, validaciones y PDF/QR. Se agregó únicamente
+  `flutter_localizations` del SDK para diálogos en español de Bolivia y formato
+  horario de 24 horas. Retirados `cupertino_icons` y el uso directo de `mime`, que
+  guardaba el tipo MIME como si fuera una descripción de evidencia.
+- Mensajes de error comprensibles; diagnóstico limitado al tipo de excepción,
+  sin credenciales, valores del formulario ni rutas privadas.
+- Consultas pendientes invalidadas al cambiar de sesión o cerrar controladores;
+  el dashboard se actualiza al volver de informes o administración.
+- Dashboard adaptado a pantallas estrechas, sin cortar etiquetas ni el nombre;
+  botones permiten saltos de línea y Android muestra el nombre ACC Tránsito.
+- Creación del primer Admin protegida por transacción ante concurrencia;
+  administración verifica la correspondencia policía/cuenta y restringe los
+  restablecimientos a cuentas POLICE. Hashes malformados se rechazan.
+
+Verificación: `flutter analyze` sin incidencias; `flutter test` con **76 pruebas
+correctas** (61 iniciales y 15 nuevas). Se conservaron las pruebas existentes,
+ajustando sus textos y la expectativa de limpieza de temporales después del commit.
+Pruebas nuevas: rollback real con archivos y reintento, Unicode en SQLite/PDF/QR,
+coordenadas inválidas, carrera del primer Admin, IDs administrativos mezclados,
+consultas tardías y recorrido del wizard en 360x800.
+
+Un PDF de estrés de 13 páginas se renderizó y revisó: conserva 180 repeticiones
+del texto español, 20 conductores y 14 fotografías; el QR se decodificó desde la
+imagen con “José Muñoz Peña” y “División de Tránsito”. Desaparecieron las advertencias
+de Helvetica. Los archivos de prueba permanecen fuera del versionado.
+
+`dart format .` encontró nuevamente una ruta residual inválida de Gradle bajo
+`build/`; `dart format lib test` terminó correctamente (61 archivos). No se borró
+el directorio de compilación para resolver un problema ajeno a las fuentes.
+`scripts/package_release.ps1` compiló y verificó el APK release de 58.9 MB:
+`build/app/outputs/flutter-apk/app-release.apk`, SHA256
+`8B8FE0EDC9545DBE4EE45103833E0B99A6B865A3FA73D9003BE8CA22DE4C5D92`.
+
+En el emulador aislado `TransitoRevision20260906` (API 35) se verificaron creación
+del Administrador, login, dashboard y nuevo login al reabrir. La actualización
+del APK final conservó la cuenta. La revisión visual confirmó etiquetas completas.
+
+Pendientes reales: comparación visual con el Word oficial (no está en los assets
+disponibles), recorrido de GPS/permisos/cámara/galería/compartir/impresión en un
+teléfono real y futura actualización coordinada de Gradle/AGP/Kotlin. El emulador
+existente rechazó la actualización por firma incompatible; su instalación se
+conservó. Detalle y resultados de verificación Android en
+`docs/REVIEW_2026-09-05.md`.
+
+No se modificaron el esquema SQLite v3, sus migraciones, las decisiones
+consolidadas ni los archivos de informes inactivos. Las secciones siguientes
+son el historial anterior y sus pendientes quedan sustituidos por este resumen.
+
+# Historial — PDF completo con QR, preview, guardado y compartir
 
 ## Actualizacion 2026-09-05 — Flujo PDF funcional
 

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../../shared/user_message.dart';
 import 'package:flutter/rendering.dart';
 
 import '../../app/routes/app_routes.dart';
@@ -19,7 +20,9 @@ import '../auth/application/auth_scope.dart';
 import '../auth/domain/app_role.dart';
 import '../auth/domain/authenticated_user.dart';
 import 'application/report_controller.dart';
-import 'report_pdf_preview_page.dart';
+import 'report_detail_page.dart';
+
+export 'report_detail_page.dart' show ReportDetailPage;
 
 class ReportListPage extends StatefulWidget {
   ReportListPage({
@@ -221,8 +224,8 @@ class _ReportListPageState extends State<ReportListPage> {
       builder: (context) => AlertDialog(
         title: const Text('Inactivar informe'),
         content: Text(
-          'El informe ${report.numeroCaso} dejara de mostrarse en la '
-          'aplicacion. No se borrara su contenido ni sus relaciones.',
+          'El informe ${report.numeroCaso} dejará de mostrarse en la '
+          'aplicación. No se borrará su contenido ni sus relaciones.',
         ),
         actions: [
           TextButton(
@@ -236,7 +239,7 @@ class _ReportListPageState extends State<ReportListPage> {
         ],
       ),
     );
-    if (confirmed != true) {
+    if (confirmed != true || !mounted) {
       return;
     }
     try {
@@ -255,7 +258,9 @@ class _ReportListPageState extends State<ReportListPage> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
+        SnackBar(
+            content: Text(userMessage(error,
+                fallback: 'No se pudo inactivar el informe.'))),
       );
     }
   }
@@ -419,7 +424,7 @@ class _ReportFilters extends StatelessWidget {
               DropdownButtonFormField<int?>(
                 initialValue: selectedPoliceId,
                 decoration: const InputDecoration(
-                  labelText: 'Policia',
+                  labelText: 'Policía',
                   prefixIcon: Icon(Icons.local_police_outlined),
                 ),
                 items: [
@@ -593,6 +598,23 @@ class _DirectActionReportFormPageState
   String? _geoMessage;
   String? _mapMessage;
   String? _photoMessage;
+  bool _allowExit = false;
+  bool _isCanceling = false;
+  final _generatedSketches = <String>{};
+  bool get _isBusy =>
+      _isSubmitting || _isLocating || _isCapturingSketch || _isPickingPhoto;
+
+  @override
+  void initState() {
+    super.initState();
+    _latitud.addListener(_coordinatesChanged);
+    _longitud.addListener(_coordinatesChanged);
+  }
+
+  void _coordinatesChanged() {
+    if (!mounted) return;
+    setState(() => _rutaCroquis.clear());
+  }
 
   @override
   void dispose() {
@@ -617,7 +639,7 @@ class _DirectActionReportFormPageState
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: !_draft.hasData,
+      canPop: _allowExit,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) {
           return;
@@ -625,7 +647,7 @@ class _DirectActionReportFormPageState
         await _cancel();
       },
       child: AppScaffoldShell(
-        title: 'Informe de Accion Directa',
+        title: 'Informe de Acción Directa',
         body: Column(
           children: [
             _WizardProgress(
@@ -640,7 +662,8 @@ class _DirectActionReportFormPageState
                 children: [
                   Form(
                     key: _stepFormKeys[_currentStep],
-                    child: _stepCard(_currentStep),
+                    child: AbsorbPointer(
+                        absorbing: _isBusy, child: _stepCard(_currentStep)),
                   ),
                   if (_errorMessage != null) ...[
                     const SizedBox(height: 12),
@@ -656,7 +679,7 @@ class _DirectActionReportFormPageState
                   _WizardNavigation(
                     isFirstStep: _currentStep == 0,
                     isLastStep: _currentStep == _totalSteps - 1,
-                    isBusy: _isSubmitting,
+                    isBusy: _isBusy,
                     onPrevious: _previousStep,
                     onNext: _nextStep,
                     onFinalize: _finalize,
@@ -692,7 +715,7 @@ class _DirectActionReportFormPageState
   Widget _generalDataStep() {
     return Column(
       children: [
-        _field(_epi, 'EPI / Estacion Policial Integral'),
+        _field(_epi, 'EPI / Estación Policial Integral'),
         _dateField(
           controller: _llegada,
           label: 'Fecha y hora de llegada',
@@ -734,10 +757,10 @@ class _DirectActionReportFormPageState
   Widget _descriptionConditionsStep() {
     return Column(
       children: [
-        _field(_descripcion, 'Descripcion', maxLines: 5),
-        _field(_condicionesClimaticas, 'Condiciones climaticas'),
+        _field(_descripcion, 'Descripción', maxLines: 5),
+        _field(_condicionesClimaticas, 'Condiciones climáticas'),
         _boolChoice(
-          label: 'Vehiculos movidos',
+          label: 'Vehículos movidos',
           value: _vehiculosMovidos,
           onChanged: (value) => setState(() {
             _vehiculosMovidos = value;
@@ -770,7 +793,7 @@ class _DirectActionReportFormPageState
         _FullWidthOutlinedButton(
           onPressed: _isLocating ? null : _locateIncident,
           icon: _isLocating ? null : Icons.location_on_outlined,
-          label: _isLocating ? 'Obteniendo ubicacion' : 'Obtener ubicacion',
+          label: _isLocating ? 'Obteniendo ubicación' : 'Obtener ubicación',
           isBusy: _isLocating,
         ),
         const SizedBox(height: 10),
@@ -793,15 +816,17 @@ class _DirectActionReportFormPageState
           _latitud,
           'Latitud',
           required: false,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          validator: _validateOptionalDouble,
+          keyboardType: const TextInputType.numberWithOptions(
+              decimal: true, signed: true),
+          validator: (_) => _coordinateError(isLatitude: true),
         ),
         _field(
           _longitud,
           'Longitud',
           required: false,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          validator: _validateOptionalDouble,
+          keyboardType: const TextInputType.numberWithOptions(
+              decimal: true, signed: true),
+          validator: (_) => _coordinateError(isLatitude: false),
         ),
         _field(
           _rutaCroquis,
@@ -819,7 +844,7 @@ class _DirectActionReportFormPageState
                 if (mounted) {
                   setState(() {
                     _mapMessage = hasError
-                        ? 'La cartografia no cargo correctamente. Las coordenadas se conservan y el informe puede finalizarse.'
+                        ? 'La cartografía no cargó correctamente. Las coordenadas se conservan y el informe puede finalizarse.'
                         : null;
                   });
                 }
@@ -859,14 +884,14 @@ class _DirectActionReportFormPageState
         _FullWidthOutlinedButton(
           onPressed: _isPickingPhoto ? null : () => _addPhotoFromCamera(),
           icon: _isPickingPhoto ? null : Icons.photo_camera_outlined,
-          label: 'Camara',
+          label: 'Cámara',
           isBusy: _isPickingPhoto,
         ),
         const SizedBox(height: 10),
         _FullWidthOutlinedButton(
           onPressed: _isPickingPhoto ? null : () => _addPhotosFromGallery(),
           icon: Icons.photo_library_outlined,
-          label: 'Galeria',
+          label: 'Galería',
         ),
         if (_photoMessage != null) ...[
           const SizedBox(height: 8),
@@ -874,7 +899,7 @@ class _DirectActionReportFormPageState
         ],
         const SizedBox(height: 12),
         if (_fotografias.isEmpty)
-          const _EmptyStepText('No existen fotografias agregadas.')
+          const _EmptyStepText('No existen fotografías agregadas.')
         else
           _PhotoGrid(
             photos: _fotografias,
@@ -897,7 +922,7 @@ class _DirectActionReportFormPageState
               title: driver.nombreCompleto,
               subtitle: [
                 'Licencia: ${driver.licencia}',
-                'Categoria: ${driver.categoria}',
+                'Categoría: ${driver.categoria}',
                 'Contactos: ${driver.contactos}',
               ].join(' / '),
               onTap: () => _editDriver(index),
@@ -913,8 +938,8 @@ class _DirectActionReportFormPageState
     return Column(
       children: [
         _RelationSection(
-          title: 'Vehiculos',
-          emptyText: 'No existen vehiculos registrados.',
+          title: 'Vehículos',
+          emptyText: 'No existen vehículos registrados.',
           count: _vehiculos.length,
           onAdd: _addVehicle,
           itemBuilder: (index) {
@@ -971,30 +996,35 @@ class _DirectActionReportFormPageState
     return switch (step) {
       0 => 'Datos generales',
       1 => 'Denunciante',
-      2 => 'Descripcion y condiciones',
+      2 => 'Descripción y condiciones',
       3 => 'Coordenadas y croquis',
-      4 => 'Fotografias y archivos',
-      _ => 'Vehiculos y personas involucradas',
+      4 => 'Fotografías y archivos',
+      _ => 'Vehículos y personas involucradas',
     };
   }
 
   String _stepDescription(int step) {
     return switch (step) {
-      0 => 'Registre la informacion basica del hecho.',
+      0 => 'Registre la información básica del hecho.',
       1 => 'Identifique a la persona denunciante.',
       2 => 'Detalle lo sucedido y las condiciones observadas.',
-      3 => 'Registre la ubicacion y la referencia del lugar.',
+      3 => 'Registre la ubicación y la referencia del lugar.',
       4 => 'Adjunte evidencia y registre conductores.',
       _ => 'Complete los registros finales antes de cerrar el informe.',
     };
   }
 
-  void _nextStep() {
+  Future<void> _nextStep() async {
+    if (_isBusy) return;
     FocusScope.of(context).unfocus();
     if (!(_stepFormKeys[_currentStep].currentState?.validate() ?? false)) {
       return;
     }
     if (_currentStep < _totalSteps - 1) {
+      if (_currentStep == 3 && _hasCoordinates && _rutaCroquis.text.isEmpty) {
+        await _captureSketchMap(showSuccessMessage: false);
+        if (!mounted) return;
+      }
       setState(() {
         _currentStep += 1;
         _errorMessage = null;
@@ -1049,8 +1079,8 @@ class _DirectActionReportFormPageState
         _isBlank(_efectosPersonales.text)) {
       return 2;
     }
-    if (_validateOptionalDouble(_latitud.text) != null ||
-        _validateOptionalDouble(_longitud.text) != null) {
+    if (_coordinateError(isLatitude: true) != null ||
+        _coordinateError(isLatitude: false) != null) {
       return 3;
     }
     return null;
@@ -1085,13 +1115,33 @@ class _DirectActionReportFormPageState
   }
 
   bool get _hasCoordinates =>
-      _currentLatitude != null && _currentLongitude != null;
+      _currentLatitude != null &&
+      _currentLongitude != null &&
+      _coordinateError(isLatitude: true) == null &&
+      _coordinateError(isLatitude: false) == null;
+
+  String? _coordinateError({required bool isLatitude}) {
+    final text = (isLatitude ? _latitud : _longitud).text.trim();
+    final other = (isLatitude ? _longitud : _latitud).text.trim();
+    if (text.isEmpty) {
+      return other.isEmpty
+          ? null
+          : 'Ingrese ambas coordenadas o deje ambas vacías.';
+    }
+    final value = double.tryParse(text);
+    final limit = isLatitude ? 90 : 180;
+    if (value == null || !value.isFinite || value.abs() > limit) {
+      return 'Ingrese un valor entre -$limit y $limit.';
+    }
+    return null;
+  }
 
   double? get _currentLatitude => _tryParseOptionalDouble(_latitud.text);
 
   double? get _currentLongitude => _tryParseOptionalDouble(_longitud.text);
 
   Future<void> _finalize() async {
+    if (_isBusy) return;
     FocusScope.of(context).unfocus();
     if (!_validateBeforeFinalize()) {
       return;
@@ -1104,6 +1154,8 @@ class _DirectActionReportFormPageState
       if (_hasCoordinates && _rutaCroquis.text.trim().isEmpty) {
         await _captureSketchMap(showSuccessMessage: false);
       }
+      if (!mounted) return;
+      final submittedPhotos = List<PhotoInput>.of(_fotografias);
       final finalized = await widget.controller.finalize(
         actor: widget.actor,
         draft: _draft,
@@ -1112,13 +1164,31 @@ class _DirectActionReportFormPageState
         cleanupPersistedPhotos:
             widget.evidenceMediaService.cleanupPersistentPhotos,
       );
+      try {
+        await widget.evidenceMediaService
+            .cleanupTemporaryPhotos(submittedPhotos);
+        await widget.mapSnapshotService.cleanupGeneratedSketches(
+          _generatedSketches
+              .where((path) => path != _rutaCroquis.text)
+              .toList(),
+        );
+      } catch (error) {
+        userMessage(error,
+            fallback:
+                'El informe se guardó, pero no se pudieron limpiar las copias temporales.');
+      }
       if (mounted) {
+        setState(() => _allowExit = true);
+        await WidgetsBinding.instance.endOfFrame;
+        if (!mounted) return;
         Navigator.of(context).pop(finalized);
       }
     } catch (error) {
       if (mounted) {
         setState(() {
-          _errorMessage = error.toString();
+          _errorMessage = userMessage(error,
+              fallback:
+                  'No se pudo guardar el informe. Los datos se conservan para reintentar.');
         });
       }
     } finally {
@@ -1173,6 +1243,8 @@ class _DirectActionReportFormPageState
         fileNamePrefix: 'croquis_${widget.actor.requiredPoliceId}',
       );
       if (!mounted) {
+        if (path != null)
+          await widget.mapSnapshotService.cleanupGeneratedSketches([path]);
         return;
       }
       setState(() {
@@ -1180,6 +1252,7 @@ class _DirectActionReportFormPageState
           _mapMessage =
               'No se pudo preparar el PNG del croquis. El informe puede finalizarse conservando las coordenadas.';
         } else {
+          _generatedSketches.add(path);
           _rutaCroquis.text = path;
           _mapMessage = showSuccessMessage
               ? 'Croquis PNG preparado para PDF.'
@@ -1191,8 +1264,9 @@ class _DirectActionReportFormPageState
         return;
       }
       setState(() {
-        _mapMessage =
-            'No se pudo preparar el PNG del croquis: $error. El informe puede finalizarse conservando las coordenadas.';
+        _mapMessage = userMessage(error,
+            fallback:
+                'No se pudo preparar el croquis. El informe puede finalizarse conservando las coordenadas.');
       });
     } finally {
       if (mounted) {
@@ -1216,40 +1290,60 @@ class _DirectActionReportFormPageState
     }
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('No se encontro una aplicacion compatible de mapas.'),
+        content: Text('No se encontró una aplicación compatible de mapas.'),
       ),
     );
   }
 
   Future<void> _cancel() async {
-    if (!_draft.hasData) {
-      Navigator.of(context).pop();
-      return;
-    }
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cancelar informe'),
-        content: const Text(
-          'La informacion ingresada no esta guardada y se perdera.',
+    if (_isBusy || _isCanceling) return;
+    _isCanceling = true;
+    try {
+      if (!_draft.hasData) {
+        await _exitForm();
+        return;
+      }
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Cancelar informe'),
+          content: const Text(
+            'La información ingresada no está guardada y se perderá.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Volver'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Descartar'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Volver'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Descartar'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true && mounted) {
-      await widget.evidenceMediaService.cleanupTemporaryPhotos(_fotografias);
-      _clearDraft();
-      Navigator.of(context).pop();
+      );
+      if (confirmed == true && mounted) {
+        await widget.evidenceMediaService.cleanupTemporaryPhotos(_fotografias);
+        await widget.mapSnapshotService
+            .cleanupGeneratedSketches(_generatedSketches);
+        if (!mounted) return;
+        _clearDraft();
+        await _exitForm();
+      }
+    } catch (error) {
+      if (mounted)
+        setState(() => _errorMessage = userMessage(error,
+            fallback:
+                'No se pudo descartar el informe. Inténtelo nuevamente.'));
+    } finally {
+      _isCanceling = false;
     }
+  }
+
+  Future<void> _exitForm() async {
+    setState(() => _allowExit = true);
+    await WidgetsBinding.instance.endOfFrame;
+    if (mounted) Navigator.of(context).pop();
   }
 
   void _clearDraft() {
@@ -1299,21 +1393,23 @@ class _DirectActionReportFormPageState
     try {
       final photos = await picker();
       if (!mounted) {
+        await widget.evidenceMediaService.cleanupTemporaryPhotos(photos);
         return;
       }
       setState(() {
         _fotografias.addAll(photos);
         _photoMessage = photos.isEmpty
-            ? 'No se seleccionaron fotografias.'
-            : 'Fotografias agregadas al formulario. Se guardaran definitivamente al finalizar.';
+            ? 'No se seleccionaron fotografías.'
+            : 'Fotografías agregadas al formulario. Se guardarán definitivamente al finalizar.';
       });
     } catch (error) {
       if (!mounted) {
         return;
       }
       setState(() {
-        _photoMessage =
-            'No se pudo acceder a la camara o galeria: $error. Revise permisos del dispositivo.';
+        _photoMessage = userMessage(error,
+            fallback:
+                'No se pudo acceder a la cámara o galería. Revise los permisos del dispositivo.');
       });
     } finally {
       if (mounted) {
@@ -1327,9 +1423,14 @@ class _DirectActionReportFormPageState
   Future<void> _removePhoto(int index) async {
     final removed = _fotografias.removeAt(index);
     setState(() {
-      _photoMessage = 'Fotografia quitada del formulario.';
+      _photoMessage = 'Fotografía quitada del formulario.';
     });
-    await widget.evidenceMediaService.cleanupTemporaryPhotos([removed]);
+    try {
+      await widget.evidenceMediaService.cleanupTemporaryPhotos([removed]);
+    } catch (error) {
+      userMessage(error,
+          fallback: 'No se pudo limpiar la copia temporal de la fotografía.');
+    }
   }
 
   Future<void> _addDriver() async {
@@ -1337,7 +1438,7 @@ class _DirectActionReportFormPageState
       context: context,
       builder: (_) => const _DriverDialog(),
     );
-    if (input != null) {
+    if (input != null && mounted) {
       setState(() {
         _conductores.add(input);
       });
@@ -1349,7 +1450,7 @@ class _DirectActionReportFormPageState
       context: context,
       builder: (_) => _DriverDialog(initialValue: _conductores[index]),
     );
-    if (input != null) {
+    if (input != null && mounted) {
       setState(() {
         _conductores[index] = input;
       });
@@ -1382,7 +1483,7 @@ class _DirectActionReportFormPageState
       context: context,
       builder: (_) => _VehicleDialog(conductores: _conductores),
     );
-    if (input != null) {
+    if (input != null && mounted) {
       setState(() {
         _vehiculos.add(input);
       });
@@ -1397,7 +1498,7 @@ class _DirectActionReportFormPageState
         initialValue: _vehiculos[index],
       ),
     );
-    if (input != null) {
+    if (input != null && mounted) {
       setState(() {
         _vehiculos[index] = input;
       });
@@ -1409,7 +1510,7 @@ class _DirectActionReportFormPageState
       context: context,
       builder: (_) => const _PersonDialog(),
     );
-    if (input != null) {
+    if (input != null && mounted) {
       setState(() {
         _personas.add(input);
       });
@@ -1421,219 +1522,10 @@ class _DirectActionReportFormPageState
       context: context,
       builder: (_) => _PersonDialog(initialValue: _personas[index]),
     );
-    if (input != null) {
+    if (input != null && mounted) {
       setState(() {
         _personas[index] = input;
       });
-    }
-  }
-}
-
-class ReportDetailPage extends StatefulWidget {
-  const ReportDetailPage({
-    super.key,
-    required this.controller,
-    required this.actor,
-    required this.idInforme,
-    required this.externalMapsService,
-  });
-
-  final ReportController controller;
-  final AuthenticatedUser actor;
-  final int idInforme;
-  final ExternalMapsService externalMapsService;
-
-  @override
-  State<ReportDetailPage> createState() => _ReportDetailPageState();
-}
-
-class _ReportDetailPageState extends State<ReportDetailPage> {
-  late final Future<ReportRecord> _detail;
-  bool _isGeneratingPdf = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _detail = widget.controller.findReadableDetail(
-      actor: widget.actor,
-      idInforme: widget.idInforme,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AppScaffoldShell(
-      title: 'Detalle de informe',
-      body: FutureBuilder<ReportRecord>(
-        future: _detail,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(
-              child: AppLoadingState(message: 'Cargando detalle'),
-            );
-          }
-          if (snapshot.hasError) {
-            return AppErrorState(
-              title: 'No se pudo abrir',
-              message: snapshot.error.toString(),
-            );
-          }
-          final report = snapshot.data!;
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Text(
-                report.numeroCaso,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              const Text('Informe finalizado. Modo lectura.'),
-              const SizedBox(height: 12),
-              AppButton(
-                label: _isGeneratingPdf ? 'Generando PDF' : 'Ver informe PDF',
-                icon: Icons.picture_as_pdf_outlined,
-                onPressed: _isGeneratingPdf ? null : _openPdfPreview,
-              ),
-              _ReadOnlySection(
-                title: 'Datos generales',
-                rows: {
-                  'EPI': report.epi,
-                  'Llegada': _formatOptionalDateTime(report.fechaHoraLlegada),
-                  'Hecho': _formatOptionalDateTime(report.fechaHoraHecho),
-                  'Naturaleza': report.naturaleza,
-                  'Lugar': report.lugar,
-                },
-              ),
-              _ReadOnlySection(
-                title: 'Denunciante',
-                rows: {
-                  'Nombre': report.denuncianteNombre,
-                  'Documento': report.denuncianteDocumento,
-                  'Contacto': report.denuncianteContacto,
-                },
-              ),
-              _ReadOnlySection(
-                title: 'Descripcion y condiciones',
-                rows: {
-                  'Descripcion': report.descripcion,
-                  'Condiciones climaticas': report.condicionesClimaticas,
-                  'Vehiculos movidos': _boolText(report.vehiculosMovidos),
-                  'Protagonistas presentes':
-                      _boolText(report.protagonistasPresentes),
-                  'Testigos': report.testigos,
-                  'Efectos personales': report.efectosPersonales,
-                },
-              ),
-              _ReadOnlySection(
-                title: 'Coordenadas y croquis',
-                rows: {
-                  'Latitud': report.latitud?.toString(),
-                  'Longitud': report.longitud?.toString(),
-                  'Ruta de croquis': report.rutaCroquis,
-                },
-              ),
-              if (report.latitud != null && report.longitud != null) ...[
-                SimpleSketchMap(
-                  latitude: report.latitud!,
-                  longitude: report.longitud!,
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () => _openCoordinatesExternally(report),
-                  icon: const Icon(Icons.map_outlined),
-                  label: const Text('Abrir coordenadas en mapas'),
-                ),
-              ] else
-                const _InlineNotice(
-                  message:
-                      'Este informe no tiene coordenadas registradas; se conserva el lugar textual.',
-                ),
-              _ReadOnlyList(
-                title: 'Conductores',
-                values: report.conductores
-                    .map((driver) => '${driver.nombreCompleto} - '
-                        '${driver.licencia ?? 'No aplica'}')
-                    .toList(),
-              ),
-              _ReadOnlyList(
-                title: 'Vehiculos',
-                values: report.vehiculos
-                    .map((vehicle) => [
-                          vehicle.placa ?? 'Sin placa',
-                          vehicle.marca,
-                          vehicle.color,
-                          vehicle.tipo,
-                          vehicle.servicio,
-                        ].whereType<String>().join(' / '))
-                    .toList(),
-              ),
-              _ReadOnlyList(
-                title: 'Personas involucradas',
-                values: report.personas
-                    .map((person) => '${person.tipo}: ${person.nombre}')
-                    .toList(),
-              ),
-              _Section(
-                title: 'Fotografias',
-                children: [
-                  _ReadOnlyPhotoGrid(photos: report.fotografias),
-                ],
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Future<void> _openCoordinatesExternally(ReportRecord report) async {
-    final opened = await widget.externalMapsService.openCoordinates(
-      latitude: report.latitud!,
-      longitude: report.longitud!,
-    );
-    if (!mounted || opened) {
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('No se encontro una aplicacion compatible de mapas.'),
-      ),
-    );
-  }
-
-  Future<void> _openPdfPreview() async {
-    setState(() => _isGeneratingPdf = true);
-    try {
-      final pdf = await widget.controller.buildReadablePdf(
-        actor: widget.actor,
-        idInforme: widget.idInforme,
-      );
-      if (!mounted) {
-        return;
-      }
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => ReportPdfPreviewPage(
-            controller: widget.controller,
-            actor: widget.actor,
-            idInforme: widget.idInforme,
-            pdf: pdf,
-          ),
-        ),
-      );
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo generar el PDF: $error')),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _isGeneratingPdf = false);
-      }
     }
   }
 }
@@ -2013,6 +1905,7 @@ class _PhotoGrid extends StatelessWidget {
         final file = File(photo.ruta);
         final exists = file.existsSync();
         return Card(
+          key: ValueKey(photo.ruta),
           clipBehavior: Clip.antiAlias,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2021,6 +1914,7 @@ class _PhotoGrid extends StatelessWidget {
                 child: exists
                     ? Image.file(
                         file,
+                        cacheWidth: 520,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => const _PhotoProblem(
                           message: 'No se pudo mostrar la imagen.',
@@ -2035,7 +1929,7 @@ class _PhotoGrid extends StatelessWidget {
                 child: DropdownButtonFormField<EvidencePhotoCategory>(
                   initialValue: photo.tipo,
                   decoration: const InputDecoration(
-                    labelText: 'Categoria',
+                    labelText: 'Categoría',
                     isDense: true,
                   ),
                   items: EvidencePhotoCategory.values
@@ -2056,67 +1950,9 @@ class _PhotoGrid extends StatelessWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: IconButton(
-                  tooltip: 'Quitar fotografia',
+                  tooltip: 'Quitar fotografía',
                   onPressed: () => onRemove(index),
                   icon: const Icon(Icons.delete_outline_rounded),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _ReadOnlyPhotoGrid extends StatelessWidget {
-  const _ReadOnlyPhotoGrid({required this.photos});
-
-  final List<PhotoRecord> photos;
-
-  @override
-  Widget build(BuildContext context) {
-    if (photos.isEmpty) {
-      return const Text('No existe.');
-    }
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: photos.length,
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 260,
-        mainAxisExtent: 228,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemBuilder: (context, index) {
-        final photo = photos[index];
-        final file = File(photo.ruta);
-        final exists = file.existsSync();
-        return Card(
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: exists
-                    ? Image.file(
-                        file,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const _PhotoProblem(
-                          message: 'No se pudo mostrar la imagen.',
-                        ),
-                      )
-                    : const _PhotoProblem(
-                        message: 'Archivo inexistente.',
-                      ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: Text(
-                  '${photo.tipo.label}\n${photo.ruta}',
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -2182,45 +2018,6 @@ class _EditableSummary extends StatelessWidget {
           icon: const Icon(Icons.delete_outline_rounded),
         ),
       ),
-    );
-  }
-}
-
-class _ReadOnlySection extends StatelessWidget {
-  const _ReadOnlySection({required this.title, required this.rows});
-
-  final String title;
-  final Map<String, String?> rows;
-
-  @override
-  Widget build(BuildContext context) {
-    return _Section(
-      title: title,
-      children: rows.entries
-          .map(
-            (entry) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text('${entry.key}: ${entry.value ?? 'No aplica'}'),
-            ),
-          )
-          .toList(),
-    );
-  }
-}
-
-class _ReadOnlyList extends StatelessWidget {
-  const _ReadOnlyList({required this.title, required this.values});
-
-  final String title;
-  final List<String> values;
-
-  @override
-  Widget build(BuildContext context) {
-    return _Section(
-      title: title,
-      children: values.isEmpty
-          ? const [Text('No existe.')]
-          : values.map((value) => Text(value)).toList(),
     );
   }
 }
@@ -2292,11 +2089,11 @@ class _DriverDialogState extends State<_DriverDialog> {
           validator: _validateRequiredInt,
         ),
         _field(_licencia, 'Licencia'),
-        _field(_categoria, 'Categoria'),
+        _field(_categoria, 'Categoría'),
         _field(_domicilio, 'Domicilio'),
         _field(_zona, 'Zona'),
         _field(_contactos, 'Contactos'),
-        _field(_condicionEntrega, 'Condicion de entrega', required: false),
+        _field(_condicionEntrega, 'Condición de entrega', required: false),
       ],
       onSubmit: () {
         if (!(_formKey.currentState?.validate() ?? false)) {
@@ -2367,7 +2164,7 @@ class _VehicleDialogState extends State<_VehicleDialog> {
   Widget build(BuildContext context) {
     return _InputDialog(
       title:
-          widget.initialValue == null ? 'Agregar vehiculo' : 'Revisar vehiculo',
+          widget.initialValue == null ? 'Agregar vehículo' : 'Revisar vehículo',
       submitLabel: widget.initialValue == null ? 'Agregar' : 'Guardar',
       formKey: _formKey,
       children: [
@@ -2485,7 +2282,7 @@ class _PersonDialogState extends State<_PersonDialog> {
           }),
         ),
         const SizedBox(height: 12),
-        _field(_lugarEvacuacion, 'Lugar de evacuacion', required: false),
+        _field(_lugarEvacuacion, 'Lugar de evacuación', required: false),
       ],
       onSubmit: () {
         if (!(_formKey.currentState?.validate() ?? false)) {
@@ -2614,7 +2411,7 @@ Widget _dateField({
             context: context,
             initialTime: TimeOfDay.fromDateTime(value ?? now),
           );
-          if (time == null) {
+          if (time == null || !context.mounted) {
             return;
           }
           onChanged(
@@ -2646,7 +2443,7 @@ Widget _boolChoice({
               ButtonSegment(
                 value: true,
                 icon: Icon(Icons.check_rounded),
-                label: Text('Si'),
+                label: Text('Sí'),
               ),
               ButtonSegment(
                 value: false,
@@ -2676,14 +2473,6 @@ Widget _boolChoice({
   );
 }
 
-String? _validateOptionalDouble(String? value) {
-  final text = (value ?? '').trim();
-  if (text.isEmpty) {
-    return null;
-  }
-  return double.tryParse(text) == null ? 'Ingrese un numero valido.' : null;
-}
-
 String? _validateOptionalInt(String? value) {
   final text = (value ?? '').trim();
   if (text.isEmpty) {
@@ -2691,7 +2480,7 @@ String? _validateOptionalInt(String? value) {
   }
   final parsed = int.tryParse(text);
   if (parsed == null || parsed < 0) {
-    return 'Ingrese un numero valido.';
+    return 'Ingrese un número válido.';
   }
   return null;
 }
@@ -2706,7 +2495,7 @@ String? _validateRequiredInt(String? value) {
 
 double? _parseOptionalDouble(String value) {
   final text = value.trim();
-  return text.isEmpty ? null : double.parse(text);
+  return text.isEmpty ? null : double.tryParse(text);
 }
 
 double? _tryParseOptionalDouble(String value) {
@@ -2730,21 +2519,8 @@ String _formatDateTime(DateTime value) {
       '${two(value.hour)}:${two(value.minute)}';
 }
 
-String _formatOptionalDateTime(DateTime? value) {
-  return value == null ? 'No aplica' : _formatDateTime(value);
-}
-
 String _formatOptionalDate(DateTime? value) {
-  if (value == null) {
-    return 'sin definir';
-  }
+  if (value == null) return 'sin definir';
   String two(int part) => part.toString().padLeft(2, '0');
   return '${two(value.day)}/${two(value.month)}/${value.year}';
-}
-
-String _boolText(bool? value) {
-  if (value == null) {
-    return 'No aplica';
-  }
-  return value ? 'Si' : 'No';
 }

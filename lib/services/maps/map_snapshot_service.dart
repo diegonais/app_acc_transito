@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
@@ -7,6 +8,19 @@ import 'package:path_provider/path_provider.dart';
 
 class MapSnapshotService {
   const MapSnapshotService();
+
+  Future<void> cleanupGeneratedSketches(Iterable<String> paths) async {
+    if (paths.isEmpty) return;
+    final root = await getApplicationDocumentsDirectory();
+    final ownedDirectory = p.normalize(p.join(root.path, 'croquis'));
+    for (final path in paths) {
+      final file = File(path);
+      if (p.isWithin(ownedDirectory, p.normalize(file.absolute.path)) &&
+          await file.exists()) {
+        await file.delete();
+      }
+    }
+  }
 
   Future<String?> saveBoundaryAsPng(
     RenderRepaintBoundary? boundary, {
@@ -18,7 +32,12 @@ class MapSnapshotService {
     }
 
     final image = await boundary.toImage(pixelRatio: pixelRatio);
-    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    final ByteData? data;
+    try {
+      data = await image.toByteData(format: ui.ImageByteFormat.png);
+    } finally {
+      image.dispose();
+    }
     if (data == null) {
       return null;
     }

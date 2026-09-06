@@ -1,7 +1,7 @@
 import 'dart:io';
+import 'dart:developer' as developer;
 
 import 'package:image_picker/image_picker.dart';
-import 'package:mime/mime.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -36,8 +36,13 @@ class EvidenceMediaService {
   }) async {
     final pickedFiles = await _picker.pickMultiImage();
     final staged = <PhotoInput>[];
-    for (final picked in pickedFiles) {
-      staged.add(await stagePickedFile(picked, category: category));
+    try {
+      for (final picked in pickedFiles) {
+        staged.add(await stagePickedFile(picked, category: category));
+      }
+    } catch (_) {
+      await cleanupTemporaryPhotos(staged);
+      rethrow;
     }
     return staged;
   }
@@ -70,7 +75,6 @@ class EvidenceMediaService {
     return PhotoInput(
       ruta: target.path,
       tipo: category,
-      descripcion: lookupMimeType(target.path),
     );
   }
 
@@ -80,36 +84,45 @@ class EvidenceMediaService {
   }) async {
     final targetDirectory = await reportImagesDirectory(numeroCaso);
     final persisted = <PhotoInput>[];
-    for (final (index, photo) in photos.indexed) {
-      final source = File(photo.ruta);
-      if (!await source.exists()) {
-        throw FileSystemException(
-          'La fotografia temporal no existe.',
-          photo.ruta,
-        );
-      }
-      final extension = _safeExtension(source.path);
-      final target = File(
-        p.join(
-          targetDirectory.path,
-          _safeFileName(
-            prefix: numeroCaso,
-            category: photo.tipo,
-            index: index + 1,
-            extension: extension,
+    try {
+      for (final (index, photo) in photos.indexed) {
+        final source = File(photo.ruta);
+        if (!await source.exists()) {
+          throw FileSystemException(
+            'La fotografía temporal no existe.',
+            photo.ruta,
+          );
+        }
+        final extension = _safeExtension(source.path);
+        final target = File(
+          p.join(
+            targetDirectory.path,
+            _safeFileName(
+              prefix: numeroCaso,
+              category: photo.tipo,
+              index: index + 1,
+              extension: extension,
+            ),
           ),
-        ),
-      );
-      await source.copy(target.path);
-      persisted.add(
-        PhotoInput(
-          ruta: target.path,
-          tipo: photo.tipo,
-          descripcion: photo.descripcion,
-        ),
-      );
-      await _deleteIfOwnedTemporary(source);
+        );
+        if (await target.exists()) {
+          throw FileSystemException(
+              'Ya existe una fotografía en el destino.', target.path);
+        }
+        persisted.add(
+          PhotoInput(
+            ruta: target.path,
+            tipo: photo.tipo,
+            descripcion: photo.descripcion,
+          ),
+        );
+        await source.copy(target.path);
+      }
+    } catch (_) {
+      await cleanupPersistentPhotos(persisted);
+      rethrow;
     }
+    // Los temporales se conservan hasta confirmar la transacción SQLite.
     return persisted;
   }
 
@@ -134,7 +147,13 @@ class EvidenceMediaService {
     for (final photo in photos) {
       final file = File(photo.ruta);
       if (await file.exists()) {
-        await file.delete();
+        try {
+          await file.delete();
+        } on FileSystemException catch (error) {
+          developer.log(
+              'No se pudo limpiar una copia de evidencia (${error.runtimeType}).',
+              name: 'acc_transito');
+        }
       }
     }
   }

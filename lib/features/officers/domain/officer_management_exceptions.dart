@@ -13,5 +13,5 @@ class DuplicateUsernameException extends OfficerManagementException {
 
 class DuplicatePlateException extends OfficerManagementException {
   const DuplicatePlateException()
-      : super('El numero de placa ya esta registrado.');
+      : super('El número de placa ya está registrado.');
 }

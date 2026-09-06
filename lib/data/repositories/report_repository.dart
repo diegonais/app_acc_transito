@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import '../database/app_database.dart';
 import '../database/dao/police_dao.dart';
 import '../database/dao/report_dao.dart';
@@ -605,8 +607,16 @@ class ReportRepository {
         );
       });
     } catch (_) {
-      if (persistedPhotos.isNotEmpty && cleanupPersistedPhotos != null) {
-        await cleanupPersistedPhotos(persistedPhotos);
+      if (persistPhotosForCase != null &&
+          persistedPhotos.isNotEmpty &&
+          cleanupPersistedPhotos != null) {
+        try {
+          await cleanupPersistedPhotos(persistedPhotos);
+        } catch (error) {
+          developer.log(
+              'No se pudo limpiar evidencia tras rollback (${error.runtimeType}).',
+              name: 'acc_transito');
+        }
       }
       rethrow;
     }
@@ -689,7 +699,7 @@ class ReportRepository {
     final db = await _database.instance;
     final row = await PoliceDao(db).findById(idPolicia);
     if (row == null) {
-      throw StateError('No se encontro el policia propietario del informe.');
+      throw StateError('No se encontró el policía propietario del informe.');
     }
     return InstitutionalQrPolice(
       nombreCompleto:
@@ -823,12 +833,12 @@ class ReportRepository {
     }
 
     if (input.idPolicia <= 0) {
-      messages.add('El informe debe asociarse a un policia valido.');
+      messages.add('El informe debe asociarse a un policía válido.');
     }
     if (input.gestion < 2000) {
-      messages.add('La gestion del informe no es valida.');
+      messages.add('La gestión del informe no es válida.');
     }
-    requiredText('EPI / Estacion Policial Integral', input.epi);
+    requiredText('EPI / Estación Policial Integral', input.epi);
     if (input.fechaHoraLlegada == null) {
       messages.add('Debe ingresar fecha y hora de llegada.');
     }
@@ -839,16 +849,28 @@ class ReportRepository {
     requiredText('lugar', input.lugar);
     requiredText('denunciante', input.denuncianteNombre);
     requiredText('contacto del denunciante', input.denuncianteContacto);
-    requiredText('descripcion', input.descripcion);
-    requiredText('condiciones climaticas', input.condicionesClimaticas);
+    requiredText('descripción', input.descripcion);
+    requiredText('condiciones climáticas', input.condicionesClimaticas);
     if (input.vehiculosMovidos == null) {
-      messages.add('Debe indicar si los vehiculos fueron movidos.');
+      messages.add('Debe indicar si los vehículos fueron movidos.');
     }
     if (input.protagonistasPresentes == null) {
-      messages.add('Debe indicar si los protagonistas estan presentes.');
+      messages.add('Debe indicar si los protagonistas están presentes.');
     }
     requiredText('testigos', input.testigos);
     requiredText('efectos personales', input.efectosPersonales);
+
+    if ((input.latitud == null) != (input.longitud == null)) {
+      messages.add('Ingrese latitud y longitud, o deje ambas vacías.');
+    }
+    if (input.latitud != null &&
+        (!input.latitud!.isFinite || input.latitud!.abs() > 90)) {
+      messages.add('La latitud debe estar entre -90 y 90.');
+    }
+    if (input.longitud != null &&
+        (!input.longitud!.isFinite || input.longitud!.abs() > 180)) {
+      messages.add('La longitud debe estar entre -180 y 180.');
+    }
 
     for (final (index, conductor) in input.conductores.indexed) {
       requiredText(
@@ -856,41 +878,41 @@ class ReportRepository {
       if (conductor.edad == null) {
         messages.add('Debe ingresar edad del conductor ${index + 1}.');
       } else if (conductor.edad! < 0) {
-        messages.add('La edad del conductor ${index + 1} no es valida.');
+        messages.add('La edad del conductor ${index + 1} no es válida.');
       }
       requiredText('licencia del conductor ${index + 1}', conductor.licencia);
-      requiredText('categoria del conductor ${index + 1}', conductor.categoria);
+      requiredText('categoría del conductor ${index + 1}', conductor.categoria);
       requiredText('domicilio del conductor ${index + 1}', conductor.domicilio);
       requiredText('zona del conductor ${index + 1}', conductor.zona);
       requiredText('contactos del conductor ${index + 1}', conductor.contactos);
     }
     for (final (index, vehiculo) in input.vehiculos.indexed) {
-      requiredText('placa del vehiculo ${index + 1}', vehiculo.placa);
-      requiredText('marca del vehiculo ${index + 1}', vehiculo.marca);
-      requiredText('color del vehiculo ${index + 1}', vehiculo.color);
-      requiredText('tipo del vehiculo ${index + 1}', vehiculo.tipo);
-      requiredText('servicio del vehiculo ${index + 1}', vehiculo.servicio);
+      requiredText('placa del vehículo ${index + 1}', vehiculo.placa);
+      requiredText('marca del vehículo ${index + 1}', vehiculo.marca);
+      requiredText('color del vehículo ${index + 1}', vehiculo.color);
+      requiredText('tipo del vehículo ${index + 1}', vehiculo.tipo);
+      requiredText('servicio del vehículo ${index + 1}', vehiculo.servicio);
       final driverIndex = vehiculo.driverIndex;
       if (driverIndex != null &&
           (driverIndex < 0 || driverIndex >= input.conductores.length)) {
         messages
-            .add('El vehiculo ${index + 1} referencia un conductor invalido.');
+            .add('El vehículo ${index + 1} referencia un conductor inválido.');
       }
     }
     for (final (index, persona) in input.personas.indexed) {
       requiredText(
           'nombre de la persona involucrada ${index + 1}', persona.nombre);
       if (persona.tipo != 'HERIDO' && persona.tipo != 'FALLECIDO') {
-        messages.add('El tipo de persona ${index + 1} no es valido.');
+        messages.add('El tipo de persona ${index + 1} no es válido.');
       }
       if (persona.edad == null) {
         messages.add('Debe ingresar edad de la persona ${index + 1}.');
       } else if (persona.edad! < 0) {
-        messages.add('La edad de la persona ${index + 1} no es valida.');
+        messages.add('La edad de la persona ${index + 1} no es válida.');
       }
     }
     for (final (index, fotografia) in input.fotografias.indexed) {
-      requiredText('ruta de fotografia ${index + 1}', fotografia.ruta);
+      requiredText('ruta de fotografía ${index + 1}', fotografia.ruta);
     }
 
     if (messages.isNotEmpty) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../shared/user_message.dart';
 
 import '../../app/routes/app_routes.dart';
 import '../../app/theme/app_theme.dart';
@@ -47,10 +48,10 @@ class _OfficerManagementPageState extends State<OfficerManagementPage> {
     }
     if (user.role != AppRole.admin) {
       return AppScaffoldShell(
-        title: 'Policias',
+        title: 'Policías',
         body: AppErrorState(
           title: 'Acceso restringido',
-          message: 'La gestion de policias esta disponible solo para ADMIN.',
+          message: 'La gestión de policías está disponible solo para ADMIN.',
           onRetry: () => Navigator.of(context).pushReplacementNamed(
             AppRoutes.dashboard,
           ),
@@ -59,7 +60,7 @@ class _OfficerManagementPageState extends State<OfficerManagementPage> {
     }
 
     return AppScaffoldShell(
-      title: 'Gestion de policias',
+      title: 'Gestión de policías',
       actions: [
         IconButton(
           tooltip: 'Actualizar',
@@ -73,7 +74,7 @@ class _OfficerManagementPageState extends State<OfficerManagementPage> {
           final controller = widget.controller;
           if (controller.isLoading && controller.officers.isEmpty) {
             return const Center(
-              child: AppLoadingState(message: 'Cargando policias'),
+              child: AppLoadingState(message: 'Cargando policías'),
             );
           }
           final error = controller.errorMessage;
@@ -151,7 +152,7 @@ class _OfficerManagementPageState extends State<OfficerManagementPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            officer == null ? 'Policia registrado.' : 'Policia actualizado.',
+            officer == null ? 'Policía registrado.' : 'Policía actualizado.',
           ),
         ),
       );
@@ -180,7 +181,7 @@ class _Header extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Policias registrados',
+                'Policías registrados',
                 style: textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
                   color: AppColors.ink,
@@ -188,7 +189,7 @@ class _Header extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                '$total ${total == 1 ? 'policia registrado' : 'policias registrados'}',
+                '$total ${total == 1 ? 'policía registrado' : 'policías registrados'}',
                 style: textTheme.titleMedium?.copyWith(
                   color: AppColors.ink.withValues(alpha: 0.68),
                 ),
@@ -225,13 +226,13 @@ class _EmptyOfficers extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const AppEmptyState(
-              title: 'Sin policias registrados',
+              title: 'Sin policías registrados',
               message: 'Registre el primer funcionario policial.',
               icon: Icons.badge_outlined,
             ),
             const SizedBox(height: 20),
             AppButton(
-              label: 'Registrar policia',
+              label: 'Registrar policía',
               icon: Icons.person_add_alt_1_rounded,
               onPressed: onCreate,
             ),
@@ -351,7 +352,7 @@ class _OfficerDetailPageState extends State<_OfficerDetailPage> {
   @override
   Widget build(BuildContext context) {
     return AppScaffoldShell(
-      title: 'Detalle del policia',
+      title: 'Detalle del policía',
       body: AnimatedBuilder(
         animation: widget.controller,
         builder: (context, _) {
@@ -388,7 +389,7 @@ class _OfficerDetailPageState extends State<_OfficerDetailPage> {
     );
     if (didSave == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Policia actualizado.')),
+        const SnackBar(content: Text('Policía actualizado.')),
       );
     }
   }
@@ -398,10 +399,10 @@ class _OfficerDetailPageState extends State<_OfficerDetailPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(activate ? 'Activar policia' : 'Desactivar policia'),
+        title: Text(activate ? 'Activar policía' : 'Desactivar policía'),
         content: Text(
           activate
-              ? 'El usuario asociado podra iniciar sesion nuevamente.'
+              ? 'El usuario asociado podrá iniciar sesión nuevamente.'
               : 'El usuario asociado quedara sin acceso. No se borraran datos.',
         ),
         actions: [
@@ -430,7 +431,7 @@ class _OfficerDetailPageState extends State<_OfficerDetailPage> {
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(activate ? 'Policia activado.' : 'Policia inactivo.'),
+          content: Text(activate ? 'Policía activado.' : 'Policía inactivo.'),
         ),
       );
     } catch (error) {
@@ -438,7 +439,9 @@ class _OfficerDetailPageState extends State<_OfficerDetailPage> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
+        SnackBar(
+            content: Text(userMessage(error,
+                fallback: 'No se pudo cambiar el estado del policía.'))),
       );
     }
   }
@@ -454,7 +457,7 @@ class _OfficerDetailPageState extends State<_OfficerDetailPage> {
     );
     if (didReset == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Contrasena restablecida.')),
+        const SnackBar(content: Text('Contraseña restablecida.')),
       );
     }
   }
@@ -594,7 +597,7 @@ class _OfficerInfoSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Informacion del policia',
+              'Información del policía',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w800,
                     color: AppColors.ink,
@@ -615,7 +618,7 @@ class _OfficerInfoSection extends StatelessWidget {
             ),
             _OfficerInfoField(label: 'C.I.', value: officer.ci),
             _OfficerInfoField(label: 'Usuario', value: officer.username),
-            const _OfficerInfoField(label: 'Rol', value: 'POLICE'),
+            const _OfficerInfoField(label: 'Rol', value: 'Policía'),
           ],
         ),
       ),
@@ -708,7 +711,7 @@ class _OfficerActionsSection extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: onResetPassword,
               icon: const Icon(Icons.lock_reset_rounded),
-              label: const Text('Restablecer contrasena'),
+              label: const Text('Restablecer contraseña'),
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
@@ -793,7 +796,7 @@ class _OfficerFormDialogState extends State<_OfficerFormDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(_isEditing ? 'Editar policia' : 'Registrar policia'),
+      title: Text(_isEditing ? 'Editar policía' : 'Registrar policía'),
       content: SizedBox(
         width: 520,
         child: SingleChildScrollView(
@@ -802,7 +805,7 @@ class _OfficerFormDialogState extends State<_OfficerFormDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _field(_plateController, 'Numero de placa', Icons.badge),
+                _field(_plateController, 'Número de placa', Icons.badge),
                 _field(_gradeController, 'Grado', Icons.military_tech),
                 _field(_namesController, 'Nombres', Icons.person_outline),
                 _field(_lastNamesController, 'Apellidos', Icons.people_outline),
@@ -814,7 +817,7 @@ class _OfficerFormDialogState extends State<_OfficerFormDialog> {
                 if (!_isEditing)
                   _field(
                     _passwordController,
-                    'Contrasena inicial',
+                    'Contraseña inicial',
                     Icons.lock_outline,
                     obscureText: true,
                     validator: _validatePassword,
@@ -898,6 +901,7 @@ class _OfficerFormDialogState extends State<_OfficerFormDialog> {
   }
 
   Future<void> _submit() async {
+    if (_isSubmitting) return;
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
@@ -943,7 +947,8 @@ class _OfficerFormDialogState extends State<_OfficerFormDialog> {
     } catch (error) {
       if (mounted) {
         setState(() {
-          _errorMessage = error.toString();
+          _errorMessage =
+              userMessage(error, fallback: 'No se pudo guardar el policía.');
         });
       }
     } finally {
@@ -986,7 +991,7 @@ class _ResetPasswordDialogState extends State<_ResetPasswordDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Restablecer contrasena'),
+      title: const Text('Restablecer contraseña'),
       content: Form(
         key: _formKey,
         child: Column(
@@ -997,7 +1002,7 @@ class _ResetPasswordDialogState extends State<_ResetPasswordDialog> {
             TextFormField(
               controller: _passwordController,
               decoration: const InputDecoration(
-                labelText: 'Nueva contrasena',
+                labelText: 'Nueva contraseña',
                 prefixIcon: Icon(Icons.lock_reset_rounded),
               ),
               obscureText: true,
@@ -1036,6 +1041,7 @@ class _ResetPasswordDialogState extends State<_ResetPasswordDialog> {
   }
 
   Future<void> _submit() async {
+    if (_isSubmitting) return;
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
@@ -1055,7 +1061,8 @@ class _ResetPasswordDialogState extends State<_ResetPasswordDialog> {
     } catch (error) {
       if (mounted) {
         setState(() {
-          _errorMessage = error.toString();
+          _errorMessage = userMessage(error,
+              fallback: 'No se pudo restablecer la contraseña.');
         });
       }
     } finally {

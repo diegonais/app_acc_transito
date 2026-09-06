@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../shared/user_message.dart';
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
@@ -6,7 +7,6 @@ import 'package:share_plus/share_plus.dart';
 import '../../services/pdf/direct_action_report_pdf_service.dart';
 import '../../services/share/report_pdf_share_service.dart';
 import '../../shared/scaffold_shell.dart';
-import '../../shared/ui/app_button.dart';
 import '../auth/domain/authenticated_user.dart';
 import 'application/report_controller.dart';
 
@@ -47,21 +47,19 @@ class _ReportPdfPreviewPageState extends State<ReportPdfPreviewPage> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                AppButton(
-                  label: _isSaving ? 'Guardando' : 'Guardar PDF',
-                  icon: Icons.save_alt_outlined,
-                  variant: AppButtonVariant.secondary,
+                TextButton.icon(
+                  label: Text(_isSaving ? 'Guardando' : 'Guardar PDF'),
+                  icon: const Icon(Icons.save_alt_outlined),
                   onPressed: _isBusy ? null : _savePdf,
                 ),
-                AppButton(
-                  label: _isSharing ? 'Compartiendo' : 'Compartir',
-                  icon: Icons.ios_share_outlined,
-                  variant: AppButtonVariant.secondary,
+                TextButton.icon(
+                  label: Text(_isSharing ? 'Compartiendo' : 'Compartir'),
+                  icon: const Icon(Icons.ios_share_outlined),
                   onPressed: _isBusy ? null : _sharePdf,
                 ),
-                AppButton(
-                  label: _isPrinting ? 'Imprimiendo' : 'Imprimir',
-                  icon: Icons.print_outlined,
+                TextButton.icon(
+                  label: Text(_isPrinting ? 'Imprimiendo' : 'Imprimir'),
+                  icon: const Icon(Icons.print_outlined),
                   onPressed: _isBusy ? null : _printPdf,
                 ),
               ],
@@ -84,7 +82,7 @@ class _ReportPdfPreviewPageState extends State<ReportPdfPreviewPage> {
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Text(
-                    'No se pudo previsualizar el PDF: $error',
+                    'No se pudo previsualizar el PDF.',
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -99,6 +97,7 @@ class _ReportPdfPreviewPageState extends State<ReportPdfPreviewPage> {
   bool get _isBusy => _isSaving || _isSharing || _isPrinting;
 
   Future<void> _savePdf() async {
+    if (_isBusy) return;
     setState(() => _isSaving = true);
     try {
       await widget.controller.saveReadablePdf(
@@ -113,7 +112,7 @@ class _ReportPdfPreviewPageState extends State<ReportPdfPreviewPage> {
         const SnackBar(content: Text('PDF guardado correctamente.')),
       );
     } catch (error) {
-      _showError('No se pudo guardar el PDF: $error');
+      _showError(userMessage(error, fallback: 'No se pudo guardar el PDF.'));
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -122,13 +121,14 @@ class _ReportPdfPreviewPageState extends State<ReportPdfPreviewPage> {
   }
 
   Future<void> _sharePdf() async {
+    if (_isBusy) return;
     setState(() => _isSharing = true);
     try {
       final result = await widget.shareService.sharePdf(
         bytes: widget.pdf.bytes,
         fileName: widget.pdf.fileName,
         subject: 'Informe ${widget.pdf.fileName}',
-        text: 'Informe de Accion Directa.',
+        text: 'Informe de Acción Directa.',
       );
       if (!mounted) {
         return;
@@ -139,7 +139,7 @@ class _ReportPdfPreviewPageState extends State<ReportPdfPreviewPage> {
         );
       }
     } catch (error) {
-      _showError('No se pudo compartir el PDF: $error');
+      _showError(userMessage(error, fallback: 'No se pudo compartir el PDF.'));
     } finally {
       if (mounted) {
         setState(() => _isSharing = false);
@@ -148,6 +148,7 @@ class _ReportPdfPreviewPageState extends State<ReportPdfPreviewPage> {
   }
 
   Future<void> _printPdf() async {
+    if (_isBusy) return;
     setState(() => _isPrinting = true);
     try {
       await Printing.layoutPdf(
@@ -156,7 +157,7 @@ class _ReportPdfPreviewPageState extends State<ReportPdfPreviewPage> {
         onLayout: (_) async => widget.pdf.bytes,
       );
     } catch (error) {
-      _showError('No se pudo imprimir el PDF: $error');
+      _showError(userMessage(error, fallback: 'No se pudo imprimir el PDF.'));
     } finally {
       if (mounted) {
         setState(() => _isPrinting = false);

@@ -1,5 +1,5 @@
 enum EvidencePhotoCategory {
-  panoramica('PANORAMICA', 'Panoramica'),
+  panoramica('PANORAMICA', 'Panorámica'),
   licencia('LICENCIA', 'Licencia'),
   placa('PLACA', 'Placa'),
   otra('OTRA', 'Otra');

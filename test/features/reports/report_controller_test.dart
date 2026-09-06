@@ -9,10 +9,12 @@ import 'package:app_acc_transito/features/auth/domain/authenticated_user.dart';
 import 'package:app_acc_transito/features/reports/application/report_controller.dart';
 import 'package:app_acc_transito/services/files/report_pdf_file_service.dart';
 import 'package:app_acc_transito/services/media/evidence_photo.dart';
+import 'package:app_acc_transito/services/media/evidence_media_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late AppDatabase appDatabase;
   late UserRepository userRepository;
   late PoliceRepository policeRepository;
@@ -36,7 +38,7 @@ void main() {
     await appDatabase.close();
   });
 
-  test('valida obligatorios antes de finalizar', () async {
+  test('válida obligatorios antes de finalizar', () async {
     final police = await _createPoliceSession(
       userRepository,
       policeRepository,
@@ -72,7 +74,7 @@ void main() {
     expect(await db.query('informes'), isEmpty);
   });
 
-  test('finaliza asociado al policia autenticado y queda en modo lectura',
+  test('finaliza asociado al policía autenticado y queda en modo lectura',
       () async {
     final police = await _createPoliceSession(
       userRepository,
@@ -95,7 +97,7 @@ void main() {
     expect(detail.idPolicia, police.requiredPoliceId);
     expect(detail.numeroCaso, finalized.numeroCaso);
     expect(detail.isActive, isTrue);
-    expect(detail.descripcion, 'Descripcion del hecho');
+    expect(detail.descripcion, 'Descripción del hecho');
   });
 
   test('GPS fallido no bloquea finalizacion y conserva lugar textual',
@@ -150,7 +152,7 @@ void main() {
     expect(detail.rutaCroquis, '/documentos/croquis/croquis_2026_000001.png');
   });
 
-  test('finaliza fotografias persistidas con categorias y relacion al informe',
+  test('finaliza fotografías persistidas con categorias y relacion al informe',
       () async {
     final police = await _createPoliceSession(
       userRepository,
@@ -206,7 +208,7 @@ void main() {
     );
   });
 
-  test('archivo inexistente de fotografia evita finalizar y no crea informe',
+  test('archivo inexistente de fotografía evita finalizar y no crea informe',
       () async {
     final police = await _createPoliceSession(
       userRepository,
@@ -228,7 +230,7 @@ void main() {
         ),
         persistPhotosForCase: ({required numeroCaso, required photos}) async {
           throw const FileSystemException(
-            'La fotografia temporal no existe.',
+            'La fotografía temporal no existe.',
             '/tmp/faltante.jpg',
           );
         },
@@ -242,7 +244,7 @@ void main() {
     expect(await db.query('fotografias'), isEmpty);
   });
 
-  test('finaliza varios conductores, vehiculos relacionados y personas',
+  test('finaliza varios conductores, vehículos relacionados y personas',
       () async {
     final police = await _createPoliceSession(
       userRepository,
@@ -272,7 +274,7 @@ void main() {
             domicilio: 'Av. Sur',
             zona: 'Sur',
             contactos: '70000002',
-            condicionEntrega: 'Entregado a Transito',
+            condicionEntrega: 'Entregado a Tránsito',
           ),
         ],
         vehiculos: const [
@@ -324,7 +326,7 @@ void main() {
         detail.vehiculos.last.idConductor, detail.conductores.last.idConductor);
   });
 
-  test('valida campos confirmados de conductores vehiculos y personas',
+  test('válida campos confirmados de conductores vehículos y personas',
       () async {
     final police = await _createPoliceSession(
       userRepository,
@@ -356,9 +358,9 @@ void main() {
           containsAll([
             'Debe ingresar edad del conductor 1.',
             'Debe ingresar contactos del conductor 1.',
-            'Debe ingresar placa del vehiculo 1.',
-            'El vehiculo 1 referencia un conductor invalido.',
-            'El tipo de persona 1 no es valido.',
+            'Debe ingresar placa del vehículo 1.',
+            'El vehículo 1 referencia un conductor inválido.',
+            'El tipo de persona 1 no es válido.',
             'Debe ingresar edad de la persona 1.',
           ]),
         ),
@@ -397,9 +399,29 @@ void main() {
 
     expect(controller.reports, hasLength(1));
     expect(controller.reports.single.idInforme, first.idInforme);
+    final owner = await controller.findReadableOwner(
+        actor: firstPolice, idInforme: first.idInforme);
+    expect(owner.numeroPlaca, 'PL-003');
+    await expectLater(
+        controller.findReadableOwner(
+            actor: secondPolice, idInforme: first.idInforme),
+        throwsStateError);
+    final adminOwner = await controller.findReadableOwner(
+        actor: _adminSession(), idInforme: first.idInforme);
+    expect(adminOwner.numeroPlaca, 'PL-003');
+    await controller.inactivate(
+        actor: _adminSession(), idInforme: first.idInforme);
+    await expectLater(
+        controller.findReadableOwner(
+            actor: firstPolice, idInforme: first.idInforme),
+        throwsStateError);
+    await expectLater(
+        controller.findReadableOwner(
+            actor: _adminSession(), idInforme: first.idInforme),
+        throwsStateError);
   });
 
-  test('consultas filtran por fecha policia y excluyen inactivos', () async {
+  test('consultas filtran por fecha policía y excluyen inactivos', () async {
     final admin = _adminSession();
     final firstPolice = await _createPoliceSession(
       userRepository,
@@ -501,7 +523,7 @@ void main() {
     expect(stored.single['estado'], 0);
   });
 
-  test('PDF consultado por ADMIN usa QR del policia propietario', () async {
+  test('PDF consultado por ADMIN usa QR del policía propietario', () async {
     final admin = _adminSession();
     final owner = await _createPoliceSession(
       userRepository,
@@ -573,7 +595,7 @@ void main() {
       whereArgs: [finalized.idInforme],
     );
     expect(rows.single['ruta_pdf'], path);
-    expect(rows.single['descripcion'], 'Descripcion del hecho');
+    expect(rows.single['descripcion'], 'Descripción del hecho');
     expect(path, contains('reports'));
     expect(path, endsWith('.pdf'));
   });
@@ -613,6 +635,55 @@ void main() {
     );
   });
 
+  test('rechaza coordenadas incompletas, no finitas o fuera de rango',
+      () async {
+    final police = await _createPoliceSession(userRepository, policeRepository,
+        username: 'coordenadas', plate: 'PL-COORD');
+    for (final pair in <(double?, double?)>[
+      (1, null),
+      (null, 1),
+      (double.nan, 0),
+      (0, double.infinity),
+      (91, 0),
+      (0, -181)
+    ]) {
+      await expectLater(
+          controller.finalize(
+              actor: police,
+              draft: _validDraft(latitud: pair.$1, longitud: pair.$2)),
+          throwsA(isA<ReportValidationException>()));
+    }
+    expect(await reportRepository.findActiveReports(), isEmpty);
+    final saved = await controller.finalize(
+        actor: police, draft: _validDraft(latitud: 0, longitud: 0));
+    expect(saved.numeroCaso, '2026-000001');
+  });
+
+  test('SQLite y QR conservan español al finalizar y volver a consultar',
+      () async {
+    final police = await _createPoliceSession(userRepository, policeRepository,
+        username: 'unicode', plate: 'PL-ES');
+    const text =
+        'José Muñoz Peña. Información, Descripción, Ubicación, Acción, Vehículo. áéíóúñÑ';
+    final saved = await controller.finalize(
+        actor: police,
+        draft: _validDraft(
+            lugar: text,
+            epi: 'División de Tránsito',
+            personas: const [
+              PersonInput(nombre: 'José Muñoz Peña', edad: 30, tipo: 'HERIDO')
+            ]));
+    final read = await controller.findReadableDetail(
+        actor: _adminSession(), idInforme: saved.idInforme);
+    expect(read.lugar, text);
+    expect(read.epi, 'División de Tránsito');
+    expect(read.personas.single.nombre, 'José Muñoz Peña');
+    final db = await appDatabase.instance;
+    expect(await db.rawQuery('PRAGMA foreign_key_check'), isEmpty);
+    expect((await db.rawQuery('PRAGMA integrity_check')).single.values.single,
+        'ok');
+  });
+
   test('cancelar descarta estado en memoria sin persistir', () async {
     const draft = DirectActionReportDraft(
       epi: 'EPI Temporal',
@@ -635,6 +706,40 @@ void main() {
     final db = await appDatabase.instance;
     expect(await db.query('informes'), isEmpty);
   });
+
+  test('rollback SQLite conserva fotos temporales y permite finalizar de nuevo',
+      () async {
+    final root = await Directory.systemTemp.createTemp('report_rollback_');
+    addTearDown(() => root.delete(recursive: true));
+    final media = EvidenceMediaService(
+        temporaryRoot: Directory('${root.path}/tmp'),
+        documentsRoot: Directory('${root.path}/docs'));
+    final source = File('${root.path}/original.jpg');
+    await source.writeAsBytes([1, 2, 3]);
+    final staged =
+        await media.stageFile(source, category: EvidencePhotoCategory.otra);
+    final police = await _createPoliceSession(userRepository, policeRepository,
+        username: 'rollback', plate: 'PL-ROLL');
+    final db = await appDatabase.instance;
+    await db.execute(
+        "CREATE TRIGGER fail_photo BEFORE INSERT ON fotografias BEGIN SELECT RAISE(ABORT, 'fallo simulado'); END");
+    Future<FinalizedReport> save() => controller.finalize(
+        actor: police,
+        draft: _validDraft(fotografias: [staged]),
+        persistPhotosForCase: media.persistPhotosForReport,
+        cleanupPersistedPhotos: media.cleanupPersistentPhotos);
+    await expectLater(save(), throwsA(isA<DatabaseException>()));
+    expect(await db.query('informes'), isEmpty);
+    expect(await db.query('conductores'), isEmpty);
+    expect(await db.query('vehiculos'), isEmpty);
+    expect(await File(staged.ruta).readAsBytes(), [1, 2, 3]);
+    await db.execute('DROP TRIGGER fail_photo');
+    final saved = await save();
+    expect(saved.numeroCaso, '2026-000001');
+    final detail = await controller.findReadableDetail(
+        actor: police, idInforme: saved.idInforme);
+    expect(await File(detail.fotografias.single.ruta).readAsBytes(), [1, 2, 3]);
+  });
 }
 
 DirectActionReportDraft _validDraft({
@@ -653,12 +758,12 @@ DirectActionReportDraft _validDraft({
     epi: epi,
     fechaHoraLlegada: DateTime.utc(2026, 1, 1, 8),
     fechaHoraHecho: fechaHoraHecho ?? DateTime.utc(2026, 1, 1, 7),
-    naturaleza: 'Colision',
+    naturaleza: 'Colisión',
     lugar: lugar,
     denuncianteNombre: 'No existe',
     denuncianteDocumento: '',
     denuncianteContacto: 'No existe',
-    descripcion: 'Descripcion del hecho',
+    descripcion: 'Descripción del hecho',
     condicionesClimaticas: 'Despejado',
     vehiculosMovidos: false,
     protagonistasPresentes: true,
@@ -729,7 +834,7 @@ Future<AuthenticatedUser> _createPoliceSession(
     grado: 'Sgto.',
     nombres: 'Ana',
     apellidos: 'Quispe',
-    unidad: 'Transito',
+    unidad: 'Tránsito',
     sigla: 'UT',
     ci: '1234567',
     now: DateTime.utc(2026),
@@ -744,7 +849,7 @@ Future<AuthenticatedUser> _createPoliceSession(
       grado: 'Sgto.',
       nombres: 'Ana',
       apellidos: 'Quispe',
-      unidad: 'Transito',
+      unidad: 'Tránsito',
       sigla: 'UT',
       ci: '1234567',
     ),

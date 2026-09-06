@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../../shared/user_message.dart';
 
 import '../../../data/repositories/report_repository.dart';
 import '../../auth/domain/app_role.dart';
@@ -14,6 +15,22 @@ class DashboardController extends ChangeNotifier {
   String? _errorMessage;
   DashboardStats? _stats;
   DateTime _selectedDate = DateTime.now();
+  int _loadGeneration = 0;
+
+  void reset() {
+    _loadGeneration++;
+    _stats = null;
+    _selectedDate = DateTime.now();
+    _errorMessage = null;
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _loadGeneration++;
+    super.dispose();
+  }
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
@@ -25,6 +42,7 @@ class DashboardController extends ChangeNotifier {
     DateTime? referenceDate,
     DateTime? selectedDate,
   }) async {
+    final generation = ++_loadGeneration;
     _isLoading = true;
     _errorMessage = null;
     if (selectedDate != null) {
@@ -34,7 +52,7 @@ class DashboardController extends ChangeNotifier {
 
     try {
       final reference = referenceDate ?? DateTime.now();
-      _stats = actor.role == AppRole.admin
+      final stats = actor.role == AppRole.admin
           ? await _repository.loadAdminDashboard(
               referenceDate: reference,
               selectedDate: _selectedDate,
@@ -44,11 +62,18 @@ class DashboardController extends ChangeNotifier {
               referenceDate: reference,
               selectedDate: _selectedDate,
             );
+      if (generation != _loadGeneration) return;
+      _stats = stats;
     } catch (error) {
-      _errorMessage = error.toString();
+      if (generation != _loadGeneration) return;
+      _stats = null;
+      _errorMessage =
+          userMessage(error, fallback: 'No se pudo cargar el resumen.');
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (generation == _loadGeneration) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 }

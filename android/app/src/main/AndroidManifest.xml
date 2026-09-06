@@ -16,7 +16,7 @@
     </queries>
 
     <application
-        android:label="ACC Transito"
+        android:label="ACC Tránsito"
         android:allowBackup="false"
         android:usesCleartextTraffic="false"
         android:name="${applicationName}"

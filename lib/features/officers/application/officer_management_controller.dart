@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../../shared/user_message.dart';
 
 import '../../auth/data/password_hasher.dart';
 import '../../auth/domain/app_role.dart';
@@ -19,6 +20,21 @@ class OfficerManagementController extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   List<OfficerRecord> _officers = const [];
+  int _loadGeneration = 0;
+
+  void reset() {
+    _loadGeneration++;
+    _officers = const [];
+    _errorMessage = null;
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _loadGeneration++;
+    super.dispose();
+  }
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
@@ -26,17 +42,25 @@ class OfficerManagementController extends ChangeNotifier {
 
   Future<void> load(AuthenticatedUser actor) async {
     _requireAdmin(actor);
+    final generation = ++_loadGeneration;
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      _officers = await _repository.listOfficers();
+      final officers = await _repository.listOfficers();
+      if (generation != _loadGeneration) return;
+      _officers = officers;
     } catch (error) {
-      _errorMessage = error.toString();
+      if (generation != _loadGeneration) return;
+      _officers = const [];
+      _errorMessage =
+          userMessage(error, fallback: 'No se pudieron cargar los policías.');
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (generation == _loadGeneration) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -55,7 +79,7 @@ class OfficerManagementController extends ChangeNotifier {
   }) async {
     _requireAdmin(actor);
     _validateRequired({
-      'numero de placa': numeroPlaca,
+      'número de placa': numeroPlaca,
       'grado': grado,
       'nombres': nombres,
       'apellidos': apellidos,
@@ -97,7 +121,7 @@ class OfficerManagementController extends ChangeNotifier {
   }) async {
     _requireAdmin(actor);
     _validateRequired({
-      'numero de placa': numeroPlaca,
+      'número de placa': numeroPlaca,
       'grado': grado,
       'nombres': nombres,
       'apellidos': apellidos,
@@ -152,7 +176,7 @@ class OfficerManagementController extends ChangeNotifier {
 
   void _requireAdmin(AuthenticatedUser actor) {
     if (actor.role != AppRole.admin) {
-      throw StateError('Operacion permitida solo para ADMIN.');
+      throw StateError('Operación permitida solo para ADMIN.');
     }
   }
 
@@ -169,7 +193,7 @@ class OfficerManagementController extends ChangeNotifier {
 
   void _validatePassword(String password) {
     if (password.length < 8) {
-      throw ArgumentError('La contrasena debe tener al menos 8 caracteres.');
+      throw ArgumentError('La contraseña debe tener al menos 8 caracteres.');
     }
   }
 }

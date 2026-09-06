@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../data/database/app_database.dart';
 import '../data/repositories/police_repository.dart';
@@ -58,6 +59,23 @@ class _AccTransitoAppState extends State<AccTransitoApp> {
     _reportController = ReportController(
       repository: reportRepository,
     );
+    _authController.addListener(_resetSessionData);
+  }
+
+  void _resetSessionData() {
+    _reportController.reset();
+    _dashboardController.reset();
+    _officerManagementController.reset();
+  }
+
+  @override
+  void dispose() {
+    _authController.removeListener(_resetSessionData);
+    _reportController.dispose();
+    _dashboardController.dispose();
+    _officerManagementController.dispose();
+    if (widget._authController == null) _authController.dispose();
+    super.dispose();
   }
 
   @override
@@ -65,8 +83,15 @@ class _AccTransitoAppState extends State<AccTransitoApp> {
     return AuthScope(
       controller: _authController,
       child: MaterialApp(
-        title: 'ACC Transito',
+        title: 'ACC Tránsito',
         debugShowCheckedModeBanner: false,
+        locale: const Locale('es', 'BO'),
+        supportedLocales: const [Locale('es', 'BO')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+          child: child!,
+        ),
         theme: AppTheme.light,
         initialRoute: AppRoutes.splash,
         onGenerateRoute: (settings) {

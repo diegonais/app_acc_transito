@@ -1,4 +1,5 @@
 import 'package:geolocator/geolocator.dart';
+import '../../shared/user_message.dart';
 
 enum GeolocationFailure {
   serviceDisabled,
@@ -35,13 +36,13 @@ class GeolocationResult {
   String get message {
     return switch (failure) {
       GeolocationFailure.serviceDisabled =>
-        'El servicio de ubicacion esta desactivado. Puede finalizar el informe sin coordenadas.',
+        'El servicio de ubicación está desactivado. Puede finalizar el informe sin coordenadas.',
       GeolocationFailure.permissionDenied =>
-        'Permiso de ubicacion denegado. Puede finalizar el informe conservando el lugar textual.',
+        'Permiso de ubicación denegado. Puede finalizar el informe conservando el lugar textual.',
       GeolocationFailure.permissionPermanentlyDenied =>
-        'Permiso de ubicacion denegado permanentemente. Habilitelo desde ajustes si necesita registrar coordenadas.',
+        'Permiso de ubicación denegado permanentemente. Habilítelo desde ajustes si necesita registrar coordenadas.',
       GeolocationFailure.unavailable => detail ??
-          'No se pudo obtener la ubicacion. Puede finalizar el informe sin coordenadas.',
+          'No se pudo obtener la ubicación. Puede finalizar el informe sin coordenadas.',
       null => 'Coordenadas registradas.',
     };
   }
@@ -88,8 +89,9 @@ class GeolocationService {
     } catch (error) {
       return GeolocationResult.failure(
         GeolocationFailure.unavailable,
-        detail:
-            'No se pudo obtener la ubicacion: $error. Puede finalizar el informe sin coordenadas.',
+        detail: userMessage(error,
+            fallback:
+                'No se pudo obtener la ubicación. Puede finalizar el informe sin coordenadas.'),
       );
     }
   }

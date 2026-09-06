@@ -50,7 +50,7 @@ void main() {
     await appDatabase.close();
   });
 
-  test('mantiene sesion solo en memoria y logout la limpia', () async {
+  test('mantiene sesión solo en memoria y logout la limpia', () async {
     expect(controller.isAuthenticated, isFalse);
 
     await controller.login(
@@ -79,7 +79,7 @@ void main() {
       grado: 'Sgto.',
       nombres: 'Ana',
       apellidos: 'Quispe',
-      unidad: 'Transito',
+      unidad: 'Tránsito',
       sigla: 'UT',
       ci: '1234567',
     );

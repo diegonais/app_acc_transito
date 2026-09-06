@@ -10,7 +10,7 @@ class AppLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: 'Logo institucional de Transito',
+      label: 'Logo institucional de Tránsito',
       image: true,
       child: Image.asset(
         AppConstants.logoAsset,
