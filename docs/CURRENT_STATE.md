@@ -1,4 +1,21 @@
-# Estado actual — Consulta de informes y PDF rediseñados
+# Estado actual — Indicadores ADMIN en cuadrícula 2 × 2
+
+## Actualización 2026-09-12 — Ajuste puntual de Inicio
+
+Las cuatro tarjetas del Administrador se distribuyen en dos columnas y dos
+filas también en teléfonos: informes activos/policías activos arriba e informes
+del día/informes del mes abajo. Se compactaron iconos y espacios internos y se
+permite que las etiquetas completas aumenten la altura de cada fila si hace falta.
+Se conservaron el resto de Inicio, el dashboard POLICE y la lógica de datos.
+Cambio limitado a `lib/features/dashboard/dashboard_placeholder_page.dart`.
+
+Verificación: `flutter analyze` sin incidencias y `flutter test` con 85 pruebas
+correctas. `dart format .` sigue fallando por la ruta residual de Gradle bajo
+`build/`; `dart format lib test` correcto (66 archivos, sin cambios).
+No se generó un APK nuevo ni se verificó este ajuste en dispositivo.
+La siguiente fase planificada sigue siendo Fase 15; DECISIONS no cambió.
+
+# Historial — Consulta de informes y PDF rediseñados
 
 ## Actualización 2026-09-06 — UX/UI documental
 

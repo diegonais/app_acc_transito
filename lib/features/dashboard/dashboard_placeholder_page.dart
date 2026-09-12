@@ -97,8 +97,10 @@ class _DashboardPageState extends State<DashboardPage> {
                 )
               else if (stats != null) ...[
                 _MetricGrid(
+                  twoColumns: user.isAdmin,
                   children: [
                     _MetricCard(
+                      compact: user.isAdmin,
                       icon: Icons.assignment_turned_in_outlined,
                       accentColor: AppColors.primaryGreen,
                       backgroundColor: const Color(0xFFEAF8EE),
@@ -109,6 +111,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                     if (user.isAdmin)
                       _MetricCard(
+                        compact: true,
                         icon: Icons.local_police_outlined,
                         accentColor: AppColors.institutionalBlue,
                         backgroundColor: const Color(0xFFEAF5FF),
@@ -116,6 +119,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         value: stats.activePoliceCount.toString(),
                       ),
                     _MetricCard(
+                      compact: user.isAdmin,
                       icon: Icons.today_outlined,
                       accentColor: AppColors.darkGold,
                       backgroundColor: const Color(0xFFFFF4E3),
@@ -123,6 +127,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       value: stats.reportsToday.toString(),
                     ),
                     _MetricCard(
+                      compact: user.isAdmin,
                       icon: Icons.calendar_month_outlined,
                       accentColor: const Color(0xFF7B2CBF),
                       backgroundColor: const Color(0xFFF3EAFF),
@@ -362,12 +367,36 @@ class _RoleBadge extends StatelessWidget {
 }
 
 class _MetricGrid extends StatelessWidget {
-  const _MetricGrid({required this.children});
+  const _MetricGrid({required this.children, required this.twoColumns});
 
   final List<Widget> children;
+  final bool twoColumns;
 
   @override
   Widget build(BuildContext context) {
+    if (twoColumns) {
+      return Column(
+        children: [
+          for (var index = 0; index < children.length; index += 2) ...[
+            if (index > 0) const SizedBox(height: 12),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: children[index]),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: index + 1 < children.length
+                        ? children[index + 1]
+                        : const SizedBox.shrink(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      );
+    }
     return LayoutBuilder(
       builder: (context, constraints) {
         final columns = constraints.maxWidth >= 1120
@@ -391,6 +420,7 @@ class _MetricGrid extends StatelessWidget {
 
 class _MetricCard extends StatelessWidget {
   const _MetricCard({
+    this.compact = false,
     required this.icon,
     required this.accentColor,
     required this.backgroundColor,
@@ -399,6 +429,7 @@ class _MetricCard extends StatelessWidget {
   });
 
   final IconData icon;
+  final bool compact;
   final Color accentColor;
   final Color backgroundColor;
   final String label;
@@ -408,25 +439,26 @@ class _MetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     return Container(
+      constraints: const BoxConstraints(minHeight: 150),
       decoration: _softCardDecoration(
         background: backgroundColor,
         borderColor: accentColor.withValues(alpha: 0.08),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: EdgeInsets.all(compact ? 10 : 14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              width: 54,
-              height: 54,
+              width: compact ? 36 : 54,
+              height: compact ? 36 : 54,
               decoration: BoxDecoration(
                 color: AppColors.white.withValues(alpha: 0.48),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(icon, color: accentColor, size: 30),
+              child: Icon(icon, color: accentColor, size: compact ? 24 : 30),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: compact ? 8 : 12),
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -443,8 +475,8 @@ class _MetricCard extends StatelessWidget {
                   ),
                   Text(
                     label,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: compact ? null : 2,
+                    overflow: compact ? null : TextOverflow.ellipsis,
                     style: textTheme.bodyMedium?.copyWith(
                       color: AppColors.ink.withValues(alpha: 0.86),
                       height: 1.14,
