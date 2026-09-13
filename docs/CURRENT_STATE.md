@@ -1,4 +1,24 @@
-# Estado actual — Indicadores ADMIN en cuadrícula 2 × 2
+# Estado actual — Indicadores en dos columnas para todos los roles
+
+## Actualización 2026-09-13 — Diseño de indicadores compartido
+
+Se extendió el diseño de tarjetas compactas y dos columnas a los dos roles
+existentes (ADMIN y POLICE). Administrador conserva cuatro indicadores en 2 × 2;
+Policía conserva sus tres indicadores propios: activos y día en la primera
+fila, mes a la izquierda de la segunda fila. El espacio restante queda vacío.
+Ambos usan etiquetas completas y altura de fila adaptable al contenido.
+
+Se retiraron las condiciones de rol que seleccionaban el diseño anterior.
+Se mantienen los datos, permisos, consultas SQLite y demás secciones de Inicio.
+Cambio de código limitado a `lib/features/dashboard/dashboard_placeholder_page.dart`.
+
+Verificación: `flutter analyze` sin incidencias y `flutter test` con 85 pruebas
+correctas. `dart format lib test` correcto (66 archivos); `dart format .`
+mantiene el fallo preexistente por residuos de Gradle bajo `build/`.
+Sin APK nuevo ni verificación en dispositivo. La siguiente fase planificada
+sigue siendo Fase 15; DECISIONS no cambió.
+
+# Historial — Indicadores ADMIN en cuadrícula 2 × 2
 
 ## Actualización 2026-09-12 — Ajuste puntual de Inicio
 
