@@ -7,6 +7,7 @@ import 'package:app_acc_transito/data/repositories/user_repository.dart';
 import 'package:app_acc_transito/features/auth/domain/app_role.dart';
 import 'package:app_acc_transito/features/auth/domain/authenticated_user.dart';
 import 'package:app_acc_transito/features/reports/application/report_controller.dart';
+import 'package:app_acc_transito/features/dashboard/application/dashboard_controller.dart';
 import 'package:app_acc_transito/services/files/report_pdf_file_service.dart';
 import 'package:app_acc_transito/services/media/evidence_photo.dart';
 import 'package:app_acc_transito/services/media/evidence_media_service.dart';
@@ -36,6 +37,42 @@ void main() {
 
   tearDown(() async {
     await appDatabase.close();
+  });
+
+  test('ambos controladores usan límites por rol y rechazan fechas inválidas',
+      () async {
+    final police = await _createPoliceSession(userRepository, policeRepository,
+        username: 'policia.fechas', plate: 'PL-FECHAS');
+    final other = await _createPoliceSession(userRepository, policeRepository,
+        username: 'policia.historial', plate: 'PL-HISTORIAL');
+    await controller.finalize(
+        actor: other,
+        draft: _validDraft(fechaHoraHecho: DateTime(2026, 1, 1, 8)));
+    await controller.finalize(
+        actor: police,
+        draft: _validDraft(fechaHoraHecho: DateTime(2026, 8, 1, 8)));
+    final repository =
+        ReportRepository(appDatabase, clock: () => DateTime(2026, 9, 13));
+    final reports = ReportController(repository: repository);
+    final dashboard = DashboardController(repository: repository);
+    addTearDown(reports.dispose);
+    addTearDown(dashboard.dispose);
+    for (final actor in [_adminSession(), police]) {
+      final earliest =
+          actor.isAdmin ? DateTime(2026, 1, 1) : DateTime(2026, 8, 1);
+      expect((await reports.loadDateBounds(actor)).firstDate, earliest);
+      expect((await dashboard.loadDateBounds(actor)).firstDate, earliest);
+      await reports.load(actor,
+          filter: ReportQueryFilter(from: DateTime(2026, 9, 14)));
+      expect(reports.errorMessage, contains('posteriores a hoy'));
+      await reports.load(actor, filter: const ReportQueryFilter());
+      expect(reports.errorMessage, isNull);
+      await dashboard.load(actor, selectedDate: earliest);
+      expect(dashboard.errorMessage, isNull);
+      await dashboard.load(actor, selectedDate: DateTime(2026, 9, 14));
+      expect(dashboard.errorMessage, contains('posteriores a hoy'));
+      expect(dashboard.selectedDate, earliest);
+    }
   });
 
   test('válida obligatorios antes de finalizar', () async {

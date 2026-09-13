@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../../data/models/report_date_bounds.dart';
 import '../../../shared/user_message.dart';
 
 import '../../../data/repositories/report_repository.dart';
@@ -116,6 +117,12 @@ class ReportController extends ChangeNotifier {
   List<ReportRecord> get reports => _reports;
   List<PoliceReportCount> get policeOptions => _policeOptions;
   ReportQueryFilter get filter => _filter;
+
+  Future<ReportDateBounds> loadDateBounds(AuthenticatedUser actor) {
+    return _repository.loadDateBounds(
+      idPolicia: actor.isAdmin ? null : actor.requiredPoliceId,
+    );
+  }
 
   Future<void> load(
     AuthenticatedUser actor, {

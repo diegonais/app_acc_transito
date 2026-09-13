@@ -16,6 +16,7 @@ import '../../services/media/evidence_photo.dart';
 import '../../shared/scaffold_shell.dart';
 import '../../shared/ui/app_button.dart';
 import '../../shared/ui/app_state_view.dart';
+import '../../shared/ui/report_filter_date_picker.dart';
 import '../auth/application/auth_scope.dart';
 import '../auth/domain/app_role.dart';
 import '../auth/domain/authenticated_user.dart';
@@ -93,7 +94,9 @@ class _ReportListPageState extends State<ReportListPage> {
             );
           }
           final error = controller.errorMessage;
-          if (error != null && controller.reports.isEmpty) {
+          if (error != null &&
+              controller.reports.isEmpty &&
+              _currentFilter.isEmpty) {
             return AppErrorState(
               title: 'No se pudo cargar',
               message: error,
@@ -124,6 +127,13 @@ class _ReportListPageState extends State<ReportListPage> {
                   onClear: () => _clearFilters(user),
                 ),
                 const SizedBox(height: 32),
+                if (error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(error,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.error)),
+                  ),
                 _EmptyReports(
                   hasFilters: !_currentFilter.isEmpty,
                   isPolice: user.isPolice,
@@ -271,11 +281,7 @@ class _ReportListPageState extends State<ReportListPage> {
       from: _from == null
           ? null
           : DateTime(_from!.year, _from!.month, _from!.day),
-      to: _to == null
-          ? null
-          : DateTime(_to!.year, _to!.month, _to!.day).add(
-              const Duration(days: 1),
-            ),
+      to: _to == null ? null : DateTime(_to!.year, _to!.month, _to!.day + 1),
     );
   }
 
@@ -284,12 +290,13 @@ class _ReportListPageState extends State<ReportListPage> {
     required bool isFrom,
   }) async {
     final current = isFrom ? _from : _to;
-    final now = DateTime.now();
-    final selected = await showDatePicker(
+    final selected = await showReportFilterDatePicker(
       context: context,
-      initialDate: current ?? now,
-      firstDate: DateTime(now.year - 10),
-      lastDate: DateTime(now.year + 1),
+      current: current,
+      from: _from,
+      to: _to,
+      isFrom: isFrom,
+      loadBounds: () => widget.controller.loadDateBounds(user),
     );
     if (selected == null || !mounted) {
       return;

@@ -1,6 +1,7 @@
 import 'dart:developer' as developer;
 
 import '../database/app_database.dart';
+import '../models/report_date_bounds.dart';
 import '../database/dao/police_dao.dart';
 import '../database/dao/report_dao.dart';
 import '../../services/media/evidence_photo.dart';
@@ -488,9 +489,40 @@ typedef PersistPhotosForCase = Future<List<PhotoInput>> Function({
 typedef CleanupPhotos = Future<void> Function(List<PhotoInput> photos);
 
 class ReportRepository {
-  const ReportRepository(this._database);
+  const ReportRepository(this._database, {this.clock = DateTime.now});
 
   final AppDatabase _database;
+  final DateTime Function() clock;
+
+  Future<ReportDateBounds> loadDateBounds({int? idPolicia}) async {
+    final db = await _database.instance;
+    final earliest =
+        await ReportDao(db).earliestReportDate(idPolicia: idPolicia);
+    return ReportDateBounds(today: clock(), earliestReportDate: earliest);
+  }
+
+  Future<void> _validateQueryDates(ReportQueryFilter filter,
+      {int? idPolicia}) async {
+    if (filter.from == null && filter.to == null) return;
+    // SQLite utiliza un límite superior exclusivo; la UI incluye todo el día.
+    final inclusiveEnd = filter.to?.subtract(const Duration(microseconds: 1));
+    final bounds = await loadDateBounds(idPolicia: idPolicia);
+    final error = bounds.validate(from: filter.from, to: inclusiveEnd);
+    if (error != null) throw ReportValidationException([error]);
+    if (filter.from != null &&
+        filter.to != null &&
+        !filter.from!.isBefore(filter.to!)) {
+      throw const ReportValidationException([
+        'La fecha de inicio no puede ser posterior a la fecha límite.',
+      ]);
+    }
+  }
+
+  Future<void> _validateSelectedDate(DateTime date, {int? idPolicia}) async {
+    final bounds = await loadDateBounds(idPolicia: idPolicia);
+    final error = bounds.validate(from: date);
+    if (error != null) throw ReportValidationException([error]);
+  }
 
   Future<FinalizedReport> finalizeReport(
     FinalizeReportInput input, {
@@ -634,6 +666,7 @@ class ReportRepository {
   Future<List<ReportRecord>> queryActiveReportsForAdmin({
     ReportQueryFilter filter = const ReportQueryFilter(),
   }) async {
+    await _validateQueryDates(filter);
     final db = await _database.instance;
     final rows = await ReportDao(db).findActiveReportsFiltered(
       idPolicia: filter.idPolicia,
@@ -651,6 +684,7 @@ class ReportRepository {
     required int idPolicia,
     ReportQueryFilter filter = const ReportQueryFilter(),
   }) async {
+    await _validateQueryDates(filter, idPolicia: idPolicia);
     final db = await _database.instance;
     final rows = await ReportDao(db).findActiveReportsFiltered(
       idPolicia: idPolicia,
@@ -714,6 +748,7 @@ class ReportRepository {
     required DateTime referenceDate,
     DateTime? selectedDate,
   }) async {
+    await _validateSelectedDate(selectedDate ?? referenceDate);
     final db = await _database.instance;
     final dao = ReportDao(db);
     final todayRange = _dayRange(referenceDate);
@@ -749,6 +784,8 @@ class ReportRepository {
     required DateTime referenceDate,
     DateTime? selectedDate,
   }) async {
+    await _validateSelectedDate(selectedDate ?? referenceDate,
+        idPolicia: idPolicia);
     final db = await _database.instance;
     final dao = ReportDao(db);
     final todayRange = _dayRange(referenceDate);

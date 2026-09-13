@@ -5,6 +5,7 @@ import '../../app/theme/app_theme.dart';
 import '../../data/repositories/report_repository.dart';
 import '../../shared/scaffold_shell.dart';
 import '../../shared/ui/app_state_view.dart';
+import '../../shared/ui/report_filter_date_picker.dart';
 import '../auth/application/auth_scope.dart';
 import '../auth/domain/app_role.dart';
 import '../auth/domain/authenticated_user.dart';
@@ -185,11 +186,10 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<void> _pickDashboardDate(AuthenticatedUser user) async {
     final current = widget.controller.selectedDate;
-    final selected = await showDatePicker(
+    final selected = await showReportFilterDatePicker(
       context: context,
-      initialDate: current,
-      firstDate: DateTime(current.year - 10),
-      lastDate: DateTime(current.year + 1),
+      current: current,
+      loadBounds: () => widget.controller.loadDateBounds(user),
     );
     if (selected == null || !mounted) {
       return;

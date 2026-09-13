@@ -5,6 +5,18 @@ class ReportDao {
 
   final DatabaseExecutor _db;
 
+  /// Conserva el límite histórico aunque el informe más antiguo se inactive.
+  /// Usa el mismo campo de fecha que los filtros y estadísticas.
+  Future<DateTime?> earliestReportDate({int? idPolicia}) async {
+    final rows = await _db.rawQuery(
+      'SELECT MIN(fecha_hora_hecho) AS primera_fecha FROM informes'
+      '${idPolicia == null ? '' : ' WHERE id_policia = ?'}',
+      idPolicia == null ? [] : [idPolicia],
+    );
+    final value = rows.single['primera_fecha'] as String?;
+    return value == null ? null : DateTime.parse(value);
+  }
+
   Future<int> nextCorrelativo(int gestion) async {
     final rows = await _db.rawQuery(
       'SELECT COALESCE(MAX(correlativo), 0) + 1 AS siguiente '

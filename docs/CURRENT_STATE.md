@@ -1,4 +1,41 @@
-# Estado actual — Indicadores en dos columnas para todos los roles
+# Estado actual — Filtros de fecha validados en consultas e Inicio
+
+## Actualización 2026-09-13 — Límites de búsqueda por fecha
+
+Se revisaron todos los selectores de fecha: el rango Desde/Hasta de Informes
+y los dos accesos de fecha de Inicio (cabecera de Resumen rápido e Informes
+por fecha) comparten ahora el selector validado para ADMIN y POLICE.
+
+- Inicio no posterior al fin; se permite buscar un mismo día y se incluye
+  todo el día final, manteniendo el límite superior exclusivo de SQLite.
+- Fecha máxima: hoy según el reloj local, recalculada al abrir, confirmar y
+  ejecutar la consulta. Se rechazan fechas futuras también por teclado.
+- Fecha mínima: el hecho más antiguo registrado, usando el mismo campo
+  `fecha_hora_hecho` que las consultas. ADMIN usa el historial del dispositivo;
+  POLICE usa su historial propio. La fecha de creación no se utiliza como
+  límite porque excluiría hechos anteriores registrados después.
+- El límite histórico se conserva al inactivar informes; estos siguen ocultos.
+  Sin historial, el calendario permite únicamente hoy. Si solo hubiera fechas
+  futuras heredadas, el límite se ajusta a hoy para mantener válido el selector.
+- Validación adicional en el repositorio, sin SQL desde widgets. Los filtros
+  permanecen accesibles para limpiarlos si una consulta devuelve error.
+  Inicio ajusta una fecha previa fuera de límites al actualizar automáticamente;
+  una selección explícita inválida se rechaza sin sustituir la fecha anterior.
+
+Sin cambios de esquema, dependencias, permisos o formulario de registro.
+DECISIONS incorpora las reglas de búsqueda solicitadas por el usuario.
+
+Verificación: `flutter analyze` sin incidencias; `flutter test` con **95 pruebas
+correctas** (10 nuevas). Cubren teclado/calendario, rangos invertidos, fechas
+futuras y antiguas, mismo día, cierre inclusivo, límites por rol, historial
+inactivo, ausencia de informes y cambio del reloj con el selector abierto.
+La prueba previa que consultaba antes del primer informe ahora usa un día
+sin resultados dentro del rango válido; el rechazo se cubre explícitamente.
+`dart format lib test` correcto (69 archivos). `dart format .` mantiene el fallo
+preexistente por residuos de Gradle en `build/`. Sin APK nuevo ni verificación
+en dispositivo. La siguiente fase planificada sigue siendo Fase 15.
+
+# Historial — Indicadores en dos columnas para todos los roles
 
 ## Actualización 2026-09-13 — Diseño de indicadores compartido
 

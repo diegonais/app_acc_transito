@@ -27,7 +27,8 @@ void main() {
     appDatabase = AppDatabase(databasePath: inMemoryDatabasePath);
     userRepository = UserRepository(appDatabase);
     policeRepository = PoliceRepository(appDatabase);
-    reportRepository = ReportRepository(appDatabase);
+    reportRepository =
+        ReportRepository(appDatabase, clock: () => DateTime(2026, 9, 13, 12));
   });
 
   tearDown(() async {
@@ -367,6 +368,135 @@ void main() {
     expect(inactivePhotos.single['ruta'], '/evidencias/inactiva.jpg');
   });
 
+  test('límites usan el hecho más antiguo por rol y conservan inactivos',
+      () async {
+    final firstPolice = await _createPolice(userRepository, policeRepository);
+    final secondPolice = await _createPolice(userRepository, policeRepository);
+    await reportRepository.finalizeReport(
+      _validReportInput(
+          idPolicia: firstPolice, fechaHoraHecho: DateTime(2026, 8, 5, 20)),
+      now: DateTime(2026, 9, 1),
+    );
+    final oldest = await reportRepository.finalizeReport(
+      _validReportInput(
+          idPolicia: secondPolice, fechaHoraHecho: DateTime(2026, 7, 2, 8)),
+      now: DateTime(2026, 9, 2),
+    );
+    await reportRepository.inactivateReport(idInforme: oldest.idInforme);
+    expect((await reportRepository.loadDateBounds()).firstDate,
+        DateTime(2026, 7, 2));
+    expect(
+        (await reportRepository.loadDateBounds(idPolicia: firstPolice))
+            .firstDate,
+        DateTime(2026, 8, 5));
+    expect(
+        (await reportRepository.loadDateBounds(idPolicia: secondPolice))
+            .firstDate,
+        DateTime(2026, 7, 2));
+    expect(
+        await reportRepository.queryActiveReportsForPolice(
+          idPolicia: secondPolice,
+          filter: ReportQueryFilter(from: DateTime(2026, 7, 2)),
+        ),
+        isEmpty);
+  });
+
+  test('sin informes limita a hoy y recalcula al cambiar el día', () async {
+    var now = DateTime(2026, 9, 13, 23, 59);
+    final repository = ReportRepository(appDatabase, clock: () => now);
+    final bounds = await repository.loadDateBounds();
+    expect(bounds.firstDate, DateTime(2026, 9, 13));
+    expect(bounds.lastDate, bounds.firstDate);
+    await expectLater(
+        repository.queryActiveReportsForAdmin(
+          filter: ReportQueryFilter(from: DateTime(1900)),
+        ),
+        throwsA(isA<ReportValidationException>()));
+    expect(
+        await repository.queryActiveReportsForAdmin(
+          filter: ReportQueryFilter(
+              from: DateTime(2026, 9, 13), to: DateTime(2026, 9, 14)),
+        ),
+        isEmpty);
+    now = DateTime(2026, 9, 14);
+    expect((await repository.loadDateBounds()).lastDate, now);
+    final stats = await repository.loadAdminDashboard(referenceDate: now);
+    expect(stats.totalActiveReports, 0);
+  });
+
+  test(
+      'consultas de ambos roles rechazan rangos invertidos, antiguos y futuros',
+      () async {
+    final police = await _createPolice(userRepository, policeRepository);
+    await reportRepository.finalizeReport(_validReportInput(
+      idPolicia: police,
+      fechaHoraHecho: DateTime(2026, 1, 10, 8),
+    ));
+    final invalidFilters = [
+      ReportQueryFilter(from: DateTime(2026, 8), to: DateTime(2026, 1, 31)),
+      ReportQueryFilter(from: DateTime(2026, 9, 14)),
+      ReportQueryFilter(to: DateTime(2026, 9, 15)),
+      ReportQueryFilter(from: DateTime(1900)),
+      ReportQueryFilter(to: DateTime(2026, 1, 10)),
+      ReportQueryFilter(from: DateTime(2026, 1, 10), to: DateTime(2026, 1, 10)),
+    ];
+    for (final filter in invalidFilters) {
+      await expectLater(
+          reportRepository.queryActiveReportsForAdmin(filter: filter),
+          throwsA(isA<ReportValidationException>()));
+      await expectLater(
+          reportRepository.queryActiveReportsForPolice(
+              idPolicia: police, filter: filter),
+          throwsA(isA<ReportValidationException>()));
+    }
+    for (final date in [DateTime(1900), DateTime(2026, 9, 14)]) {
+      await expectLater(
+          reportRepository.loadAdminDashboard(
+              referenceDate: DateTime(2026, 9, 13), selectedDate: date),
+          throwsA(isA<ReportValidationException>()));
+      await expectLater(
+          reportRepository.loadPoliceDashboard(
+              idPolicia: police,
+              referenceDate: DateTime(2026, 9, 13),
+              selectedDate: date),
+          throwsA(isA<ReportValidationException>()));
+    }
+  });
+
+  test('mismo día incluye el primer informe y hoy completo sin incluir mañana',
+      () async {
+    final police = await _createPolice(userRepository, policeRepository);
+    final todayReport = await reportRepository.finalizeReport(_validReportInput(
+      idPolicia: police,
+      fechaHoraHecho: DateTime(2026, 9, 13, 23, 59, 59),
+    ));
+    await reportRepository.finalizeReport(_validReportInput(
+      idPolicia: police,
+      fechaHoraHecho: DateTime(2026, 9, 14),
+    ));
+    final filter = ReportQueryFilter(
+        from: DateTime(2026, 9, 13), to: DateTime(2026, 9, 14));
+    expect(
+        (await reportRepository.queryActiveReportsForAdmin(filter: filter))
+            .single
+            .idInforme,
+        todayReport.idInforme);
+    expect(
+        (await reportRepository.queryActiveReportsForPolice(
+                idPolicia: police, filter: filter))
+            .single
+            .idInforme,
+        todayReport.idInforme);
+    final bounds = await reportRepository.loadDateBounds();
+    expect(bounds.firstDate, DateTime(2026, 9, 13));
+    expect(
+        (await reportRepository.loadAdminDashboard(
+                referenceDate: DateTime(2026, 9, 13),
+                selectedDate: bounds.firstDate))
+            .reportsBySelectedDate,
+        1);
+  });
+
   test('dashboard calcula totales dia mes fecha policia y omite inactivos',
       () async {
     final firstPolice = await _createPolice(userRepository, policeRepository);
@@ -411,8 +541,8 @@ void main() {
     );
     final emptyResults = await reportRepository.queryActiveReportsForAdmin(
       filter: ReportQueryFilter(
-        from: DateTime.utc(2025, 1, 1),
-        to: DateTime.utc(2025, 1, 2),
+        from: DateTime.utc(2026, 6, 1),
+        to: DateTime.utc(2026, 6, 2),
       ),
     );
 

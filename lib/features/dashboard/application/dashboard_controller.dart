@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../../data/models/report_date_bounds.dart';
 import '../../../shared/user_message.dart';
 
 import '../../../data/repositories/report_repository.dart';
@@ -37,6 +38,12 @@ class DashboardController extends ChangeNotifier {
   DashboardStats? get stats => _stats;
   DateTime get selectedDate => _selectedDate;
 
+  Future<ReportDateBounds> loadDateBounds(AuthenticatedUser actor) {
+    return _repository.loadDateBounds(
+      idPolicia: actor.isAdmin ? null : actor.requiredPoliceId,
+    );
+  }
+
   Future<void> load(
     AuthenticatedUser actor, {
     DateTime? referenceDate,
@@ -45,24 +52,25 @@ class DashboardController extends ChangeNotifier {
     final generation = ++_loadGeneration;
     _isLoading = true;
     _errorMessage = null;
-    if (selectedDate != null) {
-      _selectedDate = selectedDate;
-    }
     notifyListeners();
 
     try {
-      final reference = referenceDate ?? DateTime.now();
+      final bounds = await loadDateBounds(actor);
+      if (generation != _loadGeneration) return;
+      final queryDate = selectedDate ?? bounds.clamp(_selectedDate);
+      final reference = referenceDate ?? _repository.clock();
       final stats = actor.role == AppRole.admin
           ? await _repository.loadAdminDashboard(
               referenceDate: reference,
-              selectedDate: _selectedDate,
+              selectedDate: queryDate,
             )
           : await _repository.loadPoliceDashboard(
               idPolicia: actor.requiredPoliceId,
               referenceDate: reference,
-              selectedDate: _selectedDate,
+              selectedDate: queryDate,
             );
       if (generation != _loadGeneration) return;
+      _selectedDate = queryDate;
       _stats = stats;
     } catch (error) {
       if (generation != _loadGeneration) return;
