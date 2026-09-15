@@ -14,21 +14,45 @@ class InstitutionalQrPolice {
   final String unidad;
 }
 
+class InstitutionalQrReport {
+  const InstitutionalQrReport({
+    required this.numeroCaso,
+    required this.fechaRegistro,
+  });
+
+  final String numeroCaso;
+  final DateTime fechaRegistro;
+
+  String toStructuredText() {
+    final date = fechaRegistro;
+    String two(int value) => value.toString().padLeft(2, '0');
+    final timestamp = '${two(date.day)}/${two(date.month)}/${date.year} '
+        '${two(date.hour)}:${two(date.minute)}:${two(date.second)}'
+        '${date.isUtc ? ' UTC' : ''}';
+    return 'INFORME DE ACCIÓN DIRECTA\n'
+        'Número de caso / correlativo: $numeroCaso\n'
+        'Fecha y hora de registro definitivo: $timestamp';
+  }
+}
+
 class InstitutionalQrPayload {
   const InstitutionalQrPayload({
     required this.nombreCompleto,
     required this.grado,
     required this.numeroPlaca,
     required this.unidad,
+    this.report,
   });
 
   final String nombreCompleto;
   final String grado;
   final String numeroPlaca;
   final String unidad;
+  final InstitutionalQrReport? report;
 
   String toStructuredText() {
     return [
+      if (report != null) report!.toStructuredText(),
       'FUNCIONARIO POLICIAL',
       'Nombre completo: $nombreCompleto',
       'Grado: $grado',
@@ -64,7 +88,8 @@ class InstitutionalQrCode {
 class InstitutionalQrService {
   const InstitutionalQrService();
 
-  InstitutionalQrPayload buildPayload(InstitutionalQrPolice police) {
+  InstitutionalQrPayload buildPayload(InstitutionalQrPolice police,
+      {InstitutionalQrReport? report}) {
     return InstitutionalQrPayload(
       nombreCompleto: _requiredText(
         police.nombreCompleto,
@@ -73,11 +98,27 @@ class InstitutionalQrService {
       grado: _requiredText(police.grado, 'grado'),
       numeroPlaca: _requiredText(police.numeroPlaca, 'número de placa'),
       unidad: _requiredText(police.unidad, 'unidad'),
+      report: report == null
+          ? null
+          : InstitutionalQrReport(
+              numeroCaso: _requiredText(report.numeroCaso, 'número de caso'),
+              fechaRegistro: report.fechaRegistro,
+            ),
     );
   }
 
   InstitutionalQrCode generateForPolice(InstitutionalQrPolice police) {
-    final payload = buildPayload(police);
+    return _generate(buildPayload(police));
+  }
+
+  InstitutionalQrCode generateForReport({
+    required InstitutionalQrPolice police,
+    required InstitutionalQrReport report,
+  }) {
+    return _generate(buildPayload(police, report: report));
+  }
+
+  InstitutionalQrCode _generate(InstitutionalQrPayload payload) {
     final code = QrCode.fromData(
       data: payload.toStructuredText(),
       errorCorrectLevel: QrErrorCorrectLevel.M,

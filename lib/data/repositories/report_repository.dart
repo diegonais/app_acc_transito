@@ -912,16 +912,11 @@ class ReportRepository {
     for (final (index, conductor) in input.conductores.indexed) {
       requiredText(
           'nombre del conductor ${index + 1}', conductor.nombreCompleto);
-      if (conductor.edad == null) {
-        messages.add('Debe ingresar edad del conductor ${index + 1}.');
-      } else if (conductor.edad! < 0) {
+      if (conductor.edad != null && conductor.edad! < 0) {
         messages.add('La edad del conductor ${index + 1} no es válida.');
       }
       requiredText('licencia del conductor ${index + 1}', conductor.licencia);
       requiredText('categoría del conductor ${index + 1}', conductor.categoria);
-      requiredText('domicilio del conductor ${index + 1}', conductor.domicilio);
-      requiredText('zona del conductor ${index + 1}', conductor.zona);
-      requiredText('contactos del conductor ${index + 1}', conductor.contactos);
     }
     for (final (index, vehiculo) in input.vehiculos.indexed) {
       requiredText('placa del vehículo ${index + 1}', vehiculo.placa);

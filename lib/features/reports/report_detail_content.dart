@@ -147,7 +147,13 @@ class ReportDetailContent extends StatelessWidget {
                         if (!snapshot.hasData)
                           return const LinearProgressIndicator(
                               semanticsLabel: 'Cargando funcionario');
-                        return ReportOfficerIdentity(owner: snapshot.data!);
+                        return ReportOfficerIdentity(
+                          owner: snapshot.data!,
+                          report: InstitutionalQrReport(
+                            numeroCaso: report.numeroCaso,
+                            fechaRegistro: report.fechaCreacion,
+                          ),
+                        );
                       })),
             ]),
       )));
@@ -296,8 +302,13 @@ class _ReportIdentity extends StatelessWidget {
 }
 
 class ReportOfficerIdentity extends StatefulWidget {
-  const ReportOfficerIdentity({super.key, required this.owner});
+  const ReportOfficerIdentity({
+    super.key,
+    required this.owner,
+    required this.report,
+  });
   final InstitutionalQrPolice owner;
+  final InstitutionalQrReport report;
   @override
   State<ReportOfficerIdentity> createState() => _ReportOfficerIdentityState();
 }
@@ -313,12 +324,19 @@ class _ReportOfficerIdentityState extends State<ReportOfficerIdentity> {
   @override
   void didUpdateWidget(ReportOfficerIdentity oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.owner != widget.owner) _generate();
+    if (oldWidget.owner != widget.owner ||
+        oldWidget.report.numeroCaso != widget.report.numeroCaso ||
+        oldWidget.report.fechaRegistro != widget.report.fechaRegistro) {
+      _generate();
+    }
   }
 
   void _generate() {
     try {
-      _qr = const InstitutionalQrService().generateForPolice(widget.owner);
+      _qr = const InstitutionalQrService().generateForReport(
+        police: widget.owner,
+        report: widget.report,
+      );
     } on ArgumentError {
       _qr = null;
     }

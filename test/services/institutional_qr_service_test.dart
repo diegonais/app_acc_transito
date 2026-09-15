@@ -46,6 +46,45 @@ void main() {
     expect(qr.payload.toStructuredText(), contains('Ana Quispe Rojas'));
   });
 
+  test('QR de informe incluye caso y registro definitivo con segundos', () {
+    final report = InstitutionalQrReport(
+        numeroCaso: '2026-000042',
+        fechaRegistro: DateTime(2026, 9, 14, 21, 7, 9));
+    final code = service.generateForReport(police: police, report: report);
+    expect(
+        code.payload.toStructuredText(),
+        'INFORME DE ACCIÓN DIRECTA\n'
+        'Número de caso / correlativo: 2026-000042\n'
+        'Fecha y hora de registro definitivo: 14/09/2026 21:07:09\n'
+        '${service.buildPayload(police).toStructuredText()}');
+    expect(code.hasDarkModules, isTrue);
+    expect(
+        service
+            .generateForReport(police: police, report: report)
+            .payload
+            .toStructuredText(),
+        code.payload.toStructuredText());
+  });
+
+  test('QR identifica fechas UTC y rechaza un número de caso vacío', () {
+    final timestamp = DateTime.utc(2026, 9, 14, 21, 7, 9);
+    expect(
+        service
+            .generateForReport(
+                police: police,
+                report: InstitutionalQrReport(
+                    numeroCaso: '2026-000042', fechaRegistro: timestamp))
+            .payload
+            .toStructuredText(),
+        contains('14/09/2026 21:07:09 UTC'));
+    expect(
+        () => service.generateForReport(
+            police: police,
+            report: InstitutionalQrReport(
+                numeroCaso: ' ', fechaRegistro: timestamp)),
+        throwsArgumentError);
+  });
+
   test('rechaza payload incompleto', () {
     expect(
       () => service.buildPayload(

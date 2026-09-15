@@ -570,13 +570,24 @@ class DirectActionReportFormPage extends StatefulWidget {
 class _DirectActionReportFormPageState
     extends State<DirectActionReportFormPage> {
   static const _totalSteps = 6;
+  static const _naturalezas = [
+    'Colisión',
+    'Choque',
+    'Choque a objeto fijo/vehículo detenido',
+    'Atropello',
+    'Vuelco',
+    'Caída de persona o carga',
+    'Embarrancamiento / Deslizamiento',
+    'Incendio de vehículo',
+    'Otros',
+  ];
   final _stepFormKeys =
       List.generate(_totalSteps, (_) => GlobalKey<FormState>());
   final _mapBoundaryKey = GlobalKey();
   final _epi = TextEditingController();
   final _llegada = TextEditingController();
   final _hecho = TextEditingController();
-  final _naturaleza = TextEditingController();
+  String? _naturaleza;
   final _lugar = TextEditingController();
   final _denuncianteNombre = TextEditingController();
   final _denuncianteDocumento = TextEditingController();
@@ -628,7 +639,6 @@ class _DirectActionReportFormPageState
     _epi.dispose();
     _llegada.dispose();
     _hecho.dispose();
-    _naturaleza.dispose();
     _lugar.dispose();
     _denuncianteNombre.dispose();
     _denuncianteDocumento.dispose();
@@ -741,7 +751,27 @@ class _DirectActionReportFormPageState
             _hecho.text = _formatDateTime(value);
           }),
         ),
-        _field(_naturaleza, 'Naturaleza'),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: DropdownButtonFormField<String>(
+            initialValue: _naturaleza,
+            isExpanded: true,
+            itemHeight: null,
+            decoration: const InputDecoration(labelText: 'Naturaleza'),
+            hint: const Text('Seleccione una opción'),
+            items: _naturalezas
+                .map((value) => DropdownMenuItem(
+                      value: value,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Text(value),
+                      ),
+                    ))
+                .toList(),
+            validator: (value) => value == null ? 'Campo obligatorio.' : null,
+            onChanged: (value) => setState(() => _naturaleza = value),
+          ),
+        ),
         _field(_lugar, 'Lugar'),
       ],
     );
@@ -930,7 +960,7 @@ class _DirectActionReportFormPageState
               subtitle: [
                 'Licencia: ${driver.licencia}',
                 'Categoría: ${driver.categoria}',
-                'Contactos: ${driver.contactos}',
+                if (driver.contactos != null) 'Contactos: ${driver.contactos}',
               ].join(' / '),
               onTap: () => _editDriver(index),
               onDelete: () => _removeDriver(index),
@@ -1070,7 +1100,7 @@ class _DirectActionReportFormPageState
     if (_isBlank(_epi.text) ||
         _fechaHoraLlegada == null ||
         _fechaHoraHecho == null ||
-        _isBlank(_naturaleza.text) ||
+        _naturaleza == null ||
         _isBlank(_lugar.text)) {
       return 0;
     }
@@ -1100,7 +1130,7 @@ class _DirectActionReportFormPageState
       epi: _epi.text,
       fechaHoraLlegada: _fechaHoraLlegada,
       fechaHoraHecho: _fechaHoraHecho,
-      naturaleza: _naturaleza.text,
+      naturaleza: _naturaleza ?? '',
       lugar: _lugar.text,
       denuncianteNombre: _denuncianteNombre.text,
       denuncianteDocumento: _denuncianteDocumento.text,
@@ -1357,7 +1387,7 @@ class _DirectActionReportFormPageState
     _epi.clear();
     _llegada.clear();
     _hecho.clear();
-    _naturaleza.clear();
+    _naturaleza = null;
     _lugar.clear();
     _denuncianteNombre.clear();
     _denuncianteDocumento.clear();
@@ -2088,18 +2118,26 @@ class _DriverDialogState extends State<_DriverDialog> {
       submitLabel: widget.initialValue == null ? 'Agregar' : 'Guardar',
       formKey: _formKey,
       children: [
+        const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: Text(
+            'Nombre completo, licencia y categoría son obligatorios. '
+            'Los demás campos son opcionales.',
+          ),
+        ),
         _field(_nombre, 'Nombre completo'),
         _field(
           _edad,
           'Edad',
+          required: false,
           keyboardType: TextInputType.number,
-          validator: _validateRequiredInt,
+          validator: _validateOptionalInt,
         ),
         _field(_licencia, 'Licencia'),
         _field(_categoria, 'Categoría'),
-        _field(_domicilio, 'Domicilio'),
-        _field(_zona, 'Zona'),
-        _field(_contactos, 'Contactos'),
+        _field(_domicilio, 'Domicilio', required: false),
+        _field(_zona, 'Zona', required: false),
+        _field(_contactos, 'Contactos', required: false),
         _field(_condicionEntrega, 'Condición de entrega', required: false),
       ],
       onSubmit: () {

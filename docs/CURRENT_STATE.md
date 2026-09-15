@@ -1,4 +1,93 @@
-# Estado actual — Filtros de fecha validados en consultas e Inicio
+# Estado actual — QR del informe unificado en app y PDF
+
+## Actualización 2026-09-14 — QR de la vista de detalle
+
+La visualización del QR en la app, antes de generar el PDF, usa ahora
+`generateForReport` con el número de caso y `fechaCreacion` del informe visible.
+Su contenido coincide exactamente con el QR del PDF: datos del policía,
+correlativo completo y fecha/hora del registro definitivo con segundos.
+El QR se actualiza si cambian el caso o la fecha, incluso con el mismo policía.
+Se conserva la presentación de la sección de identidad de la app.
+
+Verificación: `flutter analyze` sin incidencias y **100 pruebas correctas** con
+`flutter test --dart-define=UI_REVIEW_OUTPUT=<ruta temporal>/app.png`. La prueba
+del detalle compara el contenido del QR con el PDF generado para el mismo
+informe. Nueva prueba de actualización por caso y fecha; permanecen correctas
+las pruebas de consulta a 320/360/412/800 px con texto ampliado. ZXing decodificó
+el QR de una captura de widgets y confirmó caso, fecha y datos con ñ/tildes;
+captura revisada visualmente en `%TEMP%/transito-qr-20260914/app-qr.png`.
+
+`dart format lib test` correcto (69 archivos); `dart format .` mantiene el fallo
+preexistente por residuos de Gradle en `build/`. Sin cambios de persistencia,
+dependencias ni generación del PDF en esta intervención. Se preservan todos
+los ajustes previos de la sesión. Sin APK nuevo ni escaneo en teléfono real.
+DECISIONS extiende al QR de la app el contenido aprobado. La siguiente fase
+planificada sigue siendo Fase 15 (manual).
+
+# Historial — PDF sin apartado de funcionario y QR del informe
+
+## Actualización 2026-09-14 — Identificación del informe en el QR
+
+- Retirado del PDF el título y la tabla «Funcionario responsable». Se conserva
+  el QR institucional y el espacio de firma; la consulta en pantalla no cambió.
+- El QR del PDF agrega el número de caso completo (`AAAA-NNNNNN`) y la fecha y
+  hora del registro definitivo (`fechaCreacion`), con segundos. El usuario
+  confirmó que no corresponde usar la hora de generación de cada archivo.
+  La fecha guardada se conserva; si está en UTC, se indica expresamente.
+- La información existente del policía continúa dentro del QR. Su generación
+  institucional sin datos del informe sigue disponible para la vista de detalle.
+- QR ampliado de 140 a 160 puntos, margen blanco de 12 puntos y corrección de
+  errores media. QR y firma permanecen juntos al paginar.
+- Sin cambios de SQLite, dependencias de la app, correlativos, guardado,
+  compartir o impresión. Los PDF previamente exportados no se reescriben;
+  el cambio se aplica al volver a generarlos. DECISIONS actualizado con lo aprobado.
+
+Verificación: `flutter analyze` sin incidencias y **99 pruebas correctas** con
+`flutter test --dart-define=PDF_REVIEW_OUTPUT=<ruta temporal>/informe.pdf`.
+Incluyen fecha/caso del registro, segundos, UTC, caso vacío y conservación del
+contenido del QR al regenerar. Se renderizaron siete PDF sintéticos (36 páginas,
+entre 2 y 14 por documento) con Poppler y se revisó la disposición de las páginas.
+ZXing leyó los siete QR desde los renderizados y verificó caso, fecha/hora y
+datos del policía, incluyendo ñ y tildes. Extracción con pypdf confirmó la
+ausencia del apartado eliminado y la presencia del QR y la firma.
+
+`dart format lib test` correcto (69 archivos); `dart format .` mantiene el fallo
+preexistente por residuos de Gradle en `build/`. `git diff --check` correcto.
+Evidencias sintéticas en `%TEMP%/transito-qr-20260914`, fuera del versionado;
+ZXing se instaló únicamente en el runtime de herramientas para esta verificación.
+Sin APK nuevo ni prueba de escaneo/impresión en teléfono. Se preservan los cambios
+del formulario de esta misma sesión. La siguiente fase planificada sigue siendo
+Fase 15 (manual).
+
+# Historial — Naturaleza y datos obligatorios de conductores
+
+## Actualización 2026-09-14 — Ajustes solicitados del formulario
+
+- Paso 1: Naturaleza usa un selector obligatorio con las nueve opciones
+  solicitadas, sin selección automática. Conserva el valor al cambiar de paso
+  y admite etiquetas largas en teléfonos estrechos.
+- Paso 5: al agregar o revisar un conductor, solo nombre completo, licencia
+  y categoría son obligatorios. Edad, domicilio, zona, contactos y condición
+  de entrega pueden quedar vacíos. La edad ingresada conserva su validación
+  como entero no negativo. Se informa la regla en el diálogo.
+- Repositorio alineado con la misma regla antes de la transacción, sin
+  debilitar la validación de vehículos ni personas involucradas. El resumen
+  del conductor omite contactos vacíos para evitar mostrar `null`.
+- Sin cambios de esquema SQLite, dependencias, correlativos ni informes
+  históricos. DECISIONS registra los dos requerimientos del usuario.
+
+Verificación: `flutter analyze` sin incidencias; `flutter test` con **97 pruebas
+correctas** (dos nuevas y ampliación del recorrido del wizard). Se comprobó
+selección de las nueve opciones a 320 px, navegación y finalización a 360 px,
+rechazo de obligatorios vacíos o con espacios, revisión del conductor y edad
+inválida. SQLite confirma el guardado de campos opcionales vacíos, la relación
+vehículo/conductor y que los intentos inválidos no persisten ni consumen caso.
+`dart format lib test` correcto (69 archivos); `dart format .` mantiene el fallo
+preexistente por residuos de Gradle bajo `build/`. `git diff --check` correcto.
+Sin verificación en dispositivo ni APK nuevo. La siguiente fase planificada
+sigue siendo Fase 15; este ajuste no genera el manual.
+
+# Historial — Filtros de fecha validados en consultas e Inicio
 
 ## Actualización 2026-09-13 — Límites de búsqueda por fecha
 

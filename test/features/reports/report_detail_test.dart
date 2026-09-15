@@ -6,6 +6,7 @@ import 'package:app_acc_transito/data/repositories/report_repository.dart';
 import 'package:app_acc_transito/features/reports/report_detail_content.dart';
 import 'package:app_acc_transito/features/reports/widgets/report_detail_widgets.dart';
 import 'package:app_acc_transito/services/media/evidence_photo.dart';
+import 'package:app_acc_transito/services/pdf/direct_action_report_pdf_service.dart';
 import 'package:app_acc_transito/services/qr/institutional_qr_service.dart';
 import 'package:app_acc_transito/shared/report_format.dart';
 import 'package:flutter/material.dart';
@@ -182,6 +183,51 @@ void main() {
     }
     expect(find.byType(InstitutionalQrView), findsOneWidget);
     expect(find.text('PL-Ñ01'), findsOneWidget);
+    final code = tester
+        .widget<InstitutionalQrView>(find.byType(InstitutionalQrView))
+        .code;
+    expect(code.payload.toStructuredText(),
+        contains('Número de caso / correlativo: 2026-000001'));
+    expect(code.payload.toStructuredText(),
+        contains('Fecha y hora de registro definitivo: 06/09/2026 00:00:00'));
+    final pdf = await DirectActionReportPdfService()
+        .build(report: fixture(), owner: owner);
+    expect(code.payload.toStructuredText(), pdf.qrPayload.toStructuredText());
+  });
+
+  testWidgets(
+      'QR en pantalla se actualiza al cambiar caso o fecha con el mismo policía',
+      (tester) async {
+    Future<void> show(String caseNumber, DateTime date) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: ReportOfficerIdentity(
+          owner: owner,
+          report: InstitutionalQrReport(
+            numeroCaso: caseNumber,
+            fechaRegistro: date,
+          ),
+        )),
+      ));
+      await tester.pumpAndSettle();
+    }
+
+    String payload() => tester
+        .widget<InstitutionalQrView>(find.byType(InstitutionalQrView))
+        .code
+        .payload
+        .toStructuredText();
+    final firstDate = DateTime(2026, 9, 14, 21, 7, 9);
+    await show('2026-000001', firstDate);
+    expect(payload(), contains('14/09/2026 21:07:09'));
+    await show('2026-000002', firstDate);
+    expect(payload(), contains('2026-000002'));
+    expect(payload(), isNot(contains('2026-000001')));
+    await show('2026-000002', DateTime(2026, 9, 15, 8, 9, 10));
+    expect(payload(), contains('15/09/2026 08:09:10'));
+    expect(payload(), isNot(contains('14/09/2026')));
+    expect(payload(), contains('Nombre completo: José Muñoz Peña'));
+    expect(tester.takeException(), isNull);
   });
 
   for (final width in [320.0, 360.0, 412.0, 800.0]) {

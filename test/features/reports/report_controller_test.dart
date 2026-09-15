@@ -393,8 +393,8 @@ void main() {
           (error) => error.messages,
           'messages',
           containsAll([
-            'Debe ingresar edad del conductor 1.',
-            'Debe ingresar contactos del conductor 1.',
+            'Debe ingresar licencia del conductor 1.',
+            'Debe ingresar categoría del conductor 1.',
             'Debe ingresar placa del vehículo 1.',
             'El vehículo 1 referencia un conductor inválido.',
             'El tipo de persona 1 no es válido.',
@@ -406,6 +406,67 @@ void main() {
 
     final db = await appDatabase.instance;
     expect(await db.query('informes'), isEmpty);
+  });
+
+  test('conductor exige solo nombre, licencia y categoría antes de persistir',
+      () async {
+    final police = await _createPoliceSession(userRepository, policeRepository,
+        username: 'policia.conductor', plate: 'PL-MIN');
+    const valid = DriverInput(
+        nombreCompleto: 'José Muñoz', licencia: 'LP-123', categoria: 'A');
+    final invalid = [
+      (
+        valid.copyWith(nombreCompleto: '  '),
+        'Debe ingresar nombre del conductor 2.'
+      ),
+      (valid.copyWith(licencia: ''), 'Debe ingresar licencia del conductor 2.'),
+      (
+        valid.copyWith(licencia: '  '),
+        'Debe ingresar licencia del conductor 2.'
+      ),
+      (
+        valid.copyWith(categoria: ''),
+        'Debe ingresar categoría del conductor 2.'
+      ),
+      (
+        valid.copyWith(categoria: '  '),
+        'Debe ingresar categoría del conductor 2.'
+      ),
+      (
+        const DriverInput(nombreCompleto: 'José', categoria: 'A'),
+        'Debe ingresar licencia del conductor 2.'
+      ),
+      (
+        const DriverInput(nombreCompleto: 'José', licencia: 'LP-123'),
+        'Debe ingresar categoría del conductor 2.'
+      ),
+      (valid.copyWith(edad: -1), 'La edad del conductor 2 no es válida.'),
+    ];
+    for (final (driver, message) in invalid) {
+      await expectLater(
+          controller.finalize(
+              actor: police, draft: _validDraft(conductores: [valid, driver])),
+          throwsA(isA<ReportValidationException>()
+              .having((error) => error.messages, 'messages', [message])));
+    }
+    final db = await appDatabase.instance;
+    expect(await db.query('informes'), isEmpty);
+    expect(await db.query('conductores'), isEmpty);
+    final saved = await controller.finalize(
+        actor: police, draft: _validDraft(conductores: [valid]));
+    expect(saved.numeroCaso, '2026-000001');
+    final report = await controller.findReadableDetail(
+        actor: police, idInforme: saved.idInforme);
+    final driver = report.conductores.single;
+    expect(driver.nombreCompleto, valid.nombreCompleto);
+    expect(driver.licencia, valid.licencia);
+    expect(driver.categoria, valid.categoria);
+    expect(driver.edad, isNull);
+    expect(driver.domicilio, isNull);
+    expect(driver.zona, isNull);
+    expect(driver.contactos, isNull);
+    expect(driver.condicionEntrega, isNull);
+    expect(report.vehiculos.single.idConductor, driver.idConductor);
   });
 
   test('POLICE consulta solo sus informes activos', () async {

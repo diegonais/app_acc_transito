@@ -32,7 +32,13 @@ class DirectActionReportPdfService {
     required ReportRecord report,
     required InstitutionalQrPolice owner,
   }) async {
-    final qr = _qrService.generateForPolice(owner);
+    final qr = _qrService.generateForReport(
+      police: owner,
+      report: InstitutionalQrReport(
+        numeroCaso: report.numeroCaso,
+        fechaRegistro: report.fechaCreacion,
+      ),
+    );
     final photos = await _loadPhotos(report.fotografias);
     final sketch = await _loadImage(report.rutaCroquis);
     final logoData = await rootBundle.load(AppConstants.logoAsset);
@@ -112,7 +118,7 @@ class DirectActionReportPdfService {
           ),
           ..._buildSketch(sketch, report.rutaCroquis),
           ..._buildPhotos(photos),
-          ..._buildPoliceAndQr(owner, qr.payload.toStructuredText()),
+          _buildQrAndSignature(qr.payload.toStructuredText()),
         ],
       ),
     );
@@ -315,54 +321,39 @@ class DirectActionReportPdfService {
               ]),
       );
 
-  List<pw.Widget> _buildPoliceAndQr(
-      InstitutionalQrPolice owner, String payload) {
-    final content = <pw.Widget>[
-      ..._section(
-          'Funcionario responsable',
-          _table([
-            ['Nombre completo', owner.nombreCompleto],
-            ['Grado', owner.grado],
-            ['Número de placa', owner.numeroPlaca],
-            ['Unidad', owner.unidad],
-          ])).skip(1),
-      pw.SizedBox(height: 18),
-      pw.Row(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
-        pw.Column(children: [
-          pw.Container(
-              width: 140,
-              height: 140,
-              color: PdfColors.white,
-              padding: const pw.EdgeInsets.all(10),
-              child: pw.BarcodeWidget(
-                  data: payload,
-                  barcode: pw.Barcode.qrCode(),
-                  drawText: false)),
-          pw.Text('QR institucional', style: const pw.TextStyle(fontSize: 9)),
+  pw.Widget _buildQrAndSignature(String payload) {
+    return pw.Inseparable(
+      child: pw.Column(children: [
+        pw.SizedBox(height: 18),
+        pw.Row(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
+          pw.Column(children: [
+            pw.Container(
+                width: 160,
+                height: 160,
+                color: PdfColors.white,
+                padding: const pw.EdgeInsets.all(12),
+                child: pw.BarcodeWidget(
+                    data: payload,
+                    barcode: pw.Barcode.qrCode(
+                      errorCorrectLevel: pw.BarcodeQRCorrectionLevel.medium,
+                    ),
+                    drawText: false)),
+            pw.Text('QR institucional', style: const pw.TextStyle(fontSize: 9)),
+          ]),
+          pw.SizedBox(width: 40),
+          pw.Expanded(
+              child: pw.Padding(
+                  padding: const pw.EdgeInsets.only(bottom: 8),
+                  child: pw.Column(children: [
+                    pw.Divider(color: PdfColors.grey700, thickness: 0.6),
+                    pw.SizedBox(height: 6),
+                    pw.Text('Firma del policía que realizó\nla Acción Directa',
+                        textAlign: pw.TextAlign.center,
+                        style: const pw.TextStyle(fontSize: 10)),
+                  ]))),
         ]),
-        pw.SizedBox(width: 40),
-        pw.Expanded(
-            child: pw.Padding(
-                padding: const pw.EdgeInsets.only(bottom: 8),
-                child: pw.Column(children: [
-                  pw.Divider(color: PdfColors.grey700, thickness: 0.6),
-                  pw.SizedBox(height: 6),
-                  pw.Text('Firma del policía que realizó\nla Acción Directa',
-                      textAlign: pw.TextAlign.center,
-                      style: const pw.TextStyle(fontSize: 10)),
-                ]))),
       ]),
-    ];
-    if ([owner.nombreCompleto, owner.grado, owner.numeroPlaca, owner.unidad]
-        .every((value) => value.length < 120)) {
-      return [
-        pw.Inseparable(
-            child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-                children: content))
-      ];
-    }
-    return [pw.NewPage(freeSpace: 110), ...content];
+    );
   }
 
   pw.Widget _photoTile(_LoadedPhoto photo) {

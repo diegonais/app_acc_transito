@@ -41,8 +41,13 @@ void main() {
     await _fill(tester, 'EPI / Estación Policial Integral', 'EPI Central');
     await _date(tester, 'Fecha y hora de llegada');
     await _date(tester, 'Fecha y hora del hecho');
-    await _fill(tester, 'Naturaleza', 'Colisión');
     await _fill(tester, 'Lugar', 'Ubicación de José Muñoz Peña');
+    await _tap(tester, 'Siguiente');
+    expect(find.text('Campo obligatorio.'), findsOneWidget);
+    await _selectNature(tester, 'Choque a objeto fijo/vehículo detenido');
+    await _tap(tester, 'Siguiente');
+    await _tap(tester, 'Anterior');
+    expect(find.text('Choque a objeto fijo/vehículo detenido'), findsOneWidget);
     await _tap(tester, 'Siguiente');
     await _fill(tester, 'Denunciante', 'José Muñoz Peña');
     await _fill(tester, 'Contacto del denunciante', 'No existe');
@@ -63,10 +68,47 @@ void main() {
     expect(find.text('Ingrese un valor entre -90 y 90.'), findsOneWidget);
     await _fill(tester, 'Latitud', '');
     await _tap(tester, 'Siguiente');
+    await _tap(tester, 'Agregar');
+    await _fill(tester, 'Nombre completo', '   ');
+    await _fill(tester, 'Licencia', '   ');
+    await _fill(tester, 'Categoría', '   ');
+    await _tap(tester, 'Agregar');
+    expect(find.text('Campo obligatorio.'), findsNWidgets(3));
+    await _fill(tester, 'Nombre completo', ' José Muñoz ');
+    await _tap(tester, 'Agregar');
+    expect(find.text('Campo obligatorio.'), findsNWidgets(2));
+    await _fill(tester, 'Licencia', ' LP-123 ');
+    await _tap(tester, 'Agregar');
+    expect(find.text('Campo obligatorio.'), findsOneWidget);
+    await _fill(tester, 'Categoría', ' A ');
+    await _fill(tester, 'Edad', '-1');
+    await _tap(tester, 'Agregar');
+    expect(find.text('Ingrese un número válido.'), findsOneWidget);
+    await _fill(tester, 'Edad', '');
+    await _tap(tester, 'Agregar');
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.textContaining('Contactos: null'), findsNothing);
+    await _tap(tester, 'José Muñoz');
+    await _fill(tester, 'Licencia', '');
+    await _tap(tester, 'Guardar');
+    expect(find.text('Campo obligatorio.'), findsOneWidget);
+    await _fill(tester, 'Licencia', 'LP-456');
+    await _tap(tester, 'Guardar');
     await _tap(tester, 'Siguiente');
     await _tap(tester, 'Finalizar informe');
     expect(controller.calls, 1);
     expect(controller.submitted!.denuncianteNombre, 'José Muñoz Peña');
+    expect(controller.submitted!.naturaleza,
+        'Choque a objeto fijo/vehículo detenido');
+    final driver = controller.submitted!.conductores.single;
+    expect(driver.nombreCompleto, 'José Muñoz');
+    expect(driver.licencia, 'LP-456');
+    expect(driver.categoria, 'A');
+    expect(driver.edad, isNull);
+    expect(driver.domicilio, isNull);
+    expect(driver.zona, isNull);
+    expect(driver.contactos, isNull);
+    expect(driver.condicionEntrega, isNull);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.text('Cancelar informe'), findsNothing);
@@ -80,6 +122,38 @@ void main() {
     expect(find.byType(DirectActionReportFormPage), findsNothing);
     expect(find.text('Abrir formulario'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('naturaleza permite seleccionar las nueve opciones en móvil',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await _open(tester, _PendingController());
+    const options = [
+      'Colisión',
+      'Choque',
+      'Choque a objeto fijo/vehículo detenido',
+      'Atropello',
+      'Vuelco',
+      'Caída de persona o carga',
+      'Embarrancamiento / Deslizamiento',
+      'Incendio de vehículo',
+      'Otros',
+    ];
+    final dropdown = tester
+        .widget<DropdownButton<String>>(find.byType(DropdownButton<String>));
+    expect(dropdown.items!.map((item) => item.value), options);
+    for (final option in options) {
+      await _selectNature(tester, option);
+      expect(find.text(option), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    }
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Cancelar informe'), findsOneWidget);
+    await _tap(tester, 'Descartar');
   });
 
   testWidgets('volver con texto sin guardar pide confirmación y descarta',
@@ -125,6 +199,17 @@ Future<void> _fill(WidgetTester tester, String label, String value) async {
   await tester.ensureVisible(field);
   await tester.enterText(field, value);
   await tester.pump();
+}
+
+Future<void> _selectNature(WidgetTester tester, String value) async {
+  final field = find.byType(DropdownButtonFormField<String>);
+  await tester.ensureVisible(field);
+  await tester.tap(field);
+  await tester.pumpAndSettle();
+  final option = find.text(value).last;
+  await tester.ensureVisible(option);
+  await tester.tap(option);
+  await tester.pumpAndSettle();
 }
 
 Future<void> _tap(WidgetTester tester, String text) async {

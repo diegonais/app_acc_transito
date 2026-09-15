@@ -22,6 +22,9 @@ void main() {
 
   test('integra el QR institucional en el PDF generado', () async {
     final report = _report(
+      numeroCaso: '2026-000042',
+      correlativo: 42,
+      fechaCreacion: DateTime(2026, 9, 14, 21, 7, 9),
       naturaleza: 'Colisión',
       lugar: 'Av. Principal',
     );
@@ -39,9 +42,21 @@ void main() {
 
     expect(pdf.bytes, isNotEmpty);
     expect(String.fromCharCodes(pdf.bytes.take(5)), '%PDF-');
-    expect(pdf.fileName, '2026-000001_Sgto_Quispe_Ana.pdf');
+    expect(pdf.fileName, '2026-000042_Sgto_Quispe_Ana.pdf');
     expect(pdf.qrPayload.toStructuredText(), contains('Ana Quispe'));
     expect(pdf.qrPayload.toStructuredText(), contains('PL-123'));
+    expect(pdf.qrPayload.toStructuredText(),
+        contains('Número de caso / correlativo: 2026-000042'));
+    expect(pdf.qrPayload.toStructuredText(),
+        contains('Fecha y hora de registro definitivo: 14/09/2026 21:07:09'));
+    expect(pdf.qrPayload.report!.fechaRegistro, report.fechaCreacion);
+    final regenerated = await DirectActionReportPdfService().build(
+      report: report,
+      owner: owner,
+    );
+    expect(regenerated.qrPayload.toStructuredText(),
+        pdf.qrPayload.toStructuredText());
+    await _reviewOutput(pdf, 'qr-registro');
   });
 
   test('normaliza el nombre del PDF sin caracteres inseguros', () {
@@ -290,6 +305,7 @@ const _owner = InstitutionalQrPolice(
 );
 
 ReportRecord _report({
+  DateTime? fechaCreacion,
   int correlativo = 1,
   String numeroCaso = '2026-000001',
   String? naturaleza = 'Colisión',
@@ -314,7 +330,7 @@ ReportRecord _report({
     numeroCaso: numeroCaso,
     epi: 'EPI Norte',
     estado: 1,
-    fechaCreacion: DateTime.utc(2026),
+    fechaCreacion: fechaCreacion ?? DateTime.utc(2026),
     fechaModificacion: DateTime.utc(2026),
     fechaHoraLlegada: DateTime.utc(2026, 9, 5, 13, 25),
     fechaHoraHecho: DateTime.utc(2026, 9, 5, 13),
