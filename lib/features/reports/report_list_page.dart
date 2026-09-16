@@ -756,6 +756,8 @@ class _DirectActionReportFormPageState
           child: DropdownButtonFormField<String>(
             initialValue: _naturaleza,
             isExpanded: true,
+            // Las opciones pueden ocupar varias líneas con el texto ampliado.
+            isDense: false,
             itemHeight: null,
             decoration: const InputDecoration(labelText: 'Naturaleza'),
             hint: const Text('Seleccione una opción'),

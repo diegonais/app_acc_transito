@@ -1,4 +1,78 @@
-# Estado actual — QR del informe unificado en app y PDF
+# Estado actual — Visualización de Naturaleza corregida
+
+## Actualización 2026-09-16 — Texto completo en Naturaleza
+
+Corregido el recorte del valor seleccionado en el primer paso del informe.
+`DropdownButtonFormField` deja de usar altura compacta (`isDense: false`);
+mantiene altura variable para mostrar completas las opciones de varias líneas.
+Se conservan las nueve opciones, obligatoriedad, selección y persistencia.
+Sin cambios de esquema, dependencias ni reglas del informe.
+
+La prueba de regresión reprodujo el fallo anterior: el texto de «Colisión»
+recibía 8 px de altura cuando necesitaba 24 px. Las nuevas pruebas comprueban
+la altura de todas las líneas y su posición dentro del campo antes y después
+de enfocar Lugar, para opciones cortas/largas a 320/360/412 px y escalas de
+texto 1/1,5/2. Capturas de widgets revisadas en
+`%TEMP%/transito-naturaleza-20260916/`. Suite completa: **103 pruebas correctas**;
+`flutter analyze` sin incidencias. `dart format lib test`: 69 archivos correctos;
+`dart format .` mantiene el fallo previo de rutas residuales de Gradle en `build/`.
+La observación anterior de recorte de Naturaleza queda resuelta en el código;
+las comprobaciones de GPS y dispositivo físico siguen pendientes.
+
+Regenerado `docs/manual/entrega/app_transito.apk` con la corrección mediante
+`scripts/package_release.ps1`, versión 1.0.0+1 y firma release verificada con
+`apksigner`. SHA256:
+`2757F01AE3FAB52AAF67EF35FF3A7D7D674553DE876B349CD850A9EBFAF6E47D`.
+Esta copia reemplaza el APK de entrega del 15/09. La corrección, las pruebas y
+este registro se incluyen en el commit `fix(informes): corregir recorte del texto
+en naturaleza`. El APK y los archivos del manual permanecen locales según
+las reglas existentes de Git.
+
+## Actualización 2026-09-15 — APK para entrega al cliente
+
+Generado con `scripts/package_release.ps1` y copiado como
+`docs/manual/entrega/app_transito.apk`, junto al manual. Versión 1.0.0+1,
+Android 7.0 o superior (minSdk 24), APK universal de 62.025.748 bytes.
+Firma verificada con `apksigner verify --verbose`; variante release sin
+indicador debuggable. SHA256:
+`A12FA2A16929B91B1A2ED3F26C394CDD49A6CC79E167C2C15F3EA2ACEBE88F28`.
+Coincide con el APK probado durante la elaboración del manual. Sin cambios
+de código ni dependencias; se mantienen las validaciones y las observaciones
+de dispositivo físico registradas abajo. Archivo de entrega local, excluido
+de Git por las reglas existentes de `docs/`.
+
+## Actualización 2026-09-14 — Fase 15 Manual de usuario
+
+Manual detallado para Administrador y Policía en `docs/manual/entrega/`, en
+PDF y DOCX editable: 40 capítulos, 42 páginas y 32 capturas reales de la
+versión release 1.0.0+1 basada en `55305ef`. Cubre instalación, primer ADMIN,
+sesión, gestión de policías, dashboard, seis pasos del informe, evidencias,
+croquis, consultas, QR, PDF, compartir, imprimir, inactivación y problemas
+frecuentes. Incluye las nueve naturalezas, los tres obligatorios del conductor
+y la fecha/hora del registro definitivo en el QR.
+
+Se construyó el APK con `scripts/package_release.ps1` y se instaló en un AVD
+aislado API 35 (`TransitoManual20260915`, `emulator-5556`), preservando el
+emulador existente. Se finalizó y exportó un informe con datos de demostración.
+ZXing confirmó igualdad del QR de la app y del PDF, incluido caso y registro
+definitivo con segundos. El PDF no contiene el apartado Funcionario responsable.
+
+Verificación: `flutter analyze` sin incidencias y **100 pruebas correctas**.
+`dart format lib test`: 69 archivos sin cambios; `dart format .` reproduce
+el fallo previo de rutas residuales de Gradle en `build/`. Sin cambios de
+código de la app, esquema ni dependencias del proyecto. Revisión visual de
+las 42 páginas y comprobación del índice. Fuente, capturas y trazabilidad en
+`docs/manual/VERIFICACION_MANUAL.md`; la carpeta del manual sigue excluida
+por las reglas existentes de Git. Sin nuevo commit en esta fase.
+
+Pendiente de aceptación en teléfono físico: obtención automática de GPS,
+cámara, impresión y lectura con otra cámara. En este emulador la solicitud
+GPS quedó pendiente; el recorrido se completó con coordenadas manuales y
+croquis correcto. También se observó recorte del texto de Naturaleza después
+de enfocar Lugar, aunque el listado y la persistencia fueron correctos.
+Ambas observaciones están registradas en la verificación del manual.
+
+# Historial — QR del informe unificado en app y PDF
 
 ## Actualización 2026-09-14 — QR de la vista de detalle
 

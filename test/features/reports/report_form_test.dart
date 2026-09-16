@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:ui' as ui;
 
+import 'package:app_acc_transito/app/theme/app_theme.dart';
 import 'package:app_acc_transito/data/database/app_database.dart';
 import 'package:app_acc_transito/data/repositories/report_repository.dart';
 import 'package:app_acc_transito/features/auth/domain/app_role.dart';
@@ -11,6 +14,8 @@ import 'package:app_acc_transito/services/geolocation/geolocation_service.dart';
 import 'package:app_acc_transito/services/maps/map_snapshot_service.dart';
 import 'package:app_acc_transito/services/media/evidence_media_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -29,6 +34,59 @@ const _actor = AuthenticatedUser(
         ci: '01'));
 
 void main() {
+  setUpAll(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    await (FontLoader('Roboto')
+          ..addFont(rootBundle.load('assets/fonts/roboto-regular.ttf'))
+          ..addFont(rootBundle.load('assets/fonts/roboto-bold.ttf')))
+        .load();
+    await (FontLoader('MaterialIcons')
+          ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf')))
+        .load();
+  });
+
+  for (final (width, scale) in [(320.0, 1.0), (360.0, 1.5), (412.0, 2.0)]) {
+    testWidgets(
+        'naturaleza muestra el texto completo a $width px y escala $scale',
+        (tester) async {
+      tester.view.physicalSize = Size(width, 900);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await _open(tester, _PendingController());
+      for (final option in [
+        'Colisión',
+        'Choque a objeto fijo/vehículo detenido',
+        'Embarrancamiento / Deslizamiento',
+      ]) {
+        await _selectNature(tester, option);
+        _expectNatureVisible(tester, option);
+        await _fill(tester, 'Lugar', 'Av. de demostración');
+        await tester.pumpAndSettle();
+        _expectNatureVisible(tester, option);
+        expect(tester.takeException(), isNull);
+      }
+      const output = String.fromEnvironment('NATURE_REVIEW_OUTPUT');
+      if (output.isNotEmpty) {
+        await tester
+            .ensureVisible(find.byType(DropdownButtonFormField<String>));
+        await tester.pumpAndSettle();
+        final boundary = tester.renderObject<RenderRepaintBoundary>(
+            find.byKey(const ValueKey('form-review')));
+        await tester.runAsync(() async {
+          final image = await boundary.toImage(pixelRatio: 2);
+          final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+          await File('$output/naturaleza-$width-$scale.png')
+              .create(recursive: true)
+              .then((file) => file.writeAsBytes(bytes!.buffer.asUint8List()));
+          image.dispose();
+        });
+      }
+    });
+  }
+
   testWidgets(
       'wizard conserva datos, bloquea salida al guardar y vuelve al finalizar',
       (tester) async {
@@ -171,27 +229,48 @@ void main() {
 }
 
 Future<void> _open(WidgetTester tester, ReportController controller) async {
-  await tester.pumpWidget(MaterialApp(
-    locale: const Locale('es', 'BO'),
-    supportedLocales: const [Locale('es', 'BO')],
-    localizationsDelegates: GlobalMaterialLocalizations.delegates,
-    home: Builder(
-        builder: (context) => Scaffold(
-                body: TextButton(
-              child: const Text('Abrir formulario'),
-              onPressed: () =>
-                  Navigator.of(context).push(MaterialPageRoute<void>(
-                      builder: (_) => DirectActionReportFormPage(
-                            controller: controller,
-                            actor: _actor,
-                            geolocationService: const GeolocationService(),
-                            mapSnapshotService: const MapSnapshotService(),
-                            externalMapsService: const ExternalMapsService(),
-                            evidenceMediaService: EvidenceMediaService(),
-                          ))),
-            ))),
-  ));
+  await tester.pumpWidget(RepaintBoundary(
+      key: const ValueKey('form-review'),
+      child: MaterialApp(
+        theme: AppTheme.light,
+        locale: const Locale('es', 'BO'),
+        supportedLocales: const [Locale('es', 'BO')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        home: Builder(
+            builder: (context) => Scaffold(
+                    body: TextButton(
+                  child: const Text('Abrir formulario'),
+                  onPressed: () =>
+                      Navigator.of(context).push(MaterialPageRoute<void>(
+                          builder: (_) => DirectActionReportFormPage(
+                                controller: controller,
+                                actor: _actor,
+                                geolocationService: const GeolocationService(),
+                                mapSnapshotService: const MapSnapshotService(),
+                                externalMapsService:
+                                    const ExternalMapsService(),
+                                evidenceMediaService: EvidenceMediaService(),
+                              ))),
+                ))),
+      )));
   await _tap(tester, 'Abrir formulario');
+}
+
+void _expectNatureVisible(WidgetTester tester, String value) {
+  final text = find.text(value);
+  final paragraph = tester.renderObject<RenderParagraph>(text);
+  final painter = TextPainter(
+    text: paragraph.text,
+    textDirection: paragraph.textDirection,
+    textScaler: paragraph.textScaler,
+  )..layout(maxWidth: paragraph.size.width);
+  expect(paragraph.size.height, greaterThanOrEqualTo(painter.height - 0.01),
+      reason: 'La altura debe permitir todas las líneas de $value');
+  final field = tester.getRect(find.byType(DropdownButtonFormField<String>));
+  final content = tester.getRect(text);
+  expect(content.top, greaterThanOrEqualTo(field.top));
+  expect(content.bottom, lessThanOrEqualTo(field.bottom));
+  painter.dispose();
 }
 
 Future<void> _fill(WidgetTester tester, String label, String value) async {
