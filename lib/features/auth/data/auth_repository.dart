@@ -1,3 +1,4 @@
+import '../domain/auth_repository_contract.dart';
 import '../../../data/repositories/police_repository.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../domain/app_role.dart';
@@ -5,7 +6,7 @@ import '../domain/auth_exceptions.dart';
 import '../domain/authenticated_user.dart';
 import 'password_hasher.dart';
 
-class AuthRepository {
+class AuthRepository implements AuthRepositoryContract {
   const AuthRepository({
     required UserRepository userRepository,
     required PoliceRepository policeRepository,
@@ -18,10 +19,12 @@ class AuthRepository {
   final PoliceRepository _policeRepository;
   final PasswordHasher _passwordHasher;
 
+  @override
   Future<bool> hasAdmin() async {
     return (await _userRepository.countAdmins()) > 0;
   }
 
+  @override
   Future<int> createFirstAdmin({
     required String username,
     required String password,
@@ -38,6 +41,7 @@ class AuthRepository {
     );
   }
 
+  @override
   Future<AuthenticatedUser> login({
     required String username,
     required String password,
@@ -80,6 +84,7 @@ class AuthRepository {
     );
   }
 
+  @override
   Future<void> resetPolicePassword({
     required AuthenticatedUser actor,
     required String policeUsername,
@@ -103,6 +108,7 @@ class AuthRepository {
     );
   }
 
+  @override
   void requireRole(AuthenticatedUser user, AppRole role) {
     if (user.role != role) {
       throw AuthorizationException(

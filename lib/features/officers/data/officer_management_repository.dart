@@ -1,3 +1,4 @@
+import '../domain/officer_management_repository_contract.dart';
 import '../../../data/database/app_database.dart';
 import '../../../data/database/dao/police_dao.dart';
 import '../../../data/database/dao/user_dao.dart';
@@ -5,17 +6,20 @@ import '../../auth/domain/app_role.dart';
 import '../domain/officer_management_exceptions.dart';
 import '../domain/officer_record.dart';
 
-class OfficerManagementRepository {
+class OfficerManagementRepository
+    implements OfficerManagementRepositoryContract {
   const OfficerManagementRepository(this._database);
 
   final AppDatabase _database;
 
+  @override
   Future<List<OfficerRecord>> listOfficers() async {
     final db = await _database.instance;
     final rows = await PoliceDao(db).findAllWithUsers();
     return rows.map(_mapOfficer).toList(growable: false);
   }
 
+  @override
   Future<int> createOfficerAccount(
     OfficerAccountInput input, {
     DateTime? now,
@@ -60,6 +64,7 @@ class OfficerManagementRepository {
     });
   }
 
+  @override
   Future<void> updateOfficerAdministrativeData(
     OfficerUpdateInput input, {
     DateTime? now,
@@ -111,6 +116,7 @@ class OfficerManagementRepository {
     });
   }
 
+  @override
   Future<void> setOfficerActive({
     required int idPolicia,
     required int idUsuario,
@@ -142,6 +148,7 @@ class OfficerManagementRepository {
     });
   }
 
+  @override
   Future<void> resetPassword({
     required int idUsuario,
     required String passwordHash,

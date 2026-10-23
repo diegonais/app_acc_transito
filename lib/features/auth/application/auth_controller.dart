@@ -1,13 +1,13 @@
 import 'package:flutter/foundation.dart';
 
-import '../data/auth_repository.dart';
+import '../domain/auth_repository_contract.dart';
 import '../domain/app_role.dart';
 import '../domain/authenticated_user.dart';
 
 class AuthController extends ChangeNotifier {
   AuthController(this._authRepository);
 
-  final AuthRepository _authRepository;
+  final AuthRepositoryContract _authRepository;
   AuthenticatedUser? _currentUser;
   int _loginGeneration = 0;
 

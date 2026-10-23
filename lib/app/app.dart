@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import '../data/database/app_database.dart';
 import '../data/repositories/police_repository.dart';
 import '../data/repositories/report_repository.dart';
+import '../data/repositories/report_repository_contract.dart';
 import '../data/repositories/user_repository.dart';
 import '../features/auth/application/auth_controller.dart';
 import '../features/auth/application/auth_scope.dart';
@@ -54,7 +55,8 @@ class _AccTransitoAppState extends State<AccTransitoApp> {
       repository: OfficerManagementRepository(database),
       passwordHasher: passwordHasher,
     );
-    final reportRepository = ReportRepository(database);
+    final ReportRepositoryContract reportRepository =
+        ReportRepository(database);
     _dashboardController = DashboardController(repository: reportRepository);
     _reportController = ReportController(
       repository: reportRepository,

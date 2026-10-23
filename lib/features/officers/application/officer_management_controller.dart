@@ -4,17 +4,17 @@ import '../../../shared/user_message.dart';
 import '../../auth/data/password_hasher.dart';
 import '../../auth/domain/app_role.dart';
 import '../../auth/domain/authenticated_user.dart';
-import '../data/officer_management_repository.dart';
+import '../domain/officer_management_repository_contract.dart';
 import '../domain/officer_record.dart';
 
 class OfficerManagementController extends ChangeNotifier {
   OfficerManagementController({
-    required OfficerManagementRepository repository,
+    required OfficerManagementRepositoryContract repository,
     required PasswordHasher passwordHasher,
   })  : _repository = repository,
         _passwordHasher = passwordHasher;
 
-  final OfficerManagementRepository _repository;
+  final OfficerManagementRepositoryContract _repository;
   final PasswordHasher _passwordHasher;
 
   bool _isLoading = false;

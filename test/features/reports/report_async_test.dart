@@ -1,7 +1,6 @@
 import 'dart:async';
 
-import 'package:app_acc_transito/data/database/app_database.dart';
-import 'package:app_acc_transito/data/repositories/report_repository.dart';
+import 'package:app_acc_transito/data/repositories/report_repository_contract.dart';
 import 'package:app_acc_transito/features/auth/domain/app_role.dart';
 import 'package:app_acc_transito/features/auth/domain/authenticated_user.dart';
 import 'package:app_acc_transito/features/reports/application/report_controller.dart';
@@ -62,8 +61,10 @@ void main() {
   });
 }
 
-class _DelayedRepository extends ReportRepository {
-  _DelayedRepository() : super(AppDatabase());
+class _DelayedRepository implements ReportRepositoryContract {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnsupportedError(
+      'Operación no prevista en esta prueba: ${invocation.memberName}');
   final calls = <Completer<List<ReportRecord>>>[];
 
   @override

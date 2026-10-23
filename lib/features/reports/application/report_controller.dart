@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../../../data/models/report_date_bounds.dart';
 import '../../../shared/user_message.dart';
 
-import '../../../data/repositories/report_repository.dart';
+import '../../../data/repositories/report_repository_contract.dart';
 import '../../../services/files/report_pdf_file_service.dart';
 import '../../../services/pdf/direct_action_report_pdf_service.dart';
 import '../../../services/qr/institutional_qr_service.dart';
@@ -84,10 +84,10 @@ class DirectActionReportDraft {
 }
 
 class ReportController extends ChangeNotifier {
-  ReportController({required ReportRepository repository})
+  ReportController({required ReportRepositoryContract repository})
       : _repository = repository;
 
-  final ReportRepository _repository;
+  final ReportRepositoryContract _repository;
 
   bool _isLoading = false;
   String? _errorMessage;

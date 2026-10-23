@@ -2,15 +2,15 @@ import 'package:flutter/foundation.dart';
 import '../../../data/models/report_date_bounds.dart';
 import '../../../shared/user_message.dart';
 
-import '../../../data/repositories/report_repository.dart';
+import '../../../data/repositories/report_repository_contract.dart';
 import '../../auth/domain/app_role.dart';
 import '../../auth/domain/authenticated_user.dart';
 
 class DashboardController extends ChangeNotifier {
-  DashboardController({required ReportRepository repository})
+  DashboardController({required ReportRepositoryContract repository})
       : _repository = repository;
 
-  final ReportRepository _repository;
+  final ReportRepositoryContract _repository;
 
   bool _isLoading = false;
   String? _errorMessage;
