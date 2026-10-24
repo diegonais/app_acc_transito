@@ -1,0 +1,1194 @@
+{
+  "fecha": "2026-10-24T16:35:11.406Z",
+  "cli": "2.122.0",
+  "http_checks": 147,
+  "sql_snapshot_and_atomicity": "correctos",
+  "concurrencia_http": "dos solicitudes independientes simultaneas; no afirma bloqueo observado",
+  "private_actor_authenticated_execute": true,
+  "private_actor_exposure": "no expuesto en Data API; EXECUTE SQL requerido por RLS, solo identidad propia",
+  "facade": {
+    "owner": "postgres",
+    "security_definer": true,
+    "config": [
+      "search_path=\"\""
+    ]
+  },
+  "results": [
+    {
+      "actor": "ADMIN",
+      "method": "POST",
+      "endpoint": "/auth/v1/admin/users",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "ADMIN",
+      "method": "POST",
+      "endpoint": "/auth/v1/token",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "ADMIN",
+      "method": "GET",
+      "endpoint": "/auth/v1/user",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/auth/v1/admin/users",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/auth/v1/token",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "GET",
+      "endpoint": "/auth/v1/user",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "POST",
+      "endpoint": "/auth/v1/admin/users",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "POST",
+      "endpoint": "/auth/v1/token",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "GET",
+      "endpoint": "/auth/v1/user",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "INACTIVO",
+      "method": "POST",
+      "endpoint": "/auth/v1/admin/users",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "INACTIVO",
+      "method": "POST",
+      "endpoint": "/auth/v1/token",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "INACTIVO",
+      "method": "GET",
+      "endpoint": "/auth/v1/user",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "SIN_PERFIL",
+      "method": "POST",
+      "endpoint": "/auth/v1/admin/users",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "SIN_PERFIL",
+      "method": "POST",
+      "endpoint": "/auth/v1/token",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "SIN_PERFIL",
+      "method": "GET",
+      "endpoint": "/auth/v1/user",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "NO_APROVISIONADO",
+      "method": "POST",
+      "endpoint": "/auth/v1/admin/users",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "NO_APROVISIONADO",
+      "method": "POST",
+      "endpoint": "/auth/v1/token",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "NO_APROVISIONADO",
+      "method": "GET",
+      "endpoint": "/auth/v1/user",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "PERFIL_INACTIVO",
+      "method": "POST",
+      "endpoint": "/auth/v1/admin/users",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "PERFIL_INACTIVO",
+      "method": "POST",
+      "endpoint": "/auth/v1/token",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "PERFIL_INACTIVO",
+      "method": "GET",
+      "endpoint": "/auth/v1/user",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 409,
+      "code": "PT409",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 400,
+      "code": "22023",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 400,
+      "code": "22023",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 400,
+      "code": "22023",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 400,
+      "code": "22023",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 400,
+      "code": "22023",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 422,
+      "code": "PT422",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 422,
+      "code": "PT422",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "ADMIN",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "INACTIVO",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "SIN_PERFIL",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "NO_APROVISIONADO",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "PERFIL_INACTIVO",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "ADMIN",
+      "method": "GET",
+      "endpoint": "/rest/v1/informes",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "GET",
+      "endpoint": "/rest/v1/informes",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "GET",
+      "endpoint": "/rest/v1/informes",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "INACTIVO",
+      "method": "GET",
+      "endpoint": "/rest/v1/informes",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "SIN_PERFIL",
+      "method": "GET",
+      "endpoint": "/rest/v1/informes",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "NO_APROVISIONADO",
+      "method": "GET",
+      "endpoint": "/rest/v1/informes",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "PERFIL_INACTIVO",
+      "method": "GET",
+      "endpoint": "/rest/v1/informes",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "GET",
+      "endpoint": "/rest/v1/informes",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "ADMIN",
+      "method": "GET",
+      "endpoint": "/rest/v1/informes",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "GET",
+      "endpoint": "/rest/v1/informes",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "GET",
+      "endpoint": "/rest/v1/informes",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "NO_APROVISIONADO",
+      "method": "GET",
+      "endpoint": "/rest/v1/informes",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "INACTIVO",
+      "method": "GET",
+      "endpoint": "/rest/v1/informes",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/informes",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "PATCH",
+      "endpoint": "/rest/v1/informes",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "DELETE",
+      "endpoint": "/rest/v1/informes",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "POST",
+      "endpoint": "/rest/v1/informes",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "PATCH",
+      "endpoint": "/rest/v1/informes",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "DELETE",
+      "endpoint": "/rest/v1/informes",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "ADMIN",
+      "method": "GET",
+      "endpoint": "/rest/v1/conductores",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "GET",
+      "endpoint": "/rest/v1/conductores",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "GET",
+      "endpoint": "/rest/v1/conductores",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "NO_APROVISIONADO",
+      "method": "GET",
+      "endpoint": "/rest/v1/conductores",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "INACTIVO",
+      "method": "GET",
+      "endpoint": "/rest/v1/conductores",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/conductores",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "PATCH",
+      "endpoint": "/rest/v1/conductores",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "DELETE",
+      "endpoint": "/rest/v1/conductores",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "POST",
+      "endpoint": "/rest/v1/conductores",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "PATCH",
+      "endpoint": "/rest/v1/conductores",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "DELETE",
+      "endpoint": "/rest/v1/conductores",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "ADMIN",
+      "method": "GET",
+      "endpoint": "/rest/v1/vehiculos",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "GET",
+      "endpoint": "/rest/v1/vehiculos",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "GET",
+      "endpoint": "/rest/v1/vehiculos",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "NO_APROVISIONADO",
+      "method": "GET",
+      "endpoint": "/rest/v1/vehiculos",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "INACTIVO",
+      "method": "GET",
+      "endpoint": "/rest/v1/vehiculos",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/vehiculos",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "PATCH",
+      "endpoint": "/rest/v1/vehiculos",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "DELETE",
+      "endpoint": "/rest/v1/vehiculos",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "POST",
+      "endpoint": "/rest/v1/vehiculos",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "PATCH",
+      "endpoint": "/rest/v1/vehiculos",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "DELETE",
+      "endpoint": "/rest/v1/vehiculos",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "ADMIN",
+      "method": "GET",
+      "endpoint": "/rest/v1/personas_involucradas",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "GET",
+      "endpoint": "/rest/v1/personas_involucradas",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "GET",
+      "endpoint": "/rest/v1/personas_involucradas",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "NO_APROVISIONADO",
+      "method": "GET",
+      "endpoint": "/rest/v1/personas_involucradas",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "INACTIVO",
+      "method": "GET",
+      "endpoint": "/rest/v1/personas_involucradas",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/personas_involucradas",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "PATCH",
+      "endpoint": "/rest/v1/personas_involucradas",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "DELETE",
+      "endpoint": "/rest/v1/personas_involucradas",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "POST",
+      "endpoint": "/rest/v1/personas_involucradas",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "PATCH",
+      "endpoint": "/rest/v1/personas_involucradas",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "DELETE",
+      "endpoint": "/rest/v1/personas_involucradas",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "ADMIN",
+      "method": "GET",
+      "endpoint": "/rest/v1/fotografias",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "GET",
+      "endpoint": "/rest/v1/fotografias",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "GET",
+      "endpoint": "/rest/v1/fotografias",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "NO_APROVISIONADO",
+      "method": "GET",
+      "endpoint": "/rest/v1/fotografias",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "INACTIVO",
+      "method": "GET",
+      "endpoint": "/rest/v1/fotografias",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/fotografias",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "PATCH",
+      "endpoint": "/rest/v1/fotografias",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "DELETE",
+      "endpoint": "/rest/v1/fotografias",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "POST",
+      "endpoint": "/rest/v1/fotografias",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "PATCH",
+      "endpoint": "/rest/v1/fotografias",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "DELETE",
+      "endpoint": "/rest/v1/fotografias",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "ADMIN",
+      "method": "GET",
+      "endpoint": "/rest/v1/archivos_informe",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "GET",
+      "endpoint": "/rest/v1/archivos_informe",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "GET",
+      "endpoint": "/rest/v1/archivos_informe",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "NO_APROVISIONADO",
+      "method": "GET",
+      "endpoint": "/rest/v1/archivos_informe",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "INACTIVO",
+      "method": "GET",
+      "endpoint": "/rest/v1/archivos_informe",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/archivos_informe",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "PATCH",
+      "endpoint": "/rest/v1/archivos_informe",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "DELETE",
+      "endpoint": "/rest/v1/archivos_informe",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "POST",
+      "endpoint": "/rest/v1/archivos_informe",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "PATCH",
+      "endpoint": "/rest/v1/archivos_informe",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "DELETE",
+      "endpoint": "/rest/v1/archivos_informe",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/usuarios",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "PATCH",
+      "endpoint": "/rest/v1/usuarios",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "DELETE",
+      "endpoint": "/rest/v1/usuarios",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "POST",
+      "endpoint": "/rest/v1/usuarios",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "PATCH",
+      "endpoint": "/rest/v1/usuarios",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "DELETE",
+      "endpoint": "/rest/v1/usuarios",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/policias",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "PATCH",
+      "endpoint": "/rest/v1/policias",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "DELETE",
+      "endpoint": "/rest/v1/policias",
+      "status": 403,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "POST",
+      "endpoint": "/rest/v1/policias",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "PATCH",
+      "endpoint": "/rest/v1/policias",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "DELETE",
+      "endpoint": "/rest/v1/policias",
+      "status": 401,
+      "code": "42501",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "GET",
+      "endpoint": "/rest/v1/operaciones_finalizacion",
+      "status": 404,
+      "code": "PGRST205",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe_impl",
+      "status": 404,
+      "code": "PGRST202",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/actor",
+      "status": 404,
+      "code": "PGRST202",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe_impl",
+      "status": 406,
+      "code": "PGRST106",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/operaciones_finalizacion",
+      "status": 406,
+      "code": "PGRST106",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "PATCH",
+      "endpoint": "/rest/v1/operaciones_finalizacion",
+      "status": 406,
+      "code": "PGRST106",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "DELETE",
+      "endpoint": "/rest/v1/operaciones_finalizacion",
+      "status": 406,
+      "code": "PGRST106",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "GET",
+      "endpoint": "/rest/v1/operaciones_finalizacion",
+      "status": 404,
+      "code": "PGRST205",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe_impl",
+      "status": 404,
+      "code": "PGRST202",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/actor",
+      "status": 404,
+      "code": "PGRST202",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe_impl",
+      "status": 406,
+      "code": "PGRST106",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "POST",
+      "endpoint": "/rest/v1/operaciones_finalizacion",
+      "status": 406,
+      "code": "PGRST106",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "PATCH",
+      "endpoint": "/rest/v1/operaciones_finalizacion",
+      "status": 406,
+      "code": "PGRST106",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "anon",
+      "method": "DELETE",
+      "endpoint": "/rest/v1/operaciones_finalizacion",
+      "status": 406,
+      "code": "PGRST106",
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "ADMIN",
+      "method": "GET",
+      "endpoint": "/rest/v1/informes",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "ADMIN",
+      "method": "GET",
+      "endpoint": "/rest/v1/conductores",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "GET",
+      "endpoint": "/rest/v1/informes",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "GET",
+      "endpoint": "/rest/v1/conductores",
+      "status": 200,
+      "code": null,
+      "resultado": "esperado"
+    }
+  ]
+}
