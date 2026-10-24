@@ -1,0 +1,523 @@
+{
+  "checks": 44,
+  "setupRequests": 79,
+  "passed": 44,
+  "failed": 0,
+  "runtime": "public.ecr.aws/supabase/edge-runtime:v1.77.8",
+  "parity": [
+    {
+      "name": "PNG_valido",
+      "bytes": 116,
+      "python": true,
+      "edge": true,
+      "coincide": true,
+      "ms": 39
+    },
+    {
+      "name": "PNG_truncado",
+      "bytes": 58,
+      "python": false,
+      "edge": false,
+      "coincide": true,
+      "ms": 34
+    },
+    {
+      "name": "PNG_vacio",
+      "bytes": 0,
+      "python": false,
+      "edge": false,
+      "coincide": true,
+      "ms": 31
+    },
+    {
+      "name": "PNG_falso",
+      "bytes": 25,
+      "python": false,
+      "edge": false,
+      "coincide": true,
+      "ms": 33
+    },
+    {
+      "name": "PNG_solo_firma",
+      "bytes": 8,
+      "python": false,
+      "edge": false,
+      "coincide": true,
+      "ms": 33
+    },
+    {
+      "name": "JPEG_valido",
+      "bytes": 644,
+      "python": true,
+      "edge": true,
+      "coincide": true,
+      "ms": 38
+    },
+    {
+      "name": "JPEG_truncado",
+      "bytes": 322,
+      "python": false,
+      "edge": false,
+      "coincide": true,
+      "ms": 33
+    },
+    {
+      "name": "JPEG_vacio",
+      "bytes": 0,
+      "python": false,
+      "edge": false,
+      "coincide": true,
+      "ms": 34
+    },
+    {
+      "name": "JPEG_falso",
+      "bytes": 25,
+      "python": false,
+      "edge": false,
+      "coincide": true,
+      "ms": 30
+    },
+    {
+      "name": "JPEG_solo_firma",
+      "bytes": 8,
+      "python": false,
+      "edge": false,
+      "coincide": true,
+      "ms": 33
+    },
+    {
+      "name": "JPEG_progresivo",
+      "bytes": 541,
+      "python": true,
+      "edge": true,
+      "coincide": true,
+      "ms": 34
+    },
+    {
+      "name": "JPEG_truncado_con_EOI",
+      "bytes": 152,
+      "python": false,
+      "edge": false,
+      "coincide": true,
+      "ms": 36
+    },
+    {
+      "name": "PNG_CRC_invalido",
+      "bytes": 116,
+      "python": false,
+      "edge": false,
+      "coincide": true,
+      "ms": 31
+    },
+    {
+      "name": "PNG_inflado_excesivo",
+      "bytes": 2017,
+      "python": true,
+      "edge": false,
+      "coincide": false,
+      "ms": 32
+    },
+    {
+      "name": "PNG_metadatos_valido",
+      "bytes": 157,
+      "python": true,
+      "edge": true,
+      "coincide": true,
+      "ms": 40
+    },
+    {
+      "name": "PNG_metadatos_excesivo",
+      "bytes": 2094,
+      "python": false,
+      "edge": false,
+      "coincide": true,
+      "ms": 17
+    },
+    {
+      "name": "PDF_valido",
+      "bytes": 546,
+      "python": true,
+      "edge": true,
+      "coincide": true,
+      "ms": 25
+    },
+    {
+      "name": "PDF_truncado_False",
+      "bytes": 273,
+      "python": false,
+      "edge": false,
+      "coincide": true,
+      "ms": 32
+    },
+    {
+      "name": "PDF_sin_cabecera_False",
+      "bytes": 546,
+      "python": false,
+      "edge": false,
+      "coincide": true,
+      "ms": 34
+    },
+    {
+      "name": "PDF_comprimido",
+      "bytes": 567,
+      "python": true,
+      "edge": true,
+      "coincide": true,
+      "ms": 39
+    },
+    {
+      "name": "PDF_truncado_True",
+      "bytes": 283,
+      "python": false,
+      "edge": false,
+      "coincide": true,
+      "ms": 29
+    },
+    {
+      "name": "PDF_sin_cabecera_True",
+      "bytes": 567,
+      "python": false,
+      "edge": false,
+      "coincide": true,
+      "ms": 33
+    },
+    {
+      "name": "PDF_falso_con_firma",
+      "bytes": 26,
+      "python": false,
+      "edge": false,
+      "coincide": true,
+      "ms": 25
+    },
+    {
+      "name": "PDF_vacio",
+      "bytes": 0,
+      "python": false,
+      "edge": false,
+      "coincide": true,
+      "ms": 34
+    },
+    {
+      "name": "PNG_cercano_5MiB",
+      "bytes": 4922311,
+      "python": true,
+      "edge": true,
+      "coincide": true,
+      "ms": 151
+    },
+    {
+      "name": "JPEG_cercano_5MiB",
+      "bytes": 4919094,
+      "python": true,
+      "edge": true,
+      "coincide": true,
+      "ms": 431
+    },
+    {
+      "name": "PDF_xref_invalido",
+      "bytes": 565,
+      "python": false,
+      "edge": false,
+      "coincide": true,
+      "ms": 30
+    },
+    {
+      "name": "PDF_offsets_invalidos",
+      "bytes": 567,
+      "python": true,
+      "edge": false,
+      "coincide": false,
+      "ms": 34
+    },
+    {
+      "name": "PDF_token_conservador",
+      "bytes": 547,
+      "python": true,
+      "edge": false,
+      "coincide": false,
+      "ms": 35
+    },
+    {
+      "name": "PDF_10MiB",
+      "bytes": 10485760,
+      "python": true,
+      "edge": true,
+      "coincide": true,
+      "ms": 602
+    },
+    {
+      "name": "PDF_fuente_imagenes_vectores",
+      "bytes": 15500,
+      "python": true,
+      "edge": true,
+      "coincide": true,
+      "ms": 391
+    }
+  ],
+  "rows": [
+    {
+      "actor": "anon",
+      "status": 401,
+      "estado": "RECHAZADO",
+      "ms": 7
+    },
+    {
+      "actor": "JWT_INVALIDO",
+      "status": 401,
+      "estado": "Invalid JWT format",
+      "ms": 15
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 400,
+      "estado": "RECHAZADO",
+      "ms": 17
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 400,
+      "estado": "RECHAZADO",
+      "ms": 15
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 400,
+      "estado": "RECHAZADO",
+      "ms": 15
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 400,
+      "estado": "RECHAZADO",
+      "ms": 14
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 400,
+      "estado": "RECHAZADO",
+      "ms": 16
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 400,
+      "estado": "RECHAZADO",
+      "ms": 15
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 400,
+      "estado": "RECHAZADO",
+      "ms": 17
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 403,
+      "estado": "RECHAZADO",
+      "ms": 22
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 24
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 200,
+      "estado": "VERIFICADO",
+      "ms": 39
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 34
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 31
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 33
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 33
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 200,
+      "estado": "VERIFICADO",
+      "ms": 38
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 33
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 34
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 30
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 33
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 200,
+      "estado": "VERIFICADO",
+      "ms": 34
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 36
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 31
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 32
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 200,
+      "estado": "VERIFICADO",
+      "ms": 40
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 17
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 200,
+      "estado": "VERIFICADO",
+      "ms": 25
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 32
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 34
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 200,
+      "estado": "VERIFICADO",
+      "ms": 39
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 29
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 33
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 25
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 34
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 200,
+      "estado": "VERIFICADO",
+      "ms": 151
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 200,
+      "estado": "VERIFICADO",
+      "ms": 431
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 30
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 34
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 35
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 200,
+      "estado": "VERIFICADO",
+      "ms": 602
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 200,
+      "estado": "VERIFICADO",
+      "ms": 391
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 503,
+      "estado": "RECHAZADO",
+      "ms": 15028
+    },
+    {
+      "actor": "POLICE_A",
+      "status": 422,
+      "estado": "RECHAZADO",
+      "ms": 24
+    }
+  ]
+}

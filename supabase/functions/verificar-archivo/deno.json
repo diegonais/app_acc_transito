@@ -1,0 +1,12 @@
+{
+  "compilerOptions": { "strict": true, "lib": ["deno.window", "dom"] },
+  "nodeModulesDir": "none",
+  "imports": {
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.118.0",
+    "fast-png": "npm:fast-png@8.0.0",
+    "jpeg-js": "npm:jpeg-js@0.4.4",
+    "dommatrix": "npm:@thednp/dommatrix@3.1.2",
+    "pdfjs": "npm:pdfjs-dist@6.4.299/legacy/build/pdf.mjs",
+    "pdfjs-worker": "npm:pdfjs-dist@6.4.299/legacy/build/pdf.worker.mjs"
+  }
+}
