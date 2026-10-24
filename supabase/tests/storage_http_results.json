@@ -1,0 +1,933 @@
+{
+  "fecha": "2026-10-24T17:45:44.255Z",
+  "status": "OK",
+  "new_http_checks": 132,
+  "passed": 132,
+  "failed": 0,
+  "rows": [
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 409,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 403,
+      "ok": true
+    },
+    {
+      "actor": "ADMIN",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 403,
+      "ok": true
+    },
+    {
+      "actor": "INACTIVO",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 403,
+      "ok": true
+    },
+    {
+      "actor": "anon",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 401,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/reservas_archivos",
+      "status": 403,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "PATCH",
+      "endpoint": "/rest/v1/reservas_archivos?reserva_id=eq.2b24ab8b-4340-4d93-b3bb-968a9d42a572",
+      "status": 403,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "DELETE",
+      "endpoint": "/rest/v1/reservas_archivos?reserva_id=eq.2b24ab8b-4340-4d93-b3bb-968a9d42a572",
+      "status": 403,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/confirmar_archivo_backend",
+      "status": 403,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 422,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/verificar",
+      "status": 422,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "POST",
+      "endpoint": "/storage/v1/object/transito-evidencias",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "INACTIVO",
+      "method": "POST",
+      "endpoint": "/storage/v1/object/transito-evidencias",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "anon",
+      "method": "POST",
+      "endpoint": "/storage/v1/object/transito-evidencias",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/storage/v1/object/transito-evidencias",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/storage/v1/object/no-existe",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/storage/v1/object/transito-evidencias",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/storage/v1/object/sign",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/storage/v1/object/upload",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/storage/v1/object/transito-evidencias",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/storage/v1/object/transito-evidencias",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "PUT",
+      "endpoint": "/storage/v1/object/transito-evidencias",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "DELETE",
+      "endpoint": "/storage/v1/object/transito-evidencias",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "anon",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/public",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "ADMIN",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "POST",
+      "endpoint": "/verificar",
+      "status": 403,
+      "ok": true
+    },
+    {
+      "actor": "INACTIVO",
+      "method": "POST",
+      "endpoint": "/verificar",
+      "status": 403,
+      "ok": true
+    },
+    {
+      "actor": "anon",
+      "method": "POST",
+      "endpoint": "/verificar",
+      "status": 401,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/verificar",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/verificar",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/storage/v1/object/transito-evidencias",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/verificar",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/storage/v1/object/transito-evidencias",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/verificar",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "POST",
+      "endpoint": "/storage/v1/object/transito-evidencias",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "POST",
+      "endpoint": "/verificar",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 422,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 422,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 409,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/finalizar_informe",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 409,
+      "ok": true
+    },
+    {
+      "actor": "SERVICIO_LOCAL_FIXTURE",
+      "method": "PUT",
+      "endpoint": "/auth/v1/admin/users",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "anon",
+      "method": "POST",
+      "endpoint": "/auth/v1/token?grant_type=password",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/verificar",
+      "status": 403,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A_SEGUNDA_SESION",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "ADMIN",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "INACTIVO",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "anon",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A_SEGUNDA_SESION",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "ADMIN",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "INACTIVO",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "anon",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A_SEGUNDA_SESION",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "ADMIN",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "INACTIVO",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "anon",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "ADMIN",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 403,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 403,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/registrar_pdf",
+      "status": 422,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/storage/v1/object/transito-pdf",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/verificar",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "ADMIN",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/registrar_pdf",
+      "status": 403,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/registrar_pdf",
+      "status": 403,
+      "ok": true
+    },
+    {
+      "actor": "INACTIVO",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/registrar_pdf",
+      "status": 403,
+      "ok": true
+    },
+    {
+      "actor": "anon",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/registrar_pdf",
+      "status": 401,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/registrar_pdf",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/registrar_pdf",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A_SEGUNDA_SESION",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "ADMIN",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_B",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "INACTIVO",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "anon",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/storage/v1/object/transito-evidencias",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/verificar",
+      "status": 422,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/storage/v1/object/transito-evidencias",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/verificar",
+      "status": 422,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/storage/v1/object/transito-evidencias",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/verificar",
+      "status": 422,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/storage/v1/object/transito-pdf",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/verificar",
+      "status": 422,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/storage/v1/object/transito-evidencias",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/verificar",
+      "status": 422,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/storage/v1/object/transito-evidencias",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/storage/v1/object/transito-evidencias",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/storage/v1/object/transito-evidencias",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/verificar",
+      "status": 403,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A",
+      "method": "POST",
+      "endpoint": "/rest/v1/rpc/reservar_archivo",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A_SEGUNDA_SESION",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "ADMIN",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "actor": "POLICE_A_SEGUNDA_SESION",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 400,
+      "ok": true
+    },
+    {
+      "actor": "ADMIN",
+      "method": "GET",
+      "endpoint": "/storage/v1/object/authenticated",
+      "status": 400,
+      "ok": true
+    }
+  ]
+}

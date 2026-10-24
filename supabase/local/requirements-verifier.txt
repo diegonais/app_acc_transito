@@ -1,0 +1,3 @@
+# Solo componente servidor LOCAL y fixtures sinteticos; nunca APK/Flutter.
+Pillow==12.3.0
+pypdf==6.10.0
