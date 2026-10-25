@@ -1,5 +1,5 @@
 {
-  "fecha": "2026-10-24T18:20:13.858Z",
+  "fecha": "2026-10-25T17:25:01.989Z",
   "status": "OK",
   "new_http_checks": 132,
   "passed": 132,
@@ -64,14 +64,14 @@
     {
       "actor": "POLICE_A",
       "method": "PATCH",
-      "endpoint": "/rest/v1/reservas_archivos?reserva_id=eq.c41b3551-1f4e-4a4e-9563-0cea15b98923",
+      "endpoint": "/rest/v1/reservas_archivos?reserva_id=eq.29fb490f-29ca-440d-a0f8-f1f0fe8861f2",
       "status": 403,
       "ok": true
     },
     {
       "actor": "POLICE_A",
       "method": "DELETE",
-      "endpoint": "/rest/v1/reservas_archivos?reserva_id=eq.c41b3551-1f4e-4a4e-9563-0cea15b98923",
+      "endpoint": "/rest/v1/reservas_archivos?reserva_id=eq.29fb490f-29ca-440d-a0f8-f1f0fe8861f2",
       "status": 403,
       "ok": true
     },

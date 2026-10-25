@@ -7,11 +7,31 @@ $suffix=[guid]::NewGuid().ToString('N')
 $taskDir=Join-Path ([IO.Path]::GetTempPath()) ('transito-edge-'+$suffix)
 $project='transito_edge_test_'+$suffix.Substring(0,8)
 $networkId=$null
+$oldFlutterPdfs=$env:TRANSITO_FLUTTER_PDFS
+$oldPythonBytecode=$env:PYTHONDONTWRITEBYTECODE
 New-Item -ItemType Directory -Path $taskDir | Out-Null
 try {
   if(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object LocalPort -in @(57520,57521,57522,57523)){throw 'Puertos de prueba ocupados; no tocar stack existente'}
   & npx --yes supabase@2.122.0 --workdir $taskDir init *> (Join-Path $taskDir 'init.log')
   if($LASTEXITCODE -ne 0){throw 'CLI init fallo'}
+  # Ejecutar Dart sin editarlo ni crear caches/build en el arbol original.
+  $flutterCopy=Join-Path $taskDir 'flutter-snapshot'
+  $pdfOutput=Join-Path $taskDir 'flutter-pdf'
+  New-Item -ItemType Directory -Path $flutterCopy,$pdfOutput | Out-Null
+  & git -C $repo archive --format=tar --output (Join-Path $taskDir 'flutter.tar') HEAD
+  if($LASTEXITCODE -ne 0){throw 'Snapshot Flutter fallo'}
+  & tar -xf (Join-Path $taskDir 'flutter.tar') -C $flutterCopy
+  if($LASTEXITCODE -ne 0){throw 'Extraccion Flutter fallo'}
+  Push-Location $flutterCopy
+  try {
+    & flutter pub get --offline --enforce-lockfile
+    if($LASTEXITCODE -ne 0){throw 'Dependencias Flutter offline no disponibles'}
+    & flutter test --no-pub "--dart-define=PDF_REVIEW_OUTPUT=$($pdfOutput.Replace('\','/'))/informe.pdf" test/services/direct_action_report_pdf_service_test.dart
+    if($LASTEXITCODE -ne 0){throw 'Generador PDF Flutter fallo'}
+  } finally {Pop-Location}
+  if(@(Get-ChildItem -LiteralPath $pdfOutput -Filter '*.pdf').Count -ne 7){throw 'Se requieren los siete PDF Flutter reales'}
+  $env:TRANSITO_FLUTTER_PDFS=$pdfOutput
+  $env:PYTHONDONTWRITEBYTECODE='1'
   $config=@"
 project_id = "$project"
 [api]
@@ -72,6 +92,8 @@ enabled = true
     throw 'Advisors requiere revision'
   }
 } finally {
+  $env:TRANSITO_FLUTTER_PDFS=$oldFlutterPdfs
+  $env:PYTHONDONTWRITEBYTECODE=$oldPythonBytecode
   # project se genero aqui; solo contenedores con su etiqueta exacta son elegibles.
   $own=@(& docker ps -a --filter "label=com.supabase.cli.project=$project" --format '{{.Names}}')
   if($own.Count){

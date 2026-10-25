@@ -1,0 +1,409 @@
+{
+  "intervention": 15,
+  "date": "2026-10-25",
+  "base_head": "f62f6d66b3fc7b9fad4f9f41b9904dc74922da10",
+  "pdf_status": "COMPLETADA",
+  "packaging_status": "PARCIAL",
+  "cloud_tested": false,
+  "official_cli_upload_bytes": null,
+  "packaging": {
+    "before": {
+      "deno_info_display": "80.52MB",
+      "dependencies": 29,
+      "runtime_eszip_bytes": 114789734,
+      "gzip_comparison_bytes": 39002622,
+      "sha256_eszip": "c351ac53341dae11fd9aa121884775c45dc4eb63c3f179ddf1380e27cc4b58c2"
+    },
+    "after": {
+      "deno_info_display": "12.48MB",
+      "dependencies": 18,
+      "runtime_eszip_bytes": 13203527,
+      "gzip_comparison_bytes": 2801759,
+      "sha256_eszip": "79e475d7f4fba962649d1b6e55729f4d55c01d7f62570eb2c939536f6fbe66fe"
+    }
+  },
+  "packaging_commands": [
+    "deno info --frozen-lockfile --config <function>/deno.json <function>/index.ts",
+    "edge-runtime bundle --entrypoint <own-temporary-function>/index.ts --output /tmp/<own>.eszip --timeout 60",
+    "gzip.compress(eszip_bytes)"
+  ],
+  "cli_limitation": "CLI 2.122.0 functions --help no ofrece bundle offline. No se ejecuto deploy. ESZIP de runtime y gzip no equivalen al paquete/subida CLI.",
+  "hosted_limits_reference": {
+    "cli_local_bundle_MB": 20,
+    "server_bundle_MB": 5,
+    "memory_MB": 256,
+    "active_cpu_seconds": 2,
+    "free_worker_seconds": 150
+  },
+  "baseline_local_http": {
+    "edge_checks": 51,
+    "flutter_rejected": 7
+  },
+  "parity31": [
+    {
+      "name": "PNG_valido",
+      "python": true,
+      "before": true,
+      "after": true
+    },
+    {
+      "name": "PNG_truncado",
+      "python": false,
+      "before": false,
+      "after": false
+    },
+    {
+      "name": "PNG_vacio",
+      "python": false,
+      "before": false,
+      "after": false
+    },
+    {
+      "name": "PNG_falso",
+      "python": false,
+      "before": false,
+      "after": false
+    },
+    {
+      "name": "PNG_solo_firma",
+      "python": false,
+      "before": false,
+      "after": false
+    },
+    {
+      "name": "JPEG_valido",
+      "python": true,
+      "before": true,
+      "after": true
+    },
+    {
+      "name": "JPEG_truncado",
+      "python": false,
+      "before": false,
+      "after": false
+    },
+    {
+      "name": "JPEG_vacio",
+      "python": false,
+      "before": false,
+      "after": false
+    },
+    {
+      "name": "JPEG_falso",
+      "python": false,
+      "before": false,
+      "after": false
+    },
+    {
+      "name": "JPEG_solo_firma",
+      "python": false,
+      "before": false,
+      "after": false
+    },
+    {
+      "name": "JPEG_progresivo",
+      "python": true,
+      "before": true,
+      "after": true
+    },
+    {
+      "name": "JPEG_truncado_con_EOI",
+      "python": false,
+      "before": false,
+      "after": false
+    },
+    {
+      "name": "PNG_CRC_invalido",
+      "python": false,
+      "before": false,
+      "after": false
+    },
+    {
+      "name": "PNG_inflado_excesivo",
+      "python": true,
+      "before": false,
+      "after": false
+    },
+    {
+      "name": "PNG_metadatos_valido",
+      "python": true,
+      "before": true,
+      "after": true
+    },
+    {
+      "name": "PNG_metadatos_excesivo",
+      "python": false,
+      "before": false,
+      "after": false
+    },
+    {
+      "name": "PDF_valido",
+      "python": true,
+      "before": true,
+      "after": true
+    },
+    {
+      "name": "PDF_truncado_False",
+      "python": false,
+      "before": false,
+      "after": false
+    },
+    {
+      "name": "PDF_sin_cabecera_False",
+      "python": false,
+      "before": false,
+      "after": false
+    },
+    {
+      "name": "PDF_comprimido",
+      "python": true,
+      "before": true,
+      "after": true
+    },
+    {
+      "name": "PDF_truncado_True",
+      "python": false,
+      "before": false,
+      "after": false
+    },
+    {
+      "name": "PDF_sin_cabecera_True",
+      "python": false,
+      "before": false,
+      "after": false
+    },
+    {
+      "name": "PDF_falso_con_firma",
+      "python": false,
+      "before": false,
+      "after": false
+    },
+    {
+      "name": "PDF_vacio",
+      "python": false,
+      "before": false,
+      "after": false
+    },
+    {
+      "name": "PNG_cercano_5MiB",
+      "python": true,
+      "before": true,
+      "after": true
+    },
+    {
+      "name": "JPEG_cercano_5MiB",
+      "python": true,
+      "before": true,
+      "after": true
+    },
+    {
+      "name": "PDF_xref_invalido",
+      "python": false,
+      "before": false,
+      "after": false
+    },
+    {
+      "name": "PDF_offsets_invalidos",
+      "python": true,
+      "before": false,
+      "after": false
+    },
+    {
+      "name": "PDF_token_conservador",
+      "python": true,
+      "before": false,
+      "after": true
+    },
+    {
+      "name": "PDF_10MiB",
+      "python": true,
+      "before": true,
+      "after": true
+    },
+    {
+      "name": "PDF_fuente_imagenes_vectores",
+      "python": true,
+      "before": true,
+      "after": true
+    }
+  ],
+  "parity31_matches_before": 28,
+  "parity31_matches_after": 29,
+  "flutter": [
+    {
+      "name": "Flutter_informe-campos-largos",
+      "bytes": 2625607,
+      "verification_status": 200,
+      "state": "VINCULADO",
+      "retry_status": 200,
+      "author_download": 200,
+      "admin_download": 200,
+      "other_author_denied": true,
+      "anonymous_denied": true,
+      "ms": 166,
+      "before_status": 422,
+      "before_state": "RESERVADO"
+    },
+    {
+      "name": "Flutter_informe-completo",
+      "bytes": 3912486,
+      "verification_status": 200,
+      "state": "VINCULADO",
+      "retry_status": 200,
+      "author_download": 200,
+      "admin_download": 200,
+      "other_author_denied": true,
+      "anonymous_denied": true,
+      "ms": 184,
+      "before_status": 422,
+      "before_state": "RESERVADO"
+    },
+    {
+      "name": "Flutter_informe-faltantes",
+      "bytes": 1318846,
+      "verification_status": 200,
+      "state": "VINCULADO",
+      "retry_status": 200,
+      "author_download": 200,
+      "admin_download": 200,
+      "other_author_denied": true,
+      "anonymous_denied": true,
+      "ms": 84,
+      "before_status": 422,
+      "before_state": "RESERVADO"
+    },
+    {
+      "name": "Flutter_informe-qr-registro",
+      "bytes": 1318093,
+      "verification_status": 200,
+      "state": "VINCULADO",
+      "retry_status": 200,
+      "author_download": 200,
+      "admin_download": 200,
+      "other_author_denied": true,
+      "anonymous_denied": true,
+      "ms": 73,
+      "before_status": 422,
+      "before_state": "RESERVADO"
+    },
+    {
+      "name": "Flutter_informe-relaciones",
+      "bytes": 1320986,
+      "verification_status": 200,
+      "state": "VINCULADO",
+      "retry_status": 200,
+      "author_download": 200,
+      "admin_download": 200,
+      "other_author_denied": true,
+      "anonymous_denied": true,
+      "ms": 116,
+      "before_status": 422,
+      "before_state": "RESERVADO"
+    },
+    {
+      "name": "Flutter_informe-vacio",
+      "bytes": 1317933,
+      "verification_status": 200,
+      "state": "VINCULADO",
+      "retry_status": 200,
+      "author_download": 200,
+      "admin_download": 200,
+      "other_author_denied": true,
+      "anonymous_denied": true,
+      "ms": 330,
+      "before_status": 422,
+      "before_state": "RESERVADO"
+    },
+    {
+      "name": "Flutter_informe",
+      "bytes": 2637358,
+      "verification_status": 200,
+      "state": "VINCULADO",
+      "retry_status": 200,
+      "author_download": 200,
+      "admin_download": 200,
+      "other_author_denied": true,
+      "anonymous_denied": true,
+      "ms": 194,
+      "before_status": 422,
+      "before_state": "RESERVADO"
+    }
+  ],
+  "security_additional_cases": 18,
+  "tests": {
+    "flutter": 8,
+    "deno": 59,
+    "sql": [
+      309,
+      78,
+      36
+    ],
+    "auth_http": 147,
+    "storage_http": 132,
+    "edge_http": 87,
+    "edge_setup_requests": 206,
+    "sql_concurrency": 4,
+    "advisor_security": "sin hallazgos"
+  },
+  "resources": [
+    {
+      "name": "Flutter_informe-completo",
+      "mode": "primer_PDF_tras_reinicio",
+      "bytes": 3912486,
+      "wall_ms": 507,
+      "status": 200
+    },
+    {
+      "name": "JPEG_cercano_5MiB",
+      "mode": "concurrencia_3",
+      "bytes": 4919094,
+      "wall_ms": 640,
+      "status": 200
+    },
+    {
+      "name": "PNG_cercano_5MiB",
+      "mode": "concurrencia_3",
+      "bytes": 4922311,
+      "wall_ms": 845,
+      "status": 200
+    },
+    {
+      "name": "PDF_10MiB",
+      "mode": "concurrencia_3",
+      "bytes": 10485760,
+      "wall_ms": 1338,
+      "status": 200
+    }
+  ],
+  "active_cpu_per_request": "NO_COMPROBADO",
+  "peak_memory_per_request": "NO_COMPROBADO",
+  "docker_memory_observation": "340.6 MiB agregados durante el ensayo/empaquetado anterior; no es memoria de una peticion",
+  "pdf_profile": "Una revision; xref clasico o stream sin filtro/Flate sin DecodeParms; profundidad 32, 100000 objetos, 200000 tokens por lector, 64MiB de inflado agregado. Rechazo cerrado de revisiones incrementales/hibridas. No es un parser universal ni certificacion visual.",
+  "licenses": {
+    "pdfjs-dist-vendored-6.4.299": "Apache-2.0",
+    "supabase-js-2.118.0": "MIT",
+    "fast-png-8.0.0": "MIT",
+    "jpeg-js-0.4.4": "BSD-3-Clause",
+    "dommatrix-3.1.2": "MIT"
+  },
+  "edited_paths": [
+    "C:\\Users\\Desktop\\Desktop\\projects\\app_acc_transito\\supabase\\functions\\verificar-archivo\\binary.ts",
+    "C:\\Users\\Desktop\\Desktop\\projects\\app_acc_transito\\supabase\\functions\\verificar-archivo\\binary_test.ts",
+    "C:\\Users\\Desktop\\Desktop\\projects\\app_acc_transito\\supabase\\functions\\verificar-archivo\\deno.json",
+    "C:\\Users\\Desktop\\Desktop\\projects\\app_acc_transito\\supabase\\functions\\verificar-archivo\\deno.lock",
+    "C:\\Users\\Desktop\\Desktop\\projects\\app_acc_transito\\supabase\\functions\\verificar-archivo\\pdf_structure.ts",
+    "C:\\Users\\Desktop\\Desktop\\projects\\app_acc_transito\\supabase\\functions\\verificar-archivo\\vendor\\pdfjs\\LICENSE",
+    "C:\\Users\\Desktop\\Desktop\\projects\\app_acc_transito\\supabase\\functions\\verificar-archivo\\vendor\\pdfjs\\NOTICE.md",
+    "C:\\Users\\Desktop\\Desktop\\projects\\app_acc_transito\\supabase\\functions\\verificar-archivo\\vendor\\pdfjs\\manifest.json",
+    "C:\\Users\\Desktop\\Desktop\\projects\\app_acc_transito\\supabase\\functions\\verificar-archivo\\vendor\\pdfjs\\pdf.mjs",
+    "C:\\Users\\Desktop\\Desktop\\projects\\app_acc_transito\\supabase\\functions\\verificar-archivo\\vendor\\pdfjs\\pdf.worker.mjs",
+    "C:\\Users\\Desktop\\Desktop\\projects\\app_acc_transito\\supabase\\tests\\create_edge_fixtures.py",
+    "C:\\Users\\Desktop\\Desktop\\projects\\app_acc_transito\\supabase\\tests\\create_pdf_security_fixtures.py",
+    "C:\\Users\\Desktop\\Desktop\\projects\\app_acc_transito\\supabase\\tests\\edge_http_cases.mjs",
+    "C:\\Users\\Desktop\\Desktop\\projects\\app_acc_transito\\supabase\\tests\\edge_http_results.json",
+    "C:\\Users\\Desktop\\Desktop\\projects\\app_acc_transito\\supabase\\tests\\edge_storage_http_results.json",
+    "C:\\Users\\Desktop\\Desktop\\projects\\app_acc_transito\\supabase\\tests\\prepare_pdfjs.mjs",
+    "C:\\Users\\Desktop\\Desktop\\projects\\app_acc_transito\\supabase\\tests\\run_edge_http_tests.ps1",
+    "C:\\Users\\Desktop\\Desktop\\projects\\app_acc_transito\\supabase\\tests\\edge_intervention15_results.json"
+  ]
+}

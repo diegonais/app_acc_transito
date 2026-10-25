@@ -2,6 +2,7 @@
 // Parsers fijados en deno.json/deno.lock; sin canvas nativo ni red de documentos.
 import { decode as pngDecode } from "fast-png";
 import jpeg from "jpeg-js";
+import { validatePdfStructure } from "./pdf_structure.ts";
 const text = new TextDecoder("latin1");
 const MAX_PIXELS = 16_000_000;
 const MAX_EXPANDED = 64 * 1024 * 1024;
@@ -212,60 +213,7 @@ async function pdf(data: Uint8Array) {
     configurable: true,
   });
   const { getDocument } = await import("pdfjs");
-  const footer = /startxref\s+([0-9]+)\s+%%EOF\s*$/.exec(
-    text.decode(data.subarray(-2048)),
-  );
-  require(footer);
-  const xref = Number(footer[1]);
-  require(Number.isSafeInteger(xref) && xref > 0 && xref < data.length);
-  // PDF.js puede reconstruir xref danados. No aceptar esa recuperacion silenciosa.
-  const head = text.decode(
-    data.subarray(xref, Math.min(xref + 128, data.length)),
-  );
-  require(
-    head.startsWith("xref") ||
-      /^\d+\s+\d+\s+obj\b[\s\S]*\/Type\s*\/XRef\b/.test(head),
-  );
-  if (head.startsWith("xref")) {
-    // Comprobar cada offset de xref clasico antes del parser tolerante.
-    let p = xref + 4, entries = 0;
-    const source = text.decode(data);
-    while (true) {
-      while (/\s/.test(source[p] ?? "x")) p++;
-      if (source.startsWith("trailer", p)) break;
-      const section = /^(\d+)\s+(\d+)\s*\r?\n/.exec(source.slice(p, p + 64));
-      require(section);
-      const first = Number(section[1]), count = Number(section[2]);
-      require(count > 0 && first >= 0 && entries + count <= 100000);
-      entries += count;
-      p += section[0].length;
-      for (let i = 0; i < count; i++) {
-        const entry = /^(\d{10}) (\d{5}) ([fn])(?:\r\n|\n|\r| \n| \r)/.exec(
-          source.slice(p, p + 24),
-        );
-        require(entry);
-        if (entry[3] === "n") {
-          const offset = Number(entry[1]), generation = Number(entry[2]);
-          require(
-            offset > 0 && offset < data.length &&
-              new RegExp(`^${first + i}\\s+${generation}\\s+obj\\b`).test(
-                source.slice(offset, offset + 64),
-              ),
-          );
-        }
-        p += entry[0].length;
-      }
-    }
-    // Presupuesto del trailer, independiente del limite aprobado de 10 MiB.
-    const marker = source.lastIndexOf("startxref");
-    require(marker > p && marker - p <= 65536);
-  }
-  require(
-    text.decode(data.subarray(0, 5)) === "%PDF-" &&
-      /%%EOF\s*$/.test(text.decode(data.subarray(-1024))),
-  );
-  // Rechazo conservador adicional. El parser revisa tambien estructuras comprimidas.
-  require(!/\/(?:OpenAction|AA|Names|Encrypt)\b/.test(text.decode(data)));
+  await validatePdfStructure(data);
   const task = getDocument({
     data: data.slice(),
     stopAtErrors: true,

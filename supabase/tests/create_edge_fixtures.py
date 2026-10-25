@@ -84,8 +84,7 @@ corrupt = re.sub(rb"startxref\s+\d+", b"startxref\n0", base)
 add("PDF_xref_invalido", "application/pdf", corrupt, False)
 corrupt = re.sub(rb"[0-9]{10} ([0-9]{5}) n", rb"0000000000 \1 n", base)
 add("PDF_offsets_invalidos", "application/pdf", corrupt, False)
-# Diferencia conservadora explicita: Python acepta este literal inocuo; Edge
-# rechaza tokens activos incluso en texto. No se rebaja ningun control de 12.
+# Comentario inerte: no es una clave del catalogo ni una accion PDF.
 writer = PdfWriter()
 page = writer.add_blank_page(width=100, height=100)
 stream = DecodedStreamObject()
@@ -93,7 +92,7 @@ stream.set_data(b"% literal sintetico /Names\nq Q")
 page[NameObject("/Contents")] = writer._add_object(stream)
 b = io.BytesIO()
 writer.write(b)
-add("PDF_token_conservador", "application/pdf", b.getvalue(), False)
+add("PDF_token_conservador", "application/pdf", b.getvalue(), True)
 writer = PdfWriter()
 writer.add_blank_page(width=100, height=100)
 subject = "X" * (10485760-500)
@@ -123,5 +122,12 @@ document.drawImage(ImageReader(io.BytesIO(images["PNG"])), 150, 300, width=100, 
 document.rect(30, 200, 80, 80, fill=1)
 document.save()
 add("PDF_fuente_imagenes_vectores", "application/pdf", b.getvalue(), True)
+from create_pdf_security_fixtures import security_cases
+for label, content, expected in security_cases():
+    add(label, "application/pdf", content, expected)
+flutter_dir = __import__("os").environ.get("TRANSITO_FLUTTER_PDFS")
+if flutter_dir:
+    for file in sorted(pathlib.Path(flutter_dir).glob("*.pdf")):
+        add("Flutter_" + file.stem, "application/pdf", file.read_bytes(), True)
 pathlib.Path(sys.argv[1]).write_text(json.dumps(cases), encoding="utf8")
 print(json.dumps({"fixtures": len(cases), "python_rejected": sum(not c["python"] for c in cases)}))

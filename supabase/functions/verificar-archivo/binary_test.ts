@@ -10,6 +10,17 @@ type Fixture = {
 const file = Deno.env.get("TRANSITO_EDGE_FIXTURES");
 if (!file) throw Error("Faltan fixtures sinteticos: create_edge_fixtures.py");
 const cases = JSON.parse(await Deno.readTextFile(file)) as Fixture[];
+if (Deno.env.get("TRANSITO_FLUTTER_PDFS")) {
+  Deno.test("los siete PDF Flutter reales estan incluidos", () => {
+    const pdfs = cases.filter((f) => f.name.startsWith("Flutter_"));
+    if (
+      pdfs.length !== 7 || new Set(pdfs.map((f) => f.name)).size !== 7 ||
+      pdfs.some((f) => !f.expected || !f.python)
+    ) {
+      throw Error("Regresion Flutter incompleta");
+    }
+  });
+}
 for (const fixture of cases) {
   Deno.test(fixture.name, async () => {
     const data = Uint8Array.from(atob(fixture.base64), (c) => c.charCodeAt(0));

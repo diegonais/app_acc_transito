@@ -2,14 +2,14 @@ import {randomUUID,createHash} from 'node:crypto';
 import {readFileSync,writeFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 export async function run({base,status,users,check,http,sql,db,project,payload}) {
-  const A=users.POLICE_A,rows=[];
+  const A=users.POLICE_A,rows=[],flutter=[];
   async function edge(actor,body,expected,headers={},label='control') {
     const started=performance.now();
     const res=await fetch(base+'/functions/v1/verificar-archivo',{method:'POST',headers:{apikey:status.ANON_KEY,'Content-Type':'application/json',...(actor?{Authorization:'Bearer '+actor.token}:{}),...headers},body:typeof body==='string'?body:JSON.stringify(body),signal:AbortSignal.timeout(30000)});
     const data=await res.json();
     check(expected.includes(res.status),`Edge ${label}: HTTP ${res.status}`);
     check(!JSON.stringify(data).match(/eyJ|service_role|transito-evidencias|\/storage\/|stack|trace/i),'Respuesta divulga datos internos');
-    rows.push({actor:actor?.name??'anon',status:res.status,estado:data.estado??data.message??null,ms:Math.round(performance.now()-started)});
+    rows.push({name:label,actor:actor?.name??'anon',status:res.status,estado:data.estado??data.message??null,ms:Math.round(performance.now()-started)});
     return data;
   }
   await edge(null,{reserva_id:randomUUID()},[401]);
@@ -47,7 +47,48 @@ export async function run({base,status,users,check,http,sql,db,project,payload})
     const state=sql(`select estado from public.reservas_archivos where reserva_id='${id}';`);
     check(state===(fixture.expected?'VERIFICADO':'RESERVADO'),'Estado de fixture incorrecto');
     parity.push({name:fixture.name,bytes:bytes.length,python:fixture.python,edge:fixture.expected,coincide:fixture.python===fixture.expected,ms:rows.at(-1).ms});
+    if(fixture.name.startsWith('Flutter_')){
+      const initialMs=rows.at(-1).ms;
+      await edge(users.POLICE_B,{reserva_id:id},[403],{},fixture.name+'_autor_ajeno');
+      const archive=await setup('/rest/v1/rpc/registrar_pdf',{p_reserva:id});
+      check(await setup('/rest/v1/rpc/registrar_pdf',{p_reserva:id})===archive,'Registro PDF no idempotente');
+      check(sql(`select estado from public.reservas_archivos where reserva_id='${id}';`)==='VINCULADO','PDF sin vinculo');
+      await edge(A,{reserva_id:id},[200],{},fixture.name+'_reintento');
+      for(const actor of [A,users.ADMIN,users.POLICE_B,null]){
+        const res=await fetch(base+`/storage/v1/object/authenticated/${reservation.bucket_id}/${reservation.objeto}`,{headers:{apikey:status.ANON_KEY,...(actor?{Authorization:'Bearer '+actor.token}:{})}});
+        const content=Buffer.from(await res.arrayBuffer());setupRequests++;
+        if(actor===A||actor===users.ADMIN){check(res.status===200&&createHash('sha256').update(content).digest('hex')===fixture.sha256,'Descarga PDF autorizada alterada');}
+        else check(!res.ok,'Descarga PDF ajena/anonima permitida');
+      }
+      flutter.push({name:fixture.name,bytes:bytes.length,verification_status:200,state:'VINCULADO',retry_status:200,author_download:200,admin_download:200,other_author_denied:true,anonymous_denied:true,ms:initialMs});
+    }
   }
+  // Recursos: solo wall HTTP, nunca CPU/heap por peticion ni garantia Cloud.
+  const resources=[];
+  const prepared=[];
+  for(const label of ['Flutter_informe-completo','PNG_cercano_5MiB','JPEG_cercano_5MiB','PDF_10MiB']){
+    const fixture=fixtures.find(f=>f.name===label);if(!fixture)continue;
+    const bytes=Buffer.from(fixture.base64,'base64'),isPdf=fixture.mime==='application/pdf';
+    const report=isPdf?await setup('/rest/v1/rpc/finalizar_informe',{operation_id:randomUUID(),payload}):null;
+    const r=await setup('/rest/v1/rpc/reservar_archivo',{p_reserva:randomUUID(),p_operacion:randomUUID(),p_clase:isPdf?'PDF':'FOTOGRAFIA',p_tipo:isPdf?null:'OTRA',p_mime:fixture.mime,p_bytes:bytes.length,p_sha256:fixture.sha256,p_informe:report?.id_informe??null});
+    await setup(`/storage/v1/object/${r.bucket_id}/${r.objeto}`,bytes,[200],false,fixture.mime);
+    prepared.push({fixture,r});
+  }
+  const edgeContainer=`supabase_edge_runtime_${project}`;
+  check(JSON.parse(execFileSync('docker',['inspect',edgeContainer],{encoding:'utf8'}))[0].Config.Labels['com.supabase.cli.project']===project,'Runtime no dedicado');
+  execFileSync('docker',['restart',edgeContainer],{stdio:'pipe'});
+  let ready=false;
+  for(let i=0;i<60;i++){
+    try{const res=await fetch(base+'/functions/v1/verificar-archivo',{headers:{apikey:status.ANON_KEY,Authorization:'Bearer '+A.token},signal:AbortSignal.timeout(1000)});await res.arrayBuffer();if(res.status===405){ready=true;break;}}catch{/* Arranque local */}
+    await new Promise(resolve=>setTimeout(resolve,500));
+  }
+  check(ready,'Runtime no recupero servicio');
+  async function resource(item,mode){
+    const t=performance.now();await edge(A,{reserva_id:item.r.reserva_id},[200],{},item.fixture.name+'_'+mode);
+    check(sql(`select estado from public.reservas_archivos where reserva_id='${item.r.reserva_id}';`)==='VERIFICADO','Carga concurrente no confirmada');
+    resources.push({name:item.fixture.name,mode,bytes:item.fixture.size,wall_ms:Math.round(performance.now()-t),status:200});
+  }
+  if(prepared.length){await resource(prepared[0],'primer_PDF_tras_reinicio');await Promise.all(prepared.slice(1).map(item=>resource(item,'concurrencia_3')));}
   // Fallos distribuidos reales solo en nuestro stack, nunca storage.objects directo.
   const valid=fixtures.find(f=>f.name==='PNG_valido'),bytes=Buffer.from(valid.base64,'base64');
   const pending=await setup('/rest/v1/rpc/reservar_archivo',{p_reserva:randomUUID(),p_operacion:randomUUID(),p_clase:'FOTOGRAFIA',p_tipo:'OTRA',p_mime:'image/png',p_bytes:bytes.length,p_sha256:valid.sha256,p_informe:null});
@@ -64,6 +105,6 @@ export async function run({base,status,users,check,http,sql,db,project,payload})
   await edge(A,{reserva_id:pending.reserva_id},[422]);
   check(sql(`select estado from public.reservas_archivos where reserva_id='${pending.reserva_id}';`)==='RESERVADO','Alteracion confirmada');
   const runtime=JSON.parse(execFileSync('docker',['inspect',`supabase_edge_runtime_${project}`],{encoding:'utf8'}))[0].Config.Image;
-  writeFileSync(new URL('./edge_http_results.json',import.meta.url),JSON.stringify({checks:rows.length,setupRequests,passed:rows.length,failed:0,runtime,parity,rows},null,2)+'\n');
+  writeFileSync(new URL('./edge_http_results.json',import.meta.url),JSON.stringify({checks:rows.length,setupRequests,passed:rows.length,failed:0,runtime,parity,flutter,resources,cloud_resources:'NO_COMPROBADOS',rows},null,2)+'\n');
   console.log(JSON.stringify({edge_additional_http:rows.length,status:'OK'}));
 }
