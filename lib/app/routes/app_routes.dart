@@ -36,7 +36,9 @@ class AppRoutes {
       dashboard when authController.isAuthenticated =>
         _buildRoute(settings, DashboardPage(controller: dashboardController)),
       dashboard => _buildRoute(settings, const LoginPage()),
-      officers when authController.currentUser?.role == AppRole.admin =>
+      officers
+          when !authController.isOnline &&
+              authController.currentUser?.role == AppRole.admin =>
         _buildRoute(
           settings,
           OfficerManagementPage(controller: officerManagementController),

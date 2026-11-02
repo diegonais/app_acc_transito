@@ -1,3 +1,4 @@
+import '../../services/qr/institutional_qr_service.dart';
 import '../../services/media/evidence_photo.dart';
 
 class ReportValidationException implements Exception {
@@ -238,11 +239,14 @@ class ReportRecord {
     this.efectosPersonales,
     this.rutaCroquis,
     this.rutaPdf,
+    this.ownerSnapshot,
     this.conductores = const [],
     this.vehiculos = const [],
     this.personas = const [],
     this.fotografias = const [],
   });
+
+  final InstitutionalQrPolice? ownerSnapshot;
 
   final int idInforme;
   final int idPolicia;
@@ -278,12 +282,15 @@ class ReportRecord {
   bool get isActive => estado == 1;
 
   ReportRecord copyWith({
+    String? rutaCroquis,
+    String? rutaPdf,
     List<DriverRecord>? conductores,
     List<VehicleRecord>? vehiculos,
     List<PersonRecord>? personas,
     List<PhotoRecord>? fotografias,
   }) {
     return ReportRecord(
+      ownerSnapshot: ownerSnapshot,
       idInforme: idInforme,
       idPolicia: idPolicia,
       gestion: gestion,
@@ -305,8 +312,8 @@ class ReportRecord {
       protagonistasPresentes: protagonistasPresentes,
       testigos: testigos,
       efectosPersonales: efectosPersonales,
-      rutaCroquis: rutaCroquis,
-      rutaPdf: rutaPdf,
+      rutaCroquis: rutaCroquis ?? this.rutaCroquis,
+      rutaPdf: rutaPdf ?? this.rutaPdf,
       estado: estado,
       fechaCreacion: fechaCreacion,
       fechaModificacion: fechaModificacion,

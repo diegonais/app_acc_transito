@@ -29,21 +29,24 @@ class ReportDetailPage extends StatefulWidget {
 }
 
 class _ReportDetailPageState extends State<ReportDetailPage> {
-  late final Future<ReportRecord> _detail;
-  late final Future<InstitutionalQrPolice> _owner;
+  late Future<ReportRecord> _detail;
+  late Future<InstitutionalQrPolice> _owner;
   bool _isGeneratingPdf = false;
 
   @override
   void initState() {
     super.initState();
-    _owner = widget.controller
-        .findReadableOwner(actor: widget.actor, idInforme: widget.idInforme);
-    // El error se presenta en la sección del funcionario cuando se monta.
+    _loadDetail();
+  }
+
+  void _loadDetail() {
+    _detail = widget.controller
+        .findReadableDetail(actor: widget.actor, idInforme: widget.idInforme);
+    _owner = _detail.then((report) async =>
+        report.ownerSnapshot ??
+        await widget.controller.findReadableOwner(
+            actor: widget.actor, idInforme: widget.idInforme));
     _owner.ignore();
-    _detail = widget.controller.findReadableDetail(
-      actor: widget.actor,
-      idInforme: widget.idInforme,
-    );
   }
 
   @override
@@ -61,6 +64,7 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
           if (snapshot.hasError) {
             return AppErrorState(
               title: 'No se pudo abrir',
+              onRetry: () => setState(_loadDetail),
               message: userMessage(snapshot.error!,
                   fallback:
                       'El informe no está disponible o no tiene permiso para consultarlo.'),

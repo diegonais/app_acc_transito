@@ -49,7 +49,8 @@ class ReportListPage extends StatefulWidget {
   State<ReportListPage> createState() => _ReportListPageState();
 }
 
-class _ReportListPageState extends State<ReportListPage> {
+class _ReportListPageState extends State<ReportListPage>
+    with WidgetsBindingObserver {
   int? _selectedPoliceId;
   DateTime? _from;
   DateTime? _to;
@@ -57,12 +58,37 @@ class _ReportListPageState extends State<ReportListPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    widget.controller.addListener(_controllerChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = AuthScope.of(context).currentUser;
       if (user != null) {
         widget.controller.load(user, filter: _currentFilter);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_controllerChanged);
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  void _controllerChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        widget.controller.isOnline &&
+        mounted &&
+        ModalRoute.of(context)?.isCurrent == true &&
+        !widget.controller.isLoading) {
+      final user = AuthScope.of(context).currentUser;
+      if (user != null) widget.controller.load(user, filter: _currentFilter);
+    }
   }
 
   @override
@@ -76,11 +102,29 @@ class _ReportListPageState extends State<ReportListPage> {
     }
 
     return AppScaffoldShell(
-      title: 'Informes',
+      title: widget.controller.isOnline
+          ? 'Informes · DEFENSA EN LÍNEA'
+          : 'Informes',
       actions: [
+        if (widget.controller.hasPendingFinalization)
+          TextButton(
+              onPressed: () async {
+                try {
+                  final r = await widget.controller.recoverFinalization(user);
+                  if (mounted) await _openDetail(user, r.idInforme);
+                } catch (error) {
+                  if (context.mounted)
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(userMessage(error,
+                            fallback: 'No se pudo confirmar la operación.'))));
+                }
+              },
+              child: const Text('Recuperar finalización pendiente')),
         IconButton(
           tooltip: 'Actualizar',
-          onPressed: () => widget.controller.load(user, filter: _currentFilter),
+          onPressed: widget.controller.isLoading
+              ? null
+              : () => widget.controller.load(user, filter: _currentFilter),
           icon: const Icon(Icons.refresh_rounded),
         ),
       ],
@@ -109,6 +153,7 @@ class _ReportListPageState extends State<ReportListPage> {
               children: [
                 _ReportHeader(
                   user: user,
+                  isOnline: widget.controller.isOnline,
                   onCreate: () => _openForm(user),
                 ),
                 const SizedBox(height: 12),
@@ -151,6 +196,7 @@ class _ReportListPageState extends State<ReportListPage> {
               if (index == 0) {
                 return _ReportHeader(
                   user: user,
+                  isOnline: widget.controller.isOnline,
                   onCreate: () => _openForm(user),
                 );
               }
@@ -173,7 +219,8 @@ class _ReportListPageState extends State<ReportListPage> {
               final report = controller.reports[index - 2];
               return _ReportTile(
                 report: report,
-                canInactivate: user.role == AppRole.admin,
+                canInactivate:
+                    user.role == AppRole.admin && !widget.controller.isOnline,
                 onOpen: () => _openDetail(user, report.idInforme),
                 onInactivate: () => _confirmInactivate(user, report),
               );
@@ -188,6 +235,16 @@ class _ReportListPageState extends State<ReportListPage> {
     if (!user.isPolice) {
       return;
     }
+    try {
+      await widget.controller.beginReport();
+    } catch (error) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(userMessage(error,
+                fallback: 'No se pudo iniciar el informe.'))));
+      return;
+    }
+    if (!mounted) return;
     final result = await Navigator.of(context).push<FinalizedReport>(
       MaterialPageRoute<FinalizedReport>(
         builder: (_) => DirectActionReportFormPage(
@@ -322,9 +379,11 @@ class _ReportListPageState extends State<ReportListPage> {
 }
 
 class _ReportHeader extends StatelessWidget {
-  const _ReportHeader({required this.user, required this.onCreate});
+  const _ReportHeader(
+      {required this.user, required this.onCreate, this.isOnline = false});
 
   final AuthenticatedUser user;
+  final bool isOnline;
   final VoidCallback onCreate;
 
   @override
@@ -333,7 +392,11 @@ class _ReportHeader extends StatelessWidget {
       children: [
         Expanded(
           child: Text(
-            user.isAdmin ? 'Informes activos del dispositivo' : 'Mis informes',
+            user.isAdmin
+                ? isOnline
+                    ? 'Informes activos compartidos'
+                    : 'Informes activos del dispositivo'
+                : 'Mis informes',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
@@ -429,6 +492,7 @@ class _ReportFilters extends StatelessWidget {
             const SizedBox(height: 12),
             if (isAdmin) ...[
               DropdownButtonFormField<int?>(
+                isExpanded: true,
                 initialValue: selectedPoliceId,
                 decoration: const InputDecoration(
                   labelText: 'Policía',
@@ -520,6 +584,13 @@ class _ReportTile extends StatelessWidget {
                               ?.copyWith(fontWeight: FontWeight.w800),
                         ),
                         const SizedBox(height: 4),
+                        if (report.ownerSnapshot != null) ...[
+                          Text(
+                              'Autor: ${report.ownerSnapshot!.grado} ${report.ownerSnapshot!.nombreCompleto}'),
+                          Text(
+                              'Gestión: ${report.gestion} · ${report.isActive ? 'Activo' : 'Inactivo'}'),
+                          Text('Registro: ${report.fechaCreacion.toLocal()}'),
+                        ],
                         Text(report.naturaleza ?? 'Sin naturaleza'),
                         Text(report.lugar ?? 'Sin lugar'),
                       ],
@@ -664,9 +735,16 @@ class _DirectActionReportFormPageState
         await _cancel();
       },
       child: AppScaffoldShell(
-        title: 'Informe de Acción Directa',
+        title: widget.controller.isOnline
+            ? 'Informe · DEFENSA EN LÍNEA'
+            : 'Informe de Acción Directa',
         body: Column(
           children: [
+            if (widget.controller.isOnline)
+              const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Text(
+                      'DEFENSA EN LÍNEA: requiere Internet. Hasta 12 fotos y un croquis, 5 MiB por imagen. Si la finalización queda sin confirmar, recupérela antes de editar o iniciar otro informe. No cierre la aplicación.')),
             _WizardProgress(
               currentStep: _currentStep + 1,
               totalSteps: _totalSteps,
@@ -680,7 +758,9 @@ class _DirectActionReportFormPageState
                   Form(
                     key: _stepFormKeys[_currentStep],
                     child: AbsorbPointer(
-                        absorbing: _isBusy, child: _stepCard(_currentStep)),
+                        absorbing:
+                            _isBusy || widget.controller.hasPendingFinalization,
+                        child: _stepCard(_currentStep)),
                   ),
                   if (_errorMessage != null) ...[
                     const SizedBox(height: 12),
@@ -1060,7 +1140,10 @@ class _DirectActionReportFormPageState
       return;
     }
     if (_currentStep < _totalSteps - 1) {
-      if (_currentStep == 3 && _hasCoordinates && _rutaCroquis.text.isEmpty) {
+      if (_currentStep == 3 &&
+          _hasCoordinates &&
+          _rutaCroquis.text.isEmpty &&
+          !widget.controller.hasPendingFinalization) {
         await _captureSketchMap(showSuccessMessage: false);
         if (!mounted) return;
       }
@@ -1182,7 +1265,8 @@ class _DirectActionReportFormPageState
   Future<void> _finalize() async {
     if (_isBusy) return;
     FocusScope.of(context).unfocus();
-    if (!_validateBeforeFinalize()) {
+    if (!widget.controller.hasPendingFinalization &&
+        !_validateBeforeFinalize()) {
       return;
     }
     setState(() {
@@ -1190,19 +1274,23 @@ class _DirectActionReportFormPageState
       _errorMessage = null;
     });
     try {
-      if (_hasCoordinates && _rutaCroquis.text.trim().isEmpty) {
+      if (!widget.controller.hasPendingFinalization &&
+          _hasCoordinates &&
+          _rutaCroquis.text.trim().isEmpty) {
         await _captureSketchMap(showSuccessMessage: false);
       }
       if (!mounted) return;
       final submittedPhotos = List<PhotoInput>.of(_fotografias);
-      final finalized = await widget.controller.finalize(
-        actor: widget.actor,
-        draft: _draft,
-        persistPhotosForCase:
-            widget.evidenceMediaService.persistPhotosForReport,
-        cleanupPersistedPhotos:
-            widget.evidenceMediaService.cleanupPersistentPhotos,
-      );
+      final finalized = widget.controller.hasPendingFinalization
+          ? await widget.controller.recoverFinalization(widget.actor)
+          : await widget.controller.finalize(
+              actor: widget.actor,
+              draft: _draft,
+              persistPhotosForCase:
+                  widget.evidenceMediaService.persistPhotosForReport,
+              cleanupPersistedPhotos:
+                  widget.evidenceMediaService.cleanupPersistentPhotos,
+            );
       try {
         await widget.evidenceMediaService
             .cleanupTemporaryPhotos(submittedPhotos);
@@ -1335,6 +1423,11 @@ class _DirectActionReportFormPageState
   }
 
   Future<void> _cancel() async {
+    if (widget.controller.hasPendingFinalization) {
+      setState(() => _errorMessage =
+          'La finalización está pendiente de confirmación. Recupere la operación con Finalizar; no puede descartarse como si no se hubiera guardado.');
+      return;
+    }
     if (_isBusy || _isCanceling) return;
     _isCanceling = true;
     try {

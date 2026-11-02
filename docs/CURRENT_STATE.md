@@ -1,3 +1,154 @@
+# Estado actual — Intervenciones 21/22: ensayo Cloud en dos clientes
+
+## Actualización 2026-11-01 — DOS CLIENTES VALIDADO, sin adjuntos
+
+Se actualizó el paquete existente com.example.app_acc_transito, versión 1.0.0+1,
+mediante adb install -r: release en emulator-5554 (Android 15/API 35) y debug en
+Samsung SM-A556E R5CX40ENFZH (Android 16/API 36). Se compararon los certificados
+efectivos con cada instalación histórica antes de actualizar. Ambas APK se
+compilaron con configuración pública mediante --dart-define, sin incorporar
+valores al código o repositorio. No hubo desinstalación, reset ni limpieza de
+datos. Por decisión expresa, no se verificó funcionalmente el historial LOCAL:
+sus datos eran sintéticos descartables y las contraseñas se desconocían.
+
+Proyecto único del ensayo: app-acc-transito-defensa-ensayo. Previamente, con
+autorización separada, se restablecieron solo las contraseñas de las tres cuentas
+sintéticas existentes mediante Auth Admin desde un procedimiento temporal local
+externo al repositorio. Se verificaron UID, correos, roles y relaciones sin cambios;
+no se incorporaron claves administrativas, contraseñas o sesiones al cliente.
+
+Resultado del ensayo dirigido mediante las aplicaciones:
+
+- POLICE A, emulador: finalizó 2026-000001 sin adjuntos y confirmó persistencia
+  al regresar al listado y pulsar Actualizar.
+- ADMIN, Samsung: consultó ese informe creado desde el otro dispositivo.
+- POLICE B, Samsung: listado sin informes ajenos; una consulta dirigida al ID 12
+  de A mediante la API pública y la sesión B devolvió cero filas. Se ejecutó
+  desde el SDK de la APK debug con conexión temporal de depuración, sin extraer
+  JWT ni usar una clave administrativa. Es evidencia real de esa lectura RLS,
+  distinta de las pruebas con mocks de la intervención 20.
+- POLICE B finalizó 2026-000002 sin adjuntos y confirmó persistencia propia.
+- La misma cuenta ADMIN inició sesión en ambos clientes y, tras Actualizar,
+  ambos mostraron los informes A y B. Total observado: 13 informes activos,
+  correspondientes a 11 previos más exactamente dos nuevos del ensayo.
+- Desconexión solo en emulador: la consulta mostró un error de carga; al restaurar
+  Wi-Fi/datos a sus estados anteriores y pulsar Reintentar recuperó ambos informes.
+  No se realizaron escrituras durante la desconexión.
+
+No se cambiaron Flutter, SQL, RLS, Edge Functions ni Storage durante el ensayo.
+La actualización comprobada es por consulta/refresco, no por WebSocket o push.
+Fotografías, croquis, PDF y archivos privados reales siguen sin validación en dos
+clientes. HTTP 546 Memory permanece abierto; no se repitió la concurrencia Edge.
+No se realizaron pruebas de carga ni validación productiva institucional.
+Las herramientas y capturas saneadas de estas intervenciones permanecen fuera
+del repositorio; los dos auxiliares preexistentes supabase/.temp se conservan locales.
+Antes del commit se repitieron flutter analyze --no-pub (sin incidencias) y
+flutter test --no-pub (136 pruebas correctas), sin nuevas operaciones Cloud.
+
+---
+
+# Estado histórico — Intervención 20: cliente para DEFENSA EN LÍNEA
+
+## Actualización 2026-10-29 — Implementado localmente, pendiente ensayo Cloud
+
+Baseline verificado: 34e74f99bce6f7ab55fe122854ba068b2b342314. Se autorizó
+expresamente esta entrada documental durante la intervención. No se modifican
+DECISIONS ni decisiones de negocio. LOCAL conserva SQLite v3, su login,
+correlativos, formulario, consultas, archivos y PDF/QR; ONLINE no construye
+AppDatabase ni escribe informes en SQLite. No hay fallback, doble escritura,
+importación ni sincronización de bases históricas.
+
+Al iniciar se elige LOCAL o DEFENSA EN LÍNEA. Supabase se inicializa solo al
+elegir ONLINE, mediante un único cliente. Sin configuración pública válida se
+muestra un error y LOCAL permanece disponible. Configuración por --dart-define:
+SUPABASE_URL (HTTPS) y SUPABASE_PUBLISHABLE_KEY (publicable o anon). No se
+incorporaron valores reales ni claves privilegiadas. Las nuevas dependencias
+se fijaron: supabase_flutter 2.18.3 (SDK), uuid 4.6.0 (operaciones) y http 1.6.0
+(clasificación de fallos de transporte y pruebas HTTP sin red); lock actualizado.
+
+### Componentes y comportamiento
+
+- app/mode_selection.dart, app/app.dart y main.dart: selección y DI por modalidad.
+- features/auth: adaptador remoto del contrato existente y capacidad adicional
+  de sesión ONLINE; correo/contraseña, restauración persistente del SDK, salida,
+  expiración y errores de renovación. Roles y perfiles activos se leen de
+  usuarios/policias con RLS; nunca de user_metadata ni de un selector de roles.
+- data/remote/online_report_repository.dart: mismas entidades ReportRecord,
+  listados propios/consolidados, relaciones, filtros, dashboard y finalización
+  mediante finalizar_informe(operation_id, payload). Sin INSERT/UPDATE directo
+  ni asignación de correlativos en el teléfono. ADMIN observa autor histórico,
+  gestión, caso, estado activo y fecha de registro.
+- Actualización al entrar/reabrir, al reanudar una pantalla visible, después de
+  finalizar y mediante Actualizar. Sin Realtime push ni temporizador periódico.
+- Doble toque comparte una sola finalización; payload JSON y UUID se congelan.
+  Tras un timeout se admite un único replay automático exacto (dos intentos
+  totales por acción). La recuperación manual conserva la misma intención;
+  no se reintentan automáticamente validaciones, permisos ni HTTP 546.
+- data/remote/online_file_service.dart: reserva/carga sin overwrite/verificación
+  y vínculo usando las RPC existentes; descarga autenticada a caché privada,
+  sin URLs públicas. Operaciones de archivo serializadas por cliente. Máximo
+  técnico del contrato: 12 fotos y un croquis, 5 MiB por imagen, 10 MiB por PDF.
+  Una verificación fallida no se invoca otra vez: se consulta su reserva. Un
+  archivo no confirmado bloquea la finalización sin omitirlo.
+- PDF/QR usan ownerSnapshot de ESE informe remoto (nombre, grado, placa y unidad),
+  no el perfil actual. El autor puede guardar y registrar el PDF con reservar_archivo
+  y registrar_pdf; ADMIN lo guarda en su dispositivo. Si falla el registro remoto,
+  se informa que la copia local existe y que el resultado remoto no se confirmó.
+- Gestión remota de cuentas e inactivación quedan deshabilitadas y señaladas:
+  no hay contrato servidor autorizado para esas escrituras. No se usa signup.
+
+### Evidencia del contrato de recuperación
+
+Revisión de 20261023030451_finalize_report_rpc.sql: clave UUID primaria en
+operaciones_finalizacion, INSERT ON CONFLICT y SELECT FOR UPDATE (líneas 91–100),
+comparación de auth_uid/payload, retorno del resultado existente y actualización
+del resultado en la misma llamada transaccional (línea 226). Las tablas privadas
+carecen de CRUD cliente (línea 23). La fachada adicional de Storage en la migración
+12 conserva la implementación y valida autor/contenido/archivos antes de vincular.
+finalization_rpc.sql contiene pruebas de replay perdido, conflicto, actor ajeno
+y rollback de hijos/contador; run_finalization_tests.ps1 contiene cuatro escenarios
+de concurrencia con espera de bloqueo observada por el harness. Se leyeron esas
+pruebas y el SQL; NO se ejecutó una BD SQL en esta intervención. Los mocks nuevos
+validan el comportamiento Flutter, no demuestran ejecución del SQL ni RLS desplegada.
+
+### Validación y límites
+
+Flutter 3.47.2 / Dart 3.13.2. flutter analyze --no-pub: sin incidencias.
+flutter test --no-pub: 136 pruebas correctas, incluidas 29 nuevas de ONLINE.
+Cubren SDK con HTTP simulado, DI con SQLite que falla si se toca, sesión/roles,
+lecturas de tres clientes simulados, refresco/lifecycle, expiración, offline,
+respuesta perdida/replay/doble toque, snapshots distintos por informe y archivos
+serializados. Se corrigieron fallos intermedios de pruebas/rutas sin AuthScope,
+ajuste del selector de policías a nombres largos y sincronización del scroll
+en el test de navegación. Compilación APK debug local correcta, sin configuración
+Cloud. No sustituye el APK release de entrega ni constituye ensayo en teléfonos.
+
+dart format lib test: 83 archivos formateados. dart format . reproduce el fallo
+preexistente de una ruta residual de Gradle bajo build/flutter_plugin_android_lifecycle.
+No se borraron builds ni se actualizaron Gradle/AGP/Kotlin/SDK. La compilación emitió
+avisos de versiones existentes. Revisión de diff, archivos nuevos y patrones de
+credenciales: sin secretos detectados. No se editan SQL, Edge Functions, Android,
+.gitignore ni los dos auxiliares preexistentes supabase/.temp, cuyo contenido no se leyó.
+
+La recuperación pendiente vive en memoria por autor durante la sesión: no resiste
+cierre del proceso. Mientras está incierta se bloquea editar/descartar esa intención
+o iniciar otra, y se indica no cerrar la aplicación. Reservas o verificaciones
+inciertas pueden requerir revisión posterior; no hay limpieza remota automática.
+El contrato de reserva no conserva descripciones opcionales de fotografías: se
+rechazan explícitamente antes de cargar, en lugar de perderlas silenciosamente.
+
+No se realizó ninguna llamada al proyecto Cloud, lectura remota, carga real,
+prueba física, cambio de Auth/RLS/Storage/Realtime, despliegue, commit ni push.
+HTTP 546 WORKER_RESOURCE_LIMIT Memory sigue ABIERTO; no se repitió la prueba de
+concurrencia Edge ni se afirma corregido. No se evaluó tamaño real del paquete.
+Pendientes de autorización separada: ensayo POLICE A registra/consulta, ADMIN ve
+A/B desde otro teléfono, POLICE B no accede a A, el mismo ADMIN accede desde un
+tercer dispositivo, errores de red/replay y archivos/PDF privados reales. Antes
+del ensayo hay que configurar únicamente URL y clave pública del cliente y
+verificar la compatibilidad del despliegue existente, sin presumirla por los mocks.
+
+---
+
 # Estado actual — Visualización de Naturaleza corregida
 
 ## Actualización 2026-09-16 — Texto completo en Naturaleza

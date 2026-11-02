@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../shared/user_message.dart';
 import '../../app/routes/app_routes.dart';
 import '../../app/theme/app_theme.dart';
 import '../../data/repositories/report_repository.dart';
@@ -20,16 +21,35 @@ class DashboardPage extends StatefulWidget {
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
-class _DashboardPageState extends State<DashboardPage> {
+class _DashboardPageState extends State<DashboardPage>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = AuthScope.of(context).currentUser;
       if (user != null) {
         widget.controller.load(user);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed ||
+        !mounted ||
+        ModalRoute.of(context)?.isCurrent != true ||
+        widget.controller.isLoading) return;
+    final auth = AuthScope.of(context);
+    if (auth.isOnline && auth.currentUser != null)
+      widget.controller.load(auth.currentUser!);
   }
 
   @override
@@ -46,7 +66,7 @@ class _DashboardPageState extends State<DashboardPage> {
     final profile = user.policeProfile;
 
     return AppScaffoldShell(
-      title: 'Inicio',
+      title: auth.isOnline ? 'Inicio · DEFENSA EN LÍNEA' : 'Inicio',
       actions: [
         IconButton(
           tooltip: 'Actualizar',
@@ -55,9 +75,18 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
         IconButton(
           tooltip: 'Cerrar sesión',
-          onPressed: () {
-            auth.logout();
-            Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+          onPressed: () async {
+            try {
+              await auth.logout();
+            } catch (error) {
+              if (context.mounted)
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(userMessage(error,
+                        fallback:
+                            'La salida remota no se confirmó. Compruebe su conexión.'))));
+            }
+            if (context.mounted)
+              Navigator.of(context).pushReplacementNamed(AppRoutes.login);
           },
           icon: const Icon(Icons.logout_rounded),
         ),
@@ -72,12 +101,18 @@ class _DashboardPageState extends State<DashboardPage> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             children: [
+              if (auth.connectionMessage != null) Text(auth.connectionMessage!),
+              if (auth.isOnline)
+                const Text(
+                    'Los archivos son privados. ADMIN puede guardar el PDF en este dispositivo; el autor puede registrarlo también en línea. La gestión de cuentas y la inactivación en línea no están disponibles.'),
               _WelcomeCard(
                 username: user.username,
                 role: user.isAdmin ? 'ADMIN' : 'Policía',
-                subtitle: user.isAdmin
-                    ? 'Consulta operativa local del dispositivo.'
-                    : 'Consulta y registro operativo del dispositivo.',
+                subtitle: auth.isOnline
+                    ? 'Informes compartidos · Requiere Internet'
+                    : user.isAdmin
+                        ? 'Consulta operativa local del dispositivo.'
+                        : 'Consulta y registro operativo del dispositivo.',
                 profileSummary: user.isAdmin
                     ? 'Administrador'
                     : profile == null
@@ -149,7 +184,8 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ],
               const SizedBox(height: 20),
-              if (user.role == AppRole.admin) const _InformationBanner(),
+              if (user.role == AppRole.admin && !auth.isOnline)
+                const _InformationBanner(),
               if (user.role == AppRole.admin) const SizedBox(height: 20),
               _ActionGrid(
                 children: [
@@ -165,7 +201,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       if (mounted) await widget.controller.load(user);
                     },
                   ),
-                  if (user.role == AppRole.admin)
+                  if (user.role == AppRole.admin && !auth.isOnline)
                     _DashboardActionButton(
                       label: 'Gestionar policías',
                       icon: Icons.groups_2_outlined,

@@ -223,7 +223,7 @@ class _FakeAuthController extends AuthController {
   }
 
   @override
-  void logout() {
+  Future<void> logout() async {
     _user = null;
     notifyListeners();
   }

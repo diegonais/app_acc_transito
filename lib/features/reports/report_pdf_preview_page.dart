@@ -48,7 +48,13 @@ class _ReportPdfPreviewPageState extends State<ReportPdfPreviewPage> {
               runSpacing: 8,
               children: [
                 TextButton.icon(
-                  label: Text(_isSaving ? 'Guardando' : 'Guardar PDF'),
+                  label: Text(_isSaving
+                      ? 'Guardando'
+                      : widget.controller.isOnline
+                          ? widget.actor.isPolice
+                              ? 'Guardar PDF y registrar en línea'
+                              : 'Guardar PDF en dispositivo'
+                          : 'Guardar PDF'),
                   icon: const Icon(Icons.save_alt_outlined),
                   onPressed: _isBusy ? null : _savePdf,
                 ),

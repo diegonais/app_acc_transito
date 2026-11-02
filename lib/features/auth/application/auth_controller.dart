@@ -1,11 +1,40 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
+import '../domain/online_session_contract.dart';
 
 import '../domain/auth_repository_contract.dart';
 import '../domain/app_role.dart';
 import '../domain/authenticated_user.dart';
 
 class AuthController extends ChangeNotifier {
-  AuthController(this._authRepository);
+  AuthController(this._authRepository) {
+    final repository = _authRepository;
+    if (repository is OnlineSessionContract) {
+      _sessionSubscription =
+          (repository as OnlineSessionContract).sessionChanges.listen((active) {
+        if (!active) _clearSession();
+      }, onError: (Object _) {
+        _connectionMessage =
+            'No se pudo renovar la sesión. Compruebe Internet y vuelva a ingresar si es necesario.';
+        notifyListeners();
+      });
+    }
+  }
+
+  StreamSubscription<bool>? _sessionSubscription;
+  String? _connectionMessage;
+  String? get connectionMessage => _connectionMessage;
+  bool get isOnline => _authRepository is OnlineSessionContract;
+
+  Future<void> restoreSession() async {
+    final repository = _authRepository;
+    if (repository is! OnlineSessionContract) return;
+    final generation = ++_loginGeneration;
+    final user = await (repository as OnlineSessionContract).restoreSession();
+    if (generation != _loginGeneration) return;
+    _currentUser = user;
+    notifyListeners();
+  }
 
   final AuthRepositoryContract _authRepository;
   AuthenticatedUser? _currentUser;
@@ -13,6 +42,7 @@ class AuthController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _sessionSubscription?.cancel();
     _loginGeneration++;
     super.dispose();
   }
@@ -40,6 +70,7 @@ class AuthController extends ChangeNotifier {
     required String password,
   }) async {
     _validateCredentials(username: username, password: password);
+    if (isOnline) _clearSession();
     final generation = ++_loginGeneration;
     final user = await _authRepository.login(
       username: username,
@@ -47,10 +78,19 @@ class AuthController extends ChangeNotifier {
     );
     if (generation != _loginGeneration) return;
     _currentUser = user;
+    _connectionMessage = null;
     notifyListeners();
   }
 
-  void logout() {
+  Future<void> logout() async {
+    _clearSession();
+    final repository = _authRepository;
+    if (repository is OnlineSessionContract) {
+      await (repository as OnlineSessionContract).signOut();
+    }
+  }
+
+  void _clearSession() {
     _loginGeneration++;
     if (_currentUser == null) {
       return;

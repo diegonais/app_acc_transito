@@ -29,19 +29,27 @@ class _SplashPageState extends State<SplashPage> {
       _errorMessage = null;
     });
     try {
-      final hasAdmin = await AuthScope.of(context).hasAdmin();
+      final auth = AuthScope.of(context);
+      await auth.restoreSession();
+      final hasAdmin = await auth.hasAdmin();
       if (!mounted) {
         return;
       }
       Navigator.of(context).pushReplacementNamed(
-        hasAdmin ? AppRoutes.login : AppRoutes.initialSetup,
+        auth.isAuthenticated
+            ? AppRoutes.dashboard
+            : hasAdmin
+                ? AppRoutes.login
+                : AppRoutes.initialSetup,
       );
     } catch (_) {
       if (!mounted) {
         return;
       }
       setState(() {
-        _errorMessage = 'No se pudo preparar la autenticación local.';
+        _errorMessage = (AuthScope.maybeOf(context)?.isOnline ?? false)
+            ? 'No se pudo restaurar la sesión en línea. Compruebe Internet y reintente.'
+            : 'No se pudo preparar la autenticación local.';
       });
     }
   }
@@ -73,7 +81,9 @@ class _SplashPageState extends State<SplashPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Sistema local de informes de accidentes de tránsito',
+                    (AuthScope.maybeOf(context)?.isOnline ?? false)
+                        ? 'DEFENSA EN LÍNEA · Requiere Internet'
+                        : 'Sistema local de informes de accidentes de tránsito',
                     textAlign: TextAlign.center,
                     style: textTheme.bodyLarge,
                   ),

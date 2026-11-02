@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'app/app.dart';
+import 'app/mode_selection.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const AccTransitoApp());
+  runApp(const ModeSelection());
 }

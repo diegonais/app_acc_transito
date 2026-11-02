@@ -32,7 +32,9 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return AppScaffoldShell(
-      title: 'Ingreso',
+      title: (AuthScope.maybeOf(context)?.isOnline ?? false)
+          ? 'Ingreso · DEFENSA EN LÍNEA'
+          : 'Ingreso',
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -59,8 +61,15 @@ class _LoginPageState extends State<LoginPage> {
                     children: [
                       TextFormField(
                         controller: _usernameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Usuario',
+                        keyboardType:
+                            (AuthScope.maybeOf(context)?.isOnline ?? false)
+                                ? TextInputType.emailAddress
+                                : TextInputType.text,
+                        decoration: InputDecoration(
+                          labelText:
+                              (AuthScope.maybeOf(context)?.isOnline ?? false)
+                                  ? 'Correo electrónico'
+                                  : 'Usuario',
                           prefixIcon: Icon(Icons.person_outline_rounded),
                         ),
                         textInputAction: TextInputAction.next,

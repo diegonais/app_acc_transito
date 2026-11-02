@@ -1,3 +1,5 @@
+import '../../../data/remote/remote_gateway.dart';
+import '../../../data/remote/online_report_operations.dart';
 import 'package:flutter/foundation.dart';
 import '../../../data/models/report_date_bounds.dart';
 import '../../../shared/user_message.dart';
@@ -88,6 +90,26 @@ class ReportController extends ChangeNotifier {
       : _repository = repository;
 
   final ReportRepositoryContract _repository;
+  bool get isOnline => _repository is OnlineReportOperations;
+  bool get hasPendingFinalization =>
+      _repository is OnlineReportOperations &&
+      (_repository as OnlineReportOperations).hasPendingFinalization;
+  Future<void> beginReport() async {
+    if (_repository is OnlineReportOperations)
+      await (_repository as OnlineReportOperations).beginReport();
+  }
+
+  Future<FinalizedReport> recoverFinalization(AuthenticatedUser actor) async {
+    final session = _sessionGeneration;
+    final result =
+        await (_repository as OnlineReportOperations).resumeFinalization();
+    if (session == _sessionGeneration) await load(actor);
+    return result;
+  }
+
+  Future<FinalizedReport>? _finalizing;
+  int? _finalizingActor;
+  int _sessionGeneration = 0;
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -97,6 +119,7 @@ class ReportController extends ChangeNotifier {
   int _loadGeneration = 0;
 
   void reset() {
+    _sessionGeneration++;
     _loadGeneration++;
     _reports = const [];
     _policeOptions = const [];
@@ -108,6 +131,7 @@ class ReportController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _sessionGeneration++;
     _loadGeneration++;
     super.dispose();
   }
@@ -173,10 +197,31 @@ class ReportController extends ChangeNotifier {
     DateTime? now,
     PersistPhotosForCase? persistPhotosForCase,
     CleanupPhotos? cleanupPersistedPhotos,
+  }) {
+    if (_finalizing != null && _finalizingActor != actor.idUsuario) {
+      throw StateError('Otra sesión tiene una finalización pendiente.');
+    }
+    _finalizingActor = actor.idUsuario;
+    return _finalizing ??= _finalizeImpl(
+            actor: actor,
+            draft: draft,
+            now: now,
+            persistPhotosForCase: persistPhotosForCase,
+            cleanupPersistedPhotos: cleanupPersistedPhotos)
+        .whenComplete(() => _finalizing = null);
+  }
+
+  Future<FinalizedReport> _finalizeImpl({
+    required AuthenticatedUser actor,
+    required DirectActionReportDraft draft,
+    DateTime? now,
+    PersistPhotosForCase? persistPhotosForCase,
+    CleanupPhotos? cleanupPersistedPhotos,
   }) async {
     if (actor.role != AppRole.police) {
       throw StateError('Solo un usuario POLICE puede crear informes.');
     }
+    final session = _sessionGeneration;
     final reference = now ?? DateTime.now();
     final finalized = await _repository.finalizeReport(
       FinalizeReportInput(
@@ -208,7 +253,7 @@ class ReportController extends ChangeNotifier {
       persistPhotosForCase: persistPhotosForCase,
       cleanupPersistedPhotos: cleanupPersistedPhotos,
     );
-    await load(actor);
+    if (session == _sessionGeneration) await load(actor);
     return finalized;
   }
 
@@ -233,7 +278,8 @@ class ReportController extends ChangeNotifier {
     required int idInforme,
   }) async {
     final report = await findReadableDetail(actor: actor, idInforme: idInforme);
-    return _repository.findReportOwnerQrIdentity(report.idPolicia);
+    return report.ownerSnapshot ??
+        await _repository.findReportOwnerQrIdentity(report.idPolicia);
   }
 
   Future<DirectActionReportPdf> buildReadablePdf({
@@ -245,7 +291,8 @@ class ReportController extends ChangeNotifier {
       actor: actor,
       idInforme: idInforme,
     );
-    final owner = await _repository.findReportOwnerQrIdentity(report.idPolicia);
+    final owner = report.ownerSnapshot ??
+        await _repository.findReportOwnerQrIdentity(report.idPolicia);
     return (pdfService ?? DirectActionReportPdfService()).build(
       report: report,
       owner: owner,
@@ -263,7 +310,17 @@ class ReportController extends ChangeNotifier {
       bytes: pdf.bytes,
       fileName: pdf.fileName,
     );
-    await _repository.updatePdfPath(idInforme: idInforme, rutaPdf: path);
+    if (!isOnline) {
+      await _repository.updatePdfPath(idInforme: idInforme, rutaPdf: path);
+    } else if (actor.isPolice) {
+      try {
+        await (_repository as OnlineReportOperations)
+            .uploadPdf(idInforme, path);
+      } catch (error) {
+        throw OnlineException(
+            'El PDF se guardó en el dispositivo, pero su registro remoto no se confirmó. Conserve esta vista para recuperar la misma operación; una verificación fallida no se repetirá.${error is OnlineException ? ' ${error.message}' : ''}');
+      }
+    }
     return path;
   }
 
