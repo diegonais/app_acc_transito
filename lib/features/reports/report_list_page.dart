@@ -22,6 +22,7 @@ import '../auth/domain/app_role.dart';
 import '../auth/domain/authenticated_user.dart';
 import 'application/report_controller.dart';
 import 'report_detail_page.dart';
+import 'description_dictation_field.dart';
 
 export 'report_detail_page.dart' show ReportDetailPage;
 
@@ -641,16 +642,36 @@ class DirectActionReportFormPage extends StatefulWidget {
 class _DirectActionReportFormPageState
     extends State<DirectActionReportFormPage> {
   static const _totalSteps = 6;
+  static const _unidades = [
+    'EPI 3',
+    'EPI 5',
+    'EPI 6',
+    'EPI 8',
+    'EPI 9',
+    'EPI 11',
+    'RP 110',
+    'TRANSITO',
+    'UPAR DELTA',
+    'PAC',
+    'DIPROVE',
+    'POFOMA',
+    'INTERPOL',
+    'BOMBEROS',
+    'BATALLON DE SEGURIDAD FISICA',
+  ];
   static const _naturalezas = [
-    'Colisión',
-    'Choque',
-    'Choque a objeto fijo/vehículo detenido',
-    'Atropello',
-    'Vuelco',
-    'Caída de persona o carga',
-    'Embarrancamiento / Deslizamiento',
-    'Incendio de vehículo',
-    'Otros',
+    'ARROLLAMIENTO',
+    'ATRICCION',
+    'ATROPELLO',
+    'CAIDA',
+    'CHOQUE',
+    'COLISION',
+    'DESLIZAMIENTO',
+    'EMBARRANCAMIENTO',
+    'ENCUNETAMIENTO',
+    'OTROS HECHOS DE TRANSITO',
+    'SUMERSION',
+    'VUELCO',
   ];
   final _stepFormKeys =
       List.generate(_totalSteps, (_) => GlobalKey<FormState>());
@@ -660,6 +681,15 @@ class _DirectActionReportFormPageState
   final _hecho = TextEditingController();
   String? _naturaleza;
   final _lugar = TextEditingController();
+  static const _tiposDenunciante = [
+    'BOL 110',
+    'DE OFICIO',
+    'DENUNCIANTE',
+    'OTRO'
+  ];
+  String? _tipoDenunciante;
+  bool get _requiereNombreDenunciante =>
+      _tipoDenunciante == 'DENUNCIANTE' || _tipoDenunciante == 'OTRO';
   final _denuncianteNombre = TextEditingController();
   final _denuncianteDocumento = TextEditingController();
   final _denuncianteContacto = TextEditingController();
@@ -812,7 +842,29 @@ class _DirectActionReportFormPageState
   Widget _generalDataStep() {
     return Column(
       children: [
-        _field(_epi, 'EPI / Estación Policial Integral'),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: DropdownButtonFormField<String>(
+            initialValue: _epi.text.isEmpty ? null : _epi.text,
+            isExpanded: true,
+            isDense: false,
+            itemHeight: null,
+            decoration:
+                const InputDecoration(labelText: 'Unidad a la que pertenece'),
+            hint: const Text('Seleccione una opción'),
+            items: _unidades
+                .map((value) => DropdownMenuItem(
+                      value: value,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Text(value),
+                      ),
+                    ))
+                .toList(),
+            validator: (value) => value == null ? 'Campo obligatorio.' : null,
+            onChanged: (value) => setState(() => _epi.text = value ?? ''),
+          ),
+        ),
         _dateField(
           controller: _llegada,
           label: 'Fecha y hora de llegada',
@@ -839,7 +891,8 @@ class _DirectActionReportFormPageState
             // Las opciones pueden ocupar varias líneas con el texto ampliado.
             isDense: false,
             itemHeight: null,
-            decoration: const InputDecoration(labelText: 'Naturaleza'),
+            decoration:
+                const InputDecoration(labelText: 'Naturaleza del hecho'),
             hint: const Text('Seleccione una opción'),
             items: _naturalezas
                 .map((value) => DropdownMenuItem(
@@ -862,7 +915,25 @@ class _DirectActionReportFormPageState
   Widget _complainantStep() {
     return Column(
       children: [
-        _field(_denuncianteNombre, 'Denunciante'),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: DropdownButtonFormField<String>(
+            initialValue: _tipoDenunciante,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Denunciante'),
+            hint: const Text('Seleccione una opción'),
+            items: _tiposDenunciante
+                .map((value) => DropdownMenuItem(
+                      value: value,
+                      child: Text(value),
+                    ))
+                .toList(),
+            validator: (value) => value == null ? 'Campo obligatorio.' : null,
+            onChanged: (value) => setState(() => _tipoDenunciante = value),
+          ),
+        ),
+        if (_requiereNombreDenunciante)
+          _field(_denuncianteNombre, 'Nombre del denunciante'),
         _field(
           _denuncianteDocumento,
           'Documento del denunciante',
@@ -876,7 +947,7 @@ class _DirectActionReportFormPageState
   Widget _descriptionConditionsStep() {
     return Column(
       children: [
-        _field(_descripcion, 'Descripción', maxLines: 5),
+        DescriptionDictationField(controller: _descripcion),
         _field(_condicionesClimaticas, 'Condiciones climáticas'),
         _boolChoice(
           label: 'Vehículos movidos',
@@ -1189,7 +1260,8 @@ class _DirectActionReportFormPageState
         _isBlank(_lugar.text)) {
       return 0;
     }
-    if (_isBlank(_denuncianteNombre.text) ||
+    if (_tipoDenunciante == null ||
+        (_requiereNombreDenunciante && _isBlank(_denuncianteNombre.text)) ||
         _isBlank(_denuncianteContacto.text)) {
       return 1;
     }
@@ -1217,7 +1289,9 @@ class _DirectActionReportFormPageState
       fechaHoraHecho: _fechaHoraHecho,
       naturaleza: _naturaleza ?? '',
       lugar: _lugar.text,
-      denuncianteNombre: _denuncianteNombre.text,
+      denuncianteNombre: _requiereNombreDenunciante
+          ? '$_tipoDenunciante: ${_denuncianteNombre.text.trim()}'
+          : _tipoDenunciante ?? '',
       denuncianteDocumento: _denuncianteDocumento.text,
       denuncianteContacto: _denuncianteContacto.text,
       descripcion: _descripcion.text,
@@ -1484,6 +1558,7 @@ class _DirectActionReportFormPageState
     _hecho.clear();
     _naturaleza = null;
     _lugar.clear();
+    _tipoDenunciante = null;
     _denuncianteNombre.clear();
     _denuncianteDocumento.clear();
     _denuncianteContacto.clear();
@@ -2164,6 +2239,7 @@ class _DriverDialog extends StatefulWidget {
 }
 
 class _DriverDialogState extends State<_DriverDialog> {
+  static const _categorias = ['A', 'B', 'C', 'M', 'P', 'T', 'Otros'];
   final _formKey = GlobalKey<FormState>();
   final _nombre = TextEditingController();
   final _edad = TextEditingController();
@@ -2229,11 +2305,30 @@ class _DriverDialogState extends State<_DriverDialog> {
           validator: _validateOptionalInt,
         ),
         _field(_licencia, 'Licencia'),
-        _field(_categoria, 'Categoría'),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: DropdownButtonFormField<String>(
+            initialValue: _categoria.text.isEmpty ? null : _categoria.text,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Categoría'),
+            hint: const Text('Seleccione una opción'),
+            items: [
+              ..._categorias,
+              if (_categoria.text.isNotEmpty &&
+                  !_categorias.contains(_categoria.text))
+                _categoria.text,
+            ]
+                .map((value) =>
+                    DropdownMenuItem(value: value, child: Text(value)))
+                .toList(),
+            validator: (value) => value == null ? 'Campo obligatorio.' : null,
+            onChanged: (value) => setState(() => _categoria.text = value ?? ''),
+          ),
+        ),
         _field(_domicilio, 'Domicilio', required: false),
         _field(_zona, 'Zona', required: false),
         _field(_contactos, 'Contactos', required: false),
-        _field(_condicionEntrega, 'Condición de entrega', required: false),
+        _field(_condicionEntrega, 'Observación', required: false),
       ],
       onSubmit: () {
         if (!(_formKey.currentState?.validate() ?? false)) {

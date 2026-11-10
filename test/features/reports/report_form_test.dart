@@ -57,9 +57,9 @@ void main() {
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       await _open(tester, _PendingController());
       for (final option in [
-        'Colisión',
-        'Choque a objeto fijo/vehículo detenido',
-        'Embarrancamiento / Deslizamiento',
+        'COLISION',
+        'OTROS HECHOS DE TRANSITO',
+        'EMBARRANCAMIENTO',
       ]) {
         await _selectNature(tester, option);
         _expectNatureVisible(tester, option);
@@ -70,8 +70,8 @@ void main() {
       }
       const output = String.fromEnvironment('NATURE_REVIEW_OUTPUT');
       if (output.isNotEmpty) {
-        await tester
-            .ensureVisible(find.byType(DropdownButtonFormField<String>));
+        await tester.ensureVisible(find.widgetWithText(
+            DropdownButtonFormField<String>, 'Naturaleza del hecho'));
         await tester.pumpAndSettle();
         final boundary = tester.renderObject<RenderRepaintBoundary>(
             find.byKey(const ValueKey('form-review')));
@@ -96,18 +96,43 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     final controller = _PendingController();
     await _open(tester, controller);
-    await _fill(tester, 'EPI / Estación Policial Integral', 'EPI Central');
+    await _selectUnit(tester, 'EPI 3');
     await _date(tester, 'Fecha y hora de llegada');
     await _date(tester, 'Fecha y hora del hecho');
     await _fill(tester, 'Lugar', 'Ubicación de José Muñoz Peña');
     await _tap(tester, 'Siguiente');
     expect(find.text('Campo obligatorio.'), findsOneWidget);
-    await _selectNature(tester, 'Choque a objeto fijo/vehículo detenido');
+    await _selectNature(tester, 'OTROS HECHOS DE TRANSITO');
     await _tap(tester, 'Siguiente');
     await _tap(tester, 'Anterior');
-    expect(find.text('Choque a objeto fijo/vehículo detenido'), findsOneWidget);
+    expect(find.text('OTROS HECHOS DE TRANSITO'), findsOneWidget);
     await _tap(tester, 'Siguiente');
-    await _fill(tester, 'Denunciante', 'José Muñoz Peña');
+    final complainant =
+        find.widgetWithText(DropdownButtonFormField<String>, 'Denunciante');
+    await Scrollable.ensureVisible(tester.element(complainant), alignment: 0.5);
+    await tester.pumpAndSettle();
+    await tester.tap(complainant);
+    await tester.pumpAndSettle();
+    final menu = tester.widget<DropdownButton<String>>(find.descendant(
+        of: complainant, matching: find.byType(DropdownButton<String>)));
+    expect(menu.items!.map((item) => item.value),
+        ['BOL 110', 'DE OFICIO', 'DENUNCIANTE', 'OTRO']);
+    await tester.tap(find.text('BOL 110').last);
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextFormField, 'Nombre del denunciante'),
+        findsNothing);
+    for (final choice in ['DE OFICIO', 'OTRO', 'DENUNCIANTE']) {
+      await tester.tap(complainant);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(choice).last);
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(TextFormField, 'Nombre del denunciante'),
+          choice == 'DE OFICIO' ? findsNothing : findsOneWidget);
+    }
+    await tester.pumpAndSettle();
+    await _tap(tester, 'Siguiente');
+    expect(find.text('Campo obligatorio.'), findsWidgets);
+    await _fill(tester, 'Nombre del denunciante', 'José Muñoz Peña');
     await _fill(tester, 'Contacto del denunciante', 'No existe');
     await _tap(tester, 'Siguiente');
     await _fill(tester, 'Descripción', 'Descripción del vehículo');
@@ -129,7 +154,6 @@ void main() {
     await _tap(tester, 'Agregar');
     await _fill(tester, 'Nombre completo', '   ');
     await _fill(tester, 'Licencia', '   ');
-    await _fill(tester, 'Categoría', '   ');
     await _tap(tester, 'Agregar');
     expect(find.text('Campo obligatorio.'), findsNWidgets(3));
     await _fill(tester, 'Nombre completo', ' José Muñoz ');
@@ -138,7 +162,24 @@ void main() {
     await _fill(tester, 'Licencia', ' LP-123 ');
     await _tap(tester, 'Agregar');
     expect(find.text('Campo obligatorio.'), findsOneWidget);
-    await _fill(tester, 'Categoría', ' A ');
+    final category =
+        find.widgetWithText(DropdownButtonFormField<String>, 'Categoría');
+    await Scrollable.ensureVisible(tester.element(category), alignment: 0.5);
+    await tester.pumpAndSettle();
+    final dropdown = tester.widget<DropdownButton<String>>(find.descendant(
+        of: category, matching: find.byType(DropdownButton<String>)));
+    expect(dropdown.items!.map((item) => item.value),
+        ['A', 'B', 'C', 'M', 'P', 'T', 'Otros']);
+    for (final option in ['B', 'C', 'M', 'P', 'T', 'Otros', 'A']) {
+      await tester.tap(category);
+      await tester.pumpAndSettle();
+      final item = find.text(option).last;
+      await tester.ensureVisible(item);
+      await tester.tap(item);
+      await tester.pumpAndSettle();
+    }
+    await _fill(tester, 'Observación', 'Sin observaciones adicionales');
+    expect(find.text('Condición de entrega'), findsNothing);
     await _fill(tester, 'Edad', '-1');
     await _tap(tester, 'Agregar');
     expect(find.text('Ingrese un número válido.'), findsOneWidget);
@@ -155,9 +196,10 @@ void main() {
     await _tap(tester, 'Siguiente');
     await _tap(tester, 'Finalizar informe');
     expect(controller.calls, 1);
-    expect(controller.submitted!.denuncianteNombre, 'José Muñoz Peña');
-    expect(controller.submitted!.naturaleza,
-        'Choque a objeto fijo/vehículo detenido');
+    expect(controller.submitted!.epi, 'EPI 3');
+    expect(controller.submitted!.denuncianteNombre,
+        'DENUNCIANTE: José Muñoz Peña');
+    expect(controller.submitted!.naturaleza, 'OTROS HECHOS DE TRANSITO');
     final driver = controller.submitted!.conductores.single;
     expect(driver.nombreCompleto, 'José Muñoz');
     expect(driver.licencia, 'LP-456');
@@ -166,7 +208,7 @@ void main() {
     expect(driver.domicilio, isNull);
     expect(driver.zona, isNull);
     expect(driver.contactos, isNull);
-    expect(driver.condicionEntrega, isNull);
+    expect(driver.condicionEntrega, 'Sin observaciones adicionales');
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.text('Cancelar informe'), findsNothing);
@@ -182,7 +224,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('naturaleza permite seleccionar las nueve opciones en móvil',
+  testWidgets('naturaleza permite seleccionar las doce opciones en móvil',
       (tester) async {
     tester.view.physicalSize = const Size(320, 800);
     tester.view.devicePixelRatio = 1;
@@ -190,18 +232,23 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await _open(tester, _PendingController());
     const options = [
-      'Colisión',
-      'Choque',
-      'Choque a objeto fijo/vehículo detenido',
-      'Atropello',
-      'Vuelco',
-      'Caída de persona o carga',
-      'Embarrancamiento / Deslizamiento',
-      'Incendio de vehículo',
-      'Otros',
+      'ARROLLAMIENTO',
+      'ATRICCION',
+      'ATROPELLO',
+      'CAIDA',
+      'CHOQUE',
+      'COLISION',
+      'DESLIZAMIENTO',
+      'EMBARRANCAMIENTO',
+      'ENCUNETAMIENTO',
+      'OTROS HECHOS DE TRANSITO',
+      'SUMERSION',
+      'VUELCO',
     ];
-    final dropdown = tester
-        .widget<DropdownButton<String>>(find.byType(DropdownButton<String>));
+    final dropdown = tester.widget<DropdownButton<String>>(find.descendant(
+        of: find.widgetWithText(
+            DropdownButtonFormField<String>, 'Naturaleza del hecho'),
+        matching: find.byType(DropdownButton<String>)));
     expect(dropdown.items!.map((item) => item.value), options);
     for (final option in options) {
       await _selectNature(tester, option);
@@ -217,8 +264,7 @@ void main() {
   testWidgets('volver con texto sin guardar pide confirmación y descarta',
       (tester) async {
     await _open(tester, _PendingController());
-    await _fill(
-        tester, 'EPI / Estación Policial Integral', 'Texto sin guardar');
+    await _selectUnit(tester, 'EPI 5');
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.text('Cancelar informe'), findsOneWidget);
@@ -266,7 +312,8 @@ void _expectNatureVisible(WidgetTester tester, String value) {
   )..layout(maxWidth: paragraph.size.width);
   expect(paragraph.size.height, greaterThanOrEqualTo(painter.height - 0.01),
       reason: 'La altura debe permitir todas las líneas de $value');
-  final field = tester.getRect(find.byType(DropdownButtonFormField<String>));
+  final field = tester.getRect(find.widgetWithText(
+      DropdownButtonFormField<String>, 'Naturaleza del hecho'));
   final content = tester.getRect(text);
   expect(content.top, greaterThanOrEqualTo(field.top));
   expect(content.bottom, lessThanOrEqualTo(field.bottom));
@@ -275,14 +322,30 @@ void _expectNatureVisible(WidgetTester tester, String value) {
 
 Future<void> _fill(WidgetTester tester, String label, String value) async {
   final field = find.widgetWithText(TextFormField, label);
-  await tester.ensureVisible(field);
+  await Scrollable.ensureVisible(tester.element(field), alignment: 0.5);
+  await tester.pumpAndSettle();
   await tester.enterText(field, value);
   await tester.pump();
 }
 
+Future<void> _selectUnit(WidgetTester tester, String value) async {
+  final field = find.widgetWithText(
+      DropdownButtonFormField<String>, 'Unidad a la que pertenece');
+  await Scrollable.ensureVisible(tester.element(field), alignment: 0.5);
+  await tester.pumpAndSettle();
+  await tester.tap(field);
+  await tester.pumpAndSettle();
+  final option = find.text(value).last;
+  await tester.ensureVisible(option);
+  await tester.tap(option);
+  await tester.pumpAndSettle();
+}
+
 Future<void> _selectNature(WidgetTester tester, String value) async {
-  final field = find.byType(DropdownButtonFormField<String>);
-  await tester.ensureVisible(field);
+  final field = find.widgetWithText(
+      DropdownButtonFormField<String>, 'Naturaleza del hecho');
+  await Scrollable.ensureVisible(tester.element(field), alignment: 0.5);
+  await tester.pumpAndSettle();
   await tester.tap(field);
   await tester.pumpAndSettle();
   final option = find.text(value).last;
@@ -297,14 +360,16 @@ Future<void> _tap(WidgetTester tester, String text) async {
         scrollable: find.byType(Scrollable).first);
   }
   final target = find.text(text).last;
-  await tester.ensureVisible(target);
+  await Scrollable.ensureVisible(tester.element(target), alignment: 0.5);
+  await tester.pumpAndSettle();
   await tester.tap(target);
   await tester.pumpAndSettle();
 }
 
 Future<void> _date(WidgetTester tester, String label) async {
   final field = find.widgetWithText(TextFormField, label);
-  await tester.ensureVisible(field);
+  await Scrollable.ensureVisible(tester.element(field), alignment: 0.5);
+  await tester.pumpAndSettle();
   final ok = MaterialLocalizations.of(tester.element(field)).okButtonLabel;
   await tester.tap(field);
   await tester.pumpAndSettle();

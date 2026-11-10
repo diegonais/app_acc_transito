@@ -1,3 +1,147 @@
+## Actualización 2026-11-09 — Formulario compatible con Supabase y ensayo real
+
+Proyecto app-acc-transito-defensa-ensayo reanudado, ACTIVE_HEALTHY. Aplicada
+migración 20261110020445_formulario_catalogo_naturaleza: la RPC privada admite
+las doce naturalezas nuevas y las nueve anteriores para APK instaladas/reintentos.
+Unidad, opción/nombre de denunciante, descripción revisada, categoría y Observación
+conservan sus columnas/contratos. Sin cambios de RLS, funciones públicas,
+Storage ni Edge Functions. LOCAL/SQLite permanece separado de ONLINE.
+
+Verificación: **147 pruebas Flutter correctas**, análisis sin incidencias y formato
+lib/test correcto. PostgreSQL 17.11 temporal separado: cuatro migraciones desde
+cero, regresiones SQL 09/10/12, catálogo completo y dos carreras concurrentes
+correctas. Auth/Storage simulados en ese harness por fallo de Docker. Cloud real:
+prueba SQL de RPC/lectura, catálogo completo, negativos, replay y RLS en ROLLBACK.
+Antes del ensayo dirigido, huellas de informes/ledger/contadores/RPC pública iguales.
+
+Ensayo real posterior: actualización por adb install -r de Samsung SM-A556E
+(Android 16) y emulador TransitoReleasePhase14, conservando firma debug, datos y
+sesiones. POLICE B en teléfono; ADMIN ingresado por el usuario en emulador.
+Tras un fallo inicial del dictado, se corrigió la selección de español local
+mediante consulta de idiomas instalados (Android 13+) y es-ES en Android 12 o
+cuando el motor no implementa dicha consulta. Sin reconocimiento remoto.
+El usuario confirmó voz real exitosa; se verificó la edición posterior del texto.
+
+Finalizado **2026-000004**, lugar ENSAYO-FORM-20261109-FICTICIO, con EPI 3,
+OTROS HECHOS DE TRANSITO, OTRO con nombre, texto dictado/editado, categoría Otros
+y observación. ADMIN lo recuperó desde Supabase tras Actualizar y comprobó todos
+los campos en el detalle; generó vista previa PDF correcta de tres páginas.
+Total Cloud: 15 informes y operaciones (14 previos más uno nuevo), un conductor,
+correlativo 2026 = 4. Huellas de los 14 informes/operaciones históricos intactas.
+Como el otro POLICE, consulta SQL/RLS al caso nuevo y su conductor: cero filas.
+Se conserva el informe de ensayo activo; no hubo eliminación ni inactivación.
+
+Release 1.0.0+1 firmada, minSdk 24/target 36, sin debuggable, configurada solo
+con URL/clave publicable del proyecto. Empaquetador admite -DartDefineFromFile.
+APK: `docs/manual/entrega/app_transito_defensa_actualizada.apk`, anterior conservada.
+SHA256: 91EBF06E173BBBB1C6DC3D5756F84A86C1181FD51554B4A80AEA536824643A48.
+La release fue compilada/verificada; el ensayo instalado fue debug de igual código
+funcional. No se reemplazó la firma debug existente ni se borraron datos.
+
+Se mantiene consulta/refresco, sin Realtime nuevo. No se repitieron cargas de
+fotos/croquis/PDF privados ni concurrencia Edge; HTTP 546 Memory permanece abierto.
+La vista PDF probada se generó localmente desde datos remotos, sin subirla.
+Evidencia y límites: `supabase/tests/form_sync_verification.md`; capturas en
+%TEMP%/transito-form-evidence-20261109. Bitácora Notion pendiente, sin destino
+autorizado. Sin commit ni push; trabajo previo y supabase/.temp preservados.
+
+---
+
+## Actualización 2026-11-09 — Naturaleza del hecho
+
+El selector Naturaleza pasa a Naturaleza del hecho y reemplaza sus nueve opciones
+por las doce de la captura del usuario, en este orden: ARROLLAMIENTO, ATRICCION,
+ATROPELLO, CAIDA, CHOQUE, COLISION, DESLIZAMIENTO, EMBARRANCAMIENTO,
+ENCUNETAMIENTO, OTROS HECHOS DE TRANSITO, SUMERSION y VUELCO.
+Se respeta la escritura de la referencia. La etiqueta se actualiza también en
+el detalle y los nuevos PDF. Los valores de informes finalizados y los PDF ya
+exportados no se alteran; no hay migraciones ni cambios de servicios remotos.
+
+Verificación: 141 pruebas correctas, incluidas selección de las doce opciones,
+persistencia en el envío y legibilidad a 320/360/412 px con texto ampliado.
+Análisis sin incidencias, formato lib/test y git diff --check correctos.
+El bloqueo previo de dart format . por residuos de Gradle en build/ permanece.
+No se regeneró la APK después de este ajuste. Cambios previos preservados.
+
+---
+
+## Actualización 2026-11-09 — Categoría y observación del conductor
+
+En Agregar/Revisar conductor, Categoría es un selector obligatorio con A, B, C,
+M, P, T y Otros. Se conserva la selección al revisar un conductor en memoria.
+La etiqueta Condición de entrega pasa a Observación, también en detalle y en
+los PDF generados posteriormente; sigue siendo texto opcional y usa el campo
+existente condicionEntrega. No hay cambios de esquema, dependencias, contratos
+remotos ni contenido persistido; los PDF ya exportados se conservan.
+
+Verificación: 141 pruebas Flutter correctas y análisis sin incidencias. El flujo
+prueba las siete categorías, obligatoriedad, revisión y envío de la observación.
+Formato lib/test correcto; dart format . sigue bloqueado por una ruta residual
+de Gradle en build/. Diff sin errores de espacios. No se regeneró ni instaló
+la APK después de este ajuste; se preservan los cambios previos de esta sesión.
+
+---
+
+## Actualización 2026-11-09 — Dictado editable en Descripción
+
+El paso de descripción permite dictar en español por fragmentos, terminar o
+cancelar el dictado. El resultado se añade al texto existente y queda editable
+para revisión; no reescribe los hechos con IA ni finaliza automáticamente.
+Se conserva únicamente el texto mediante el contrato existente, sin archivos
+de audio, cambios de esquema, dependencias nuevas ni servicios Cloud.
+
+Implementación: widget DescriptionDictationField, servicio Dart por MethodChannel
+y reconocimiento Android estrictamente local mediante createOnDeviceSpeechRecognizer.
+Requiere Android 12/API 31 o superior y motor/modelo local compatible con español
+(es-BO). Sin soporte, permisos o reconocimiento, informa el error y conserva
+la escritura manual. Solicita RECORD_AUDIO al pulsar dictado; cancela al salir
+del campo o pasar la aplicación a segundo plano. Tiempo máximo de espera: 60 s.
+No existe fallback a reconocimiento remoto ni subida de audios pregrabados.
+
+Verificación: 141 pruebas Flutter correctas; análisis sin incidencias y formato
+lib/test correcto. Pruebas con servicio simulado de texto añadido, edición,
+cancelación con resultado tardío, permiso denegado y reconocimiento no disponible.
+Pendiente validación de micrófono y modelos de idioma en dispositivo físico;
+las pruebas simuladas no acreditan la disponibilidad del motor del teléfono.
+Compilación Android debug correcta: build/app/outputs/flutter-apk/app-debug.apk.
+Sin instalación ni prueba de voz en teléfono; APK sin configuración remota.
+Se preservan los dos cambios del formulario previos de esta sesión.
+
+---
+
+## Actualización 2026-11-09 — Menú de denunciante
+
+El paso Denunciante incorpora selección obligatoria: BOL 110, DE OFICIO,
+DENUNCIANTE y OTRO. Las dos últimas muestran un nombre obligatorio.
+Se conserva la opción y, cuando corresponde, el nombre en el campo textual
+existente (`DENUNCIANTE: nombre` u `OTRO: nombre`); las otras opciones se guardan
+literalmente. El nombre oculto no se envía. Documento opcional y contacto
+obligatorio mantienen sus reglas. Sin cambios de esquema, dependencias,
+informes finalizados ni servicios remotos.
+
+Verificación: selección de las cuatro opciones, visibilidad condicional,
+validación de nombre y envío final comprobados en las pruebas del formulario.
+`flutter analyze --no-pub` sin incidencias; formato de lib/test correcto.
+
+---
+
+## Actualización 2026-11-09 — Selector de unidad del informe
+
+En Datos generales, el campo textual EPI se sustituye por el selector obligatorio
+«Unidad a la que pertenece», con las 15 opciones proporcionadas por el usuario:
+EPI 3, EPI 5, EPI 6, EPI 8, EPI 9, EPI 11, RP 110, TRANSITO, UPAR DELTA,
+PAC, DIPROVE, POFOMA, INTERPOL, BOMBEROS y BATALLON DE SEGURIDAD FISICA.
+El formulario compartido conserva el valor textual en `epi`, sin migraciones,
+cambios de dependencias ni alteración de informes finalizados. No se modifican
+perfiles policiales, PDF/QR ni recursos remotos.
+
+Verificación: `flutter analyze --no-pub` sin incidencias y pruebas del formulario
+correctas, incluido envío de la unidad seleccionada y Naturaleza con texto ampliado.
+`dart format lib test` correcto; `dart format .` mantiene el error preexistente
+por una ruta residual de Gradle dentro de `build/`. Sin APK ni instalación nueva.
+
+---
+
 # Estado actual — Intervenciones 21/22: ensayo Cloud en dos clientes
 
 ## Actualización 2026-11-01 — DOS CLIENTES VALIDADO, sin adjuntos

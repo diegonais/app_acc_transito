@@ -45,7 +45,7 @@ class ReportDetailContent extends StatelessWidget {
                         ReportFormat.dateTime(report.fechaHoraLlegada),
                     'Fecha y hora del hecho':
                         ReportFormat.dateTime(report.fechaHoraHecho),
-                    'Naturaleza': report.naturaleza,
+                    'Naturaleza del hecho': report.naturaleza,
                     'Lugar': report.lugar,
                   })),
               ReportDetailSection(
@@ -194,7 +194,7 @@ class ReportDetailContent extends StatelessWidget {
                       'Domicilio': driver.domicilio,
                       'Zona': driver.zona,
                       'Contactos': driver.contactos,
-                      'Condición de entrega': driver.condicionEntrega,
+                      'Observación': driver.condicionEntrega,
                     }),
             ]));
 

@@ -68,6 +68,7 @@ class FakeServer {
       }
   ];
   final reports = <Map<String, dynamic>>[];
+  final drivers = <Map<String, dynamic>>[];
   final ledger = <String, Map<String, dynamic>>{};
   final reservations = <Map<String, dynamic>>[];
   final archives = <Map<String, dynamic>>[];
@@ -146,7 +147,9 @@ class FakeGateway implements RemoteGateway {
           .where((r) =>
               r['auth_uid'] == userId || accessibleReport(r['id_informe']))
           .toList(),
-      'conductores' || 'vehiculos' || 'personas_involucradas' => [],
+      'conductores' =>
+        server.drivers.where((r) => accessibleReport(r['id_informe'])).toList(),
+      'vehiculos' || 'personas_involucradas' => [],
       _ => throw StateError('Tabla no autorizada: $table'),
     };
     return rows
@@ -223,6 +226,13 @@ class FakeGateway implements RemoteGateway {
         'policia_placa_snapshot': p['numero_placa'],
         'policia_unidad_snapshot': p['unidad']
       });
+      for (final driver in payload['conductores'] as List? ?? []) {
+        server.drivers.add({
+          ...Map<String, dynamic>.from(driver as Map),
+          'id_conductor': server.drivers.length + 1,
+          'id_informe': n,
+        });
+      }
       for (final id in payload['archivos'] as List? ?? []) {
         _link(server.reservations.singleWhere((r) => r['reserva_id'] == id), n);
       }
@@ -294,24 +304,30 @@ class BombDatabase extends AppDatabase {
 FinalizeReportInput input(
         {int police = 2,
         String place = 'Lugar ficticio',
+        String unit = 'EPI ficticia',
+        String nature = 'Colisión',
+        String complainant = 'Persona ficticia',
+        String description = 'Descripción ficticia',
+        List<DriverInput> drivers = const [],
         List<PhotoInput> photos = const [],
         String? sketch}) =>
     FinalizeReportInput(
         idPolicia: police,
         gestion: 2026,
-        epi: 'EPI ficticia',
+        epi: unit,
         fechaHoraLlegada: DateTime(2026, 10, 29, 10),
         fechaHoraHecho: DateTime(2026, 10, 29, 9),
-        naturaleza: 'Colisión',
+        naturaleza: nature,
         lugar: place,
-        denuncianteNombre: 'Persona ficticia',
+        denuncianteNombre: complainant,
         denuncianteContacto: 'Contacto ficticio',
-        descripcion: 'Descripción sintética',
+        descripcion: description,
         condicionesClimaticas: 'Sin novedad',
         vehiculosMovidos: false,
         protagonistasPresentes: true,
         testigos: 'Sin testigos',
         efectosPersonales: 'Sin efectos',
+        conductores: drivers,
         fotografias: photos,
         rutaCroquis: sketch);
 
@@ -410,6 +426,80 @@ void main() {
     await admin.load(actor);
     expect(admin.reports.length, 1);
     admin.dispose();
+  });
+  test('formulario actualizado conserva campos en otro cliente ONLINE',
+      () async {
+    const natures = [
+      'ARROLLAMIENTO',
+      'ATRICCION',
+      'ATROPELLO',
+      'CAIDA',
+      'CHOQUE',
+      'COLISION',
+      'DESLIZAMIENTO',
+      'EMBARRANCAMIENTO',
+      'ENCUNETAMIENTO',
+      'OTROS HECHOS DE TRANSITO',
+      'SUMERSION',
+      'VUELCO'
+    ];
+    const units = [
+      'EPI 3',
+      'EPI 5',
+      'EPI 6',
+      'EPI 8',
+      'EPI 9',
+      'EPI 11',
+      'RP 110',
+      'TRANSITO',
+      'UPAR DELTA',
+      'PAC',
+      'DIPROVE',
+      'POFOMA',
+      'INTERPOL',
+      'BOMBEROS',
+      'BATALLON DE SEGURIDAD FISICA'
+    ];
+    const categories = ['A', 'B', 'C', 'M', 'P', 'T', 'Otros'];
+    const complainants = [
+      'BOL 110',
+      'DE OFICIO',
+      'DENUNCIANTE: Persona ficticia Áñez',
+      'OTRO: Persona ficticia Muñoz'
+    ];
+    const description =
+        'Texto dictado ficticio.\nCorrección revisada con ñ y acentos.';
+    final admin = OnlineReportRepository(FakeGateway(server, adminUid));
+    final anotherPolice = OnlineReportRepository(FakeGateway(server));
+    final forbidden = OnlineReportRepository(FakeGateway(server, bUid));
+    for (var i = 0; i < units.length; i++) {
+      a.lostResponses = 1;
+      final result = await reports.finalizeReport(input(
+          unit: units[i],
+          nature: natures[i % natures.length],
+          complainant: complainants[i % 4],
+          description: description,
+          drivers: [
+            DriverInput(
+                nombreCompleto: 'Conductor ficticio',
+                licencia: 'FICTICIA',
+                categoria: categories[i % 7],
+                condicionEntrega: 'Observación ficticia')
+          ]));
+      for (final reader in [admin, anotherPolice]) {
+        final row = (await reader.findActiveReportDetail(result.idInforme))!;
+        expect(row.epi, units[i]);
+        expect(row.naturaleza, natures[i % natures.length]);
+        expect(row.denuncianteNombre, complainants[i % 4]);
+        expect(row.descripcion, description);
+        expect(row.conductores.single.categoria, categories[i % 7]);
+        expect(row.conductores.single.condicionEntrega, 'Observación ficticia');
+      }
+      expect(await forbidden.findActiveReportDetail(result.idInforme), isNull);
+    }
+    expect(server.reports.length, 15);
+    expect(server.drivers.length, 15);
+    expect(server.ledger.length, 15);
   });
   test('offline propaga error y borra resultados visibles; nunca fallback',
       () async {

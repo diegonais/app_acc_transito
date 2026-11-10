@@ -1,4 +1,14 @@
+param([string]$DartDefineFromFile)
+
 $ErrorActionPreference = 'Stop'
+$dartDefineArgs = @()
+if ($DartDefineFromFile) {
+    $resolvedDefines = (Resolve-Path -LiteralPath $DartDefineFromFile).Path
+    if (-not (Test-Path -LiteralPath $resolvedDefines -PathType Leaf)) {
+        throw 'El archivo de configuracion publica no existe.'
+    }
+    $dartDefineArgs = @("--dart-define-from-file=$resolvedDefines")
+}
 Push-Location (Join-Path $PSScriptRoot '..')
 $originalConfig = $null
 try {
@@ -18,7 +28,7 @@ try {
         languageVersion = '3.0'
     }
     [IO.File]::WriteAllText($configPath, ($config | ConvertTo-Json -Depth 20))
-    flutter build apk --release --no-pub --build-name=1.0.0 --build-number=1 --obfuscate --split-debug-info=.release-private/symbols/1.0.0+1
+    flutter build apk --release --no-pub --build-name=1.0.0 --build-number=1 --obfuscate --split-debug-info=.release-private/symbols/1.0.0+1 @dartDefineArgs
     if ($LASTEXITCODE -ne 0) { throw 'APK release fallo' }
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $apk = [IO.Compression.ZipFile]::OpenRead(

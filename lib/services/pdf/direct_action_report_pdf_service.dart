@@ -71,7 +71,7 @@ class DirectActionReportPdfService {
             _table([
               ['Número de caso', report.numeroCaso],
               ['EPI', report.epi],
-              ['Naturaleza', report.naturaleza],
+              ['Naturaleza del hecho', report.naturaleza],
               ['Lugar', report.lugar],
               [
                 'Fecha y hora de llegada',
@@ -224,7 +224,7 @@ class DirectActionReportPdfService {
                     ['Domicilio', driver.domicilio],
                     ['Zona', driver.zona],
                     ['Contactos', driver.contactos],
-                    ['Condición de entrega', driver.condicionEntrega],
+                    ['Observación', driver.condicionEntrega],
                   ]),
               ],
             ),
